@@ -805,6 +805,7 @@ function renderSidebar(){
     let thumbHtml = '';
     if (thumbnailsEnabled && showThumbnails) {
       thumbHtml = `<div class="thumbnail"><img src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
+      classes.push('with-thumbnails');
     }
     
     html += `<div class="${classes.join(' ')}" data-name="${v.name}" ${inFiltered ? '' : 'data-disabled="1"'}>` +

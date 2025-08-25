@@ -84,3 +84,47 @@
 2025-08-25 22:35:10,429 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
 2025-08-25 22:35:10,429 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
 2025-08-25 22:35:10,430 | INFO  | Thumbnail generation complete: 5 generated, 0 skipped
+2025-08-25 23:16:28,427 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:16:28,428 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.mp4 files=6
+2025-08-25 23:17:14,930 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:17:14,931 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.mp4 files=6
+2025-08-25 23:17:14,932 | INFO  | Generating thumbnails for 6 files...
+2025-08-25 23:17:14,933 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,934 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,934 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,936 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video1.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,937 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,942 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:14,942 | INFO  | Thumbnail generation complete: 0 generated, 0 skipped
+2025-08-25 23:17:28,714 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:28,722 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:28,724 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video1.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:28,726 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:28,727 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:28,728 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,477 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,480 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,482 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,485 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video1.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,487 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:17:50,489 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,980 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:19:53,981 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.mp4 files=6
+2025-08-25 23:19:53,982 | INFO  | Generating thumbnails for 6 files...
+2025-08-25 23:19:53,982 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,983 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,984 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,985 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video1.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,986 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,987 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:19:53,987 | INFO  | Thumbnail generation complete: 0 generated, 0 skipped
+2025-08-25 23:20:07,176 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:07,183 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:07,183 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:07,185 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video1.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:07,185 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:07,187 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/video3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
+2025-08-25 23:20:46,143 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:20:46,143 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.jpg files=11
+2025-08-25 23:20:46,145 | INFO  | Generating thumbnails for 6 files...
+2025-08-25 23:20:46,167 | INFO  | Thumbnail generation complete: 6 generated, 5 skipped

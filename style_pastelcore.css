@@ -40,6 +40,7 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#f0e8f0; border:1px 
 .item .thumbnail { flex-shrink:0; border-radius:4px; overflow:hidden; background:#fff; border:1px solid #d0c0d0; }
 .item .thumbnail img { display:block; border-radius:4px; }
 .item .content { flex:1; display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; min-width:0; }
+.item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items:start; }
 .item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6b5b6b; }
 .item .score { font-size:12px; opacity:0.8; color:#7d5a78; flex-shrink:0; }
 .item.disabled { opacity:0.4; cursor:default; }
