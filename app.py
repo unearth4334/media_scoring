@@ -21,6 +21,7 @@ APP = FastAPI()
 VIDEO_DIR: Path = Path.cwd()
 LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
+FILE_PATTERN: str = "*.mp4"
 
 def scores_dir_for(directory: Path) -> Path:
     sdir = directory / ".scores"
@@ -53,8 +54,20 @@ def write_score(video_path: Path, score: int) -> None:
     }
     scp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
-def discover_videos(directory: Path) -> List[Path]:
-    return sorted([p for p in directory.glob("*.mp4")])
+# ---- file discovery (supports images + glob union) ----
+def _match_union(directory: Path, pattern: str) -> List[Path]:
+    pats = [p.strip() for p in (pattern or "").split("|") if p.strip()]
+    if not pats:
+        pats = ["*.mp4"]
+    seen: Dict[Path, Path] = {}
+    for pat in pats:
+        for p in directory.glob(pat):
+            if p.is_file():
+                seen[p.resolve()] = p
+    return sorted(seen.values())
+
+def discover_files(directory: Path, pattern: str) -> List[Path]:
+    return _match_union(directory, pattern)
 
 def setup_logging(directory: Path):
     global LOGGER
@@ -70,14 +83,19 @@ def setup_logging(directory: Path):
     LOGGER.addHandler(fh)
     LOGGER.info(f"Logger initialized. dir={directory}")
 
-def switch_directory(new_dir: Path):
-    global VIDEO_DIR, FILE_LIST
+def switch_directory(new_dir: Path, pattern: Optional[str] = None):
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN
     VIDEO_DIR = new_dir
+    if pattern is not None and pattern.strip():
+        FILE_PATTERN = pattern.strip()
     setup_logging(VIDEO_DIR)
-    FILE_LIST = discover_videos(VIDEO_DIR)
-    LOGGER.info(f"SCAN dir={VIDEO_DIR} videos={len(FILE_LIST)}")
+    FILE_LIST = discover_files(VIDEO_DIR, FILE_PATTERN)
+    LOGGER.info(f"SCAN dir={VIDEO_DIR} pattern={FILE_PATTERN} files={len(FILE_LIST)}")
 
 
+# ---------------------------
+# Extractor helpers
+# ---------------------------
 
 def extractor_script_path() -> Path:
     # expect the script to live next to this app.py
@@ -122,7 +140,7 @@ def index():
 
 @APP.get("/api/videos")
 def api_videos():
-    # Return list of video entries with current score
+    # Return list of entries with current score
     items = []
     for p in FILE_LIST:
         items.append({
@@ -130,16 +148,17 @@ def api_videos():
             "url": f"/media/{p.name}",
             "score": read_score(p) if read_score(p) is not None else 0
         })
-    return {"dir": str(VIDEO_DIR), "videos": items}
+    return {"dir": str(VIDEO_DIR), "pattern": FILE_PATTERN, "videos": items}
 
 @APP.post("/api/scan")
 async def api_scan(req: Request):
     data = await req.json()
     new_dir = Path(str(data.get("dir",""))).expanduser().resolve()
+    pattern = str(data.get("pattern","")).strip() or None
     if not new_dir.exists() or not new_dir.is_dir():
         raise HTTPException(400, f"Directory not found: {new_dir}")
-    switch_directory(new_dir)
-    return {"ok": True, "dir": str(VIDEO_DIR), "count": len(FILE_LIST)}
+    switch_directory(new_dir, pattern)
+    return {"ok": True, "dir": str(VIDEO_DIR), "pattern": FILE_PATTERN, "count": len(FILE_LIST)}
 
 @APP.get("/media/{name:path}")
 def serve_media(name: str):
@@ -151,7 +170,16 @@ def serve_media(name: str):
         raise HTTPException(403, "Forbidden path")
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "File not found")
-    return FileResponse(target, media_type="video/mp4")
+    ext = target.suffix.lower()
+    if ext == ".mp4":
+        mime = "video/mp4"
+    elif ext == ".png":
+        mime = "image/png"
+    elif ext in {".jpg", ".jpeg"}:
+        mime = "image/jpeg"
+    else:
+        mime = "application/octet-stream"
+    return FileResponse(target, media_type=mime)
 
 @APP.post("/api/score")
 async def api_score(req: Request):
@@ -160,7 +188,7 @@ async def api_score(req: Request):
     score = int(data.get("score", 0))
     target = VIDEO_DIR / name
     if not target.exists() or target not in FILE_LIST:
-        raise HTTPException(404, "Video not found")
+        raise HTTPException(404, "File not found")
     write_score(target, score)
     LOGGER.info(f"SCORE file={name} score={score}")
     return {"ok": True}
@@ -210,7 +238,7 @@ CLIENT_HTML = r"""
     body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
     header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
     h1 { font-size:18px; margin:0 0 8px 0; }
-    main { padding:16px; max-width:1200px; margin:0 auto; }
+    main { padding:16px; max-width:1300px; margin:0 auto; }
     .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
     .filename { font-family:monospace; opacity:0.9; }
@@ -219,26 +247,29 @@ CLIENT_HTML = r"""
     .video-wrap { background:#000; padding:8px; border-radius:12px; }
     .scorebar { margin-top:8px; }
     .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
-    input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:420px; }
+    input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
     .grow { flex: 1 1 auto; min-width: 280px; }
     /* Sidebar */
     aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px solid #333; border-radius:10px; padding:8px; }
-    .item { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
+    .item { display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
     .item:hover { background:#2a2a2a; }
-    .item.current { background:#343434; }
+    .item.current { background:#343434; border:1px solid #555; }
     .item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 230px; }
     .item .score { font-size:12px; opacity:0.9; }
     .item.disabled { opacity:0.4; cursor:default; }
+    .helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; }
   </style>
 </head>
 <body>
   <header>
-    <h1>🎬 Video Scorer (FastAPI)</h1>
-    <div class="pill">Keys: ←/→ navigate • Space play/pause • 1–5 rate • R reject</div>
+    <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject</div>
   </header>
   <main class="layout">
     <div class="row">
-      <input id="dir" type="text" class="grow" placeholder="/path/to/videos"/>
+      <input id="dir" type="text" class="grow" placeholder="/path/to/folder"/>
+      <input id="pattern" type="text" style="min-width:240px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+      <button id="pat_help" class="helpbtn">?</button>
       <button id="load">Load</button>
       <div id="dir_display" class="filename"></div>
     </div>
@@ -259,14 +290,12 @@ CLIENT_HTML = r"""
     </aside>
     <section id="right">
       <div class="row">
-        <div id="filter_info" class="filename"></div>
-      </div>
-      <div class="row">
         <div class="filename" id="filename">(loading…)</div>
       </div>
       <div class="row">
         <div class="video-wrap">
-          <video id="player" width="960" height="540" controls preload="metadata"></video>
+          <video id="player" width="960" height="540" controls preload="metadata" style="display:none"></video>
+          <img id="imgview" style="max-width:960px; max-height:540px; display:none" />
           <div class="scorebar" id="scorebar"></div>
         </div>
       </div>
@@ -289,6 +318,7 @@ let videos = [];
 let filtered = [];
 let idx = 0;
 let currentDir = "";
+let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
 
 function svgReject(selected){
@@ -302,7 +332,6 @@ function svgReject(selected){
   <line x1="${cx-10}" y1="${cy+10}" x2="${cx+10}" y2="${cy-10}" stroke="${xColor}" stroke-width="4" stroke-linecap="round" />
 </svg>`;
 }
-
 function svgStar(filled){
   const fill = filled ? "white" : "black";
   return `
@@ -311,7 +340,6 @@ function svgStar(filled){
     fill="${fill}" stroke="white" stroke-width="2"/>
 </svg>`;
 }
-
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
   let html = `<div style="display:flex; gap:8px; align-items:center;">`;
@@ -321,14 +349,11 @@ function renderScoreBar(score){
   html += `</div>`;
   bar.innerHTML = html;
 }
-
-
 function scoreBadge(s){
   if (s === -1) return 'R';
   if (!s || s < 1) return '—';
   return s + '★';
 }
-
 function renderSidebar(){
   const list = document.getElementById('sidebar_list');
   if (!list) return;
@@ -346,8 +371,6 @@ function renderSidebar(){
             `</div>`;
   });
   list.innerHTML = html;
-
-  // Attach click handlers only for enabled items
   list.querySelectorAll('.item').forEach(el => {
     if (el.getAttribute('data-disabled') === '1') return;
     el.addEventListener('click', () => {
@@ -357,83 +380,97 @@ function renderSidebar(){
     });
   });
 }
-
 function applyFilter(){
-  if (minFilter === null){ filtered = videos.slice(); }
-  else { filtered = videos.filter(v => (v.score||0) >= minFilter); }
+  filtered = (minFilter === null) ? videos.slice() : videos.filter(v => (v.score||0) >= minFilter);
   const info = document.getElementById('filter_info');
   const label = (minFilter===null? 'No filter' : ('rating ≥ ' + minFilter));
   info.textContent = `${label} — showing ${filtered.length}/${videos.length}`;
 }
-
+function isVideoName(n){ return n.toLowerCase().endsWith('.mp4'); }
+function isImageName(n){ const s=n.toLowerCase(); return s.endsWith('.png')||s.endsWith('.jpg')||s.endsWith('.jpeg'); }
+function showMedia(url, name){
+  const vtag = document.getElementById('player');
+  const itag = document.getElementById('imgview');
+  if (isVideoName(name)){
+    itag.style.display = 'none'; itag.removeAttribute('src');
+    vtag.style.display = ''; vtag.src = url + '#t=0.001';
+  } else if (isImageName(name)){
+    vtag.pause && vtag.pause(); vtag.removeAttribute('src'); vtag.load && vtag.load(); vtag.style.display='none';
+    itag.style.display = ''; itag.src = url;
+  } else {
+    vtag.style.display='none'; vtag.removeAttribute('src');
+    itag.style.display=''; itag.src = url;
+  }
+  const b1 = document.getElementById('extract_one'); const b2 = document.getElementById('extract_filtered');
+  if (b1 && b2){ const enable = isVideoName(name); b1.disabled = !enable; b2.disabled = !enable; }
+}
 function show(i){
   if (filtered.length === 0){
     document.getElementById('filename').textContent = '(no items match filter)';
     const player = document.getElementById('player');
     player.removeAttribute('src'); player.load();
     renderScoreBar(0);
+    renderSidebar();
     return;
   }
   idx = Math.max(0, Math.min(i, filtered.length-1));
   const v = filtered[idx];
-  const player = document.getElementById('player');
-  player.src = v.url + `#t=0.001`;
-  document.getElementById('filename').textContent = `${idx+1}/${filtered.length} (of ${videos.length})  •  ${v.name}`;
+  showMedia(v.url, v.name);
+  document.getElementById('filename').textContent = `${idx+1}/${filtered.length}  •  ${v.name}`;
   renderScoreBar(v.score || 0);
+  renderSidebar();
 }
-
 async function loadVideos(){
   const res = await fetch("/api/videos");
   const data = await res.json();
   videos = data.videos || [];
   currentDir = data.dir || "";
-  document.getElementById('dir_display').textContent = currentDir;
+  currentPattern = data.pattern || currentPattern;
+  document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
+  const patInput = document.getElementById('pattern');
+  if (patInput && !patInput.value) patInput.value = currentPattern;
   applyFilter();
   renderSidebar();
   show(0);
 }
-
 async function postScore(score){
-  // v is from filtered list for current idx
   const v = filtered[idx];
   if (!v) return;
   await fetch('/api/score', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ name: v.name, score: score })
   });
-  // Update underlying source entry
   const source = videos.find(x => x.name === v.name);
   if (source) source.score = score;
   v.score = score;
-  // Re-apply filter and keep continuity
   const curName = v.name;
   applyFilter();
   const newIndex = filtered.findIndex(x => x.name === curName);
-  if (newIndex === -1){
-    // current item no longer matches; move to next best
-    if (filtered.length > 0){ show(Math.min(idx, filtered.length-1)); }
-    else { show(0); }
-  } else {
+  if (newIndex >= 0) {
     show(newIndex);
+  } else {
+    show(idx);
   }
+  renderSidebar();
+  renderScoreBar(score);
 }
-
 async function postKey(key){
-  const v = videos[idx];
+  const v = filtered[idx];
   await fetch("/api/key", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
     body: JSON.stringify({ key: key, name: v ? v.name : "" })
   });
 }
-
 async function scanDir(path){
+  const pattern = (document.getElementById('pattern')?.value || '').trim();
   const res = await fetch("/api/scan", {
     method: "POST",
     headers: {"Content-Type":"application/json"},
-    body: JSON.stringify({ dir: path })
+    body: JSON.stringify({ dir: path, pattern: pattern })
   });
   if (!res.ok){
     const t = await res.text();
@@ -442,7 +479,9 @@ async function scanDir(path){
   }
   await loadVideos();
 }
-
+document.getElementById("pat_help").addEventListener("click", () => {
+  alert("Glob syntax:\\n- Use * and ? wildcards (e.g., *.mp4, image??.png)\\n- Union with | (e.g., *.mp4|*.png|*.jpg)\\n- Examples:\\n  *.mp4\\n  image*.png\\n  *.mp4|*.png|*.jpg");
+});
 document.getElementById("load").addEventListener("click", () => {
   const path = (document.getElementById("dir").value || "").trim();
   if (path) scanDir(path);
@@ -451,33 +490,33 @@ document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
   minFilter = (val === 'none') ? null : parseInt(val);
   fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':('>='+minFilter)), name: '' })});
-  applyFilter();
-  renderSidebar();
-  show(0);
+  applyFilter(); renderSidebar(); show(0);
 });
-
 document.getElementById('dir').addEventListener('keydown', (e) => {
   if (e.key === "Enter"){
     const path = (document.getElementById("dir").value || "").trim();
     if (path) scanDir(path);
   }
 });
-
+document.getElementById('pattern').addEventListener('keydown', (e) => {
+  if (e.key === "Enter"){
+    const path = (document.getElementById("dir").value || "").trim();
+    if (path) scanDir(path);
+  }
+});
 document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
 document.getElementById('next').addEventListener('click', () => { show(idx+1); });
 document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
-
 document.querySelectorAll("[data-star]").forEach(btn => {
   btn.addEventListener("click", () => {
     const n = parseInt(btn.getAttribute("data-star"));
     postScore(n);
   });
 });
-
 document.addEventListener("keydown", (e) => {
   if (["INPUT","TEXTAREA"].includes((e.target.tagName||"").toUpperCase())) return;
   const player = document.getElementById("player");
-  function togglePlay(){ if (!player) return; if (player.paused) { player.play(); } else { player.pause(); } }
+  function togglePlay(){ if (!player || player.style.display==='none') return; if (player.paused) { player.play(); } else { player.pause(); } }
   if (e.key === "ArrowLeft"){ e.preventDefault(); postKey("ArrowLeft"); show(idx-1); return; }
   if (e.key === "ArrowRight"){ e.preventDefault(); postKey("ArrowRight"); show(idx+1); return; }
   if (e.key === " "){ e.preventDefault(); postKey("Space"); togglePlay(); return; }
@@ -488,11 +527,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "5"){ e.preventDefault(); postKey("5"); postScore(5); return; }
   if (e.key === "r" || e.key === "R"){ e.preventDefault(); postKey("R"); postScore(-1); return; }
 });
-
-
 async function extractCurrent(){
-  if (!filtered.length) { alert("No video selected."); return; }
+  if (!filtered.length) { alert("No item selected."); return; }
   const v = filtered[idx];
+  if (!v.name.toLowerCase().endsWith('.mp4')){ alert('Extractor only works for .mp4'); return; }
   try{
     const res = await fetch("/api/extract", {
       method: "POST",
@@ -509,8 +547,9 @@ async function extractCurrent(){
   }
 }
 async function extractFiltered(){
-  if (!filtered.length) { alert("No videos in current filter scope."); return; }
-  const names = filtered.map(v => v.name);
+  if (!filtered.length) { alert("No items in current filter scope."); return; }
+  const names = filtered.map(v => v.name).filter(n => n.toLowerCase().endsWith('.mp4'));
+  if (!names.length){ alert('No .mp4 files in the current filtered view.'); return; }
   try{
     const res = await fetch("/api/extract", {
       method: "POST",
@@ -528,7 +567,6 @@ async function extractFiltered(){
 }
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
-
 window.addEventListener("load", loadVideos);
 </script>
 </body>
@@ -539,19 +577,21 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN
 
-    ap = argparse.ArgumentParser(description="Video Scorer (FastAPI)")
-    ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with .mp4 files")
+    ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
+    ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
+    ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
     if not start_dir.exists() or not start_dir.is_dir():
         raise SystemExit(f"Directory not found: {start_dir}")
 
-    switch_directory(start_dir)
+    FILE_PATTERN = args.pattern or "*.mp4"
+    switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
 if __name__ == "__main__":
