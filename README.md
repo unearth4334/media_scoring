@@ -1,14 +1,14 @@
-# 🎬 Video Scorer (FastAPI)
+# 🎬 Video Scorer (FastAPI) — with Directory Picker
 
-A minimal, robust video scorer that **runs locally** and captures **keyboard shortcuts** reliably (←/→ navigation, 1–5 stars, R reject).  
-This is a replacement for the Gradio-based UI when global key handling is finicky.
+A minimal, robust video scorer that **captures keyboard shortcuts** and now includes a **directory picker** so you can switch folders on the fly.
 
 ## Features
-- Plain HTML + JS → **reliable** keyboard handling
-- Serve videos directly from your target folder (`/media/<file>`)
+- Plain HTML + JS → reliable keys (←/→, Space, 1–5, R)
+- Change directory from the UI (textbox + Load button or press Enter)
+- Serves media from the **current** directory via `/media/<file>`
 - Score sidecars in `.scores/<filename>.json` (auto-load existing)
-- Verbose logging to `.scores/.log/video_scorer.log` including **keystrokes**
-- SVG score bar exactly as specified
+- Verbose logging to `.scores/.log/video_scorer.log` — includes **keystrokes** and directory scans
+- SVG score bar: reject circle + five stars
 
 ## Install
 ```bash
@@ -19,31 +19,27 @@ pip install -r requirements.txt
 
 ## Run
 ```bash
-python app_fastapi.py --dir /path/to/videos --port 7862
+python app_fastapi.py --dir /path/to/initial/videos --port 7862
 # open http://127.0.0.1:7862/
 ```
 
-## Scores
-Example sidecar:
-```json
-{
-  "file": "clip001.mp4",
-  "score": 4,
-  "updated": "2025-08-24T17:25:00"
-}
-```
+## Change directory (in the UI)
+- Paste a path (e.g., `/mnt/qnap-sd/SecretFolder/WAN/2025-08-24/test`) into the **Directory** box
+- Click **Load** or press **Enter**
+- The app scans that folder for `*.mp4`, loads scores, and starts serving `/media/<file>` from it
 
 ## Logs
-Log file at:
 ```
 <video_dir>/.scores/.log/video_scorer.log
 ```
-Contains entries like:
+Examples:
 ```
+INFO | Logger initialized. dir=/mnt/qnap-sd/SecretFolder/WAN/2025-08-24/test
+INFO | SCAN dir=/mnt/qnap-sd/SecretFolder/WAN/2025-08-24/test videos=24
+INFO | KEY key=Space file=134405_IN_00002.mp4
 INFO | SCORE file=134405_IN_00003.mp4 score=3
-INFO | KEY key=ArrowRight file=134405_IN_00004.mp4
 ```
 
 ## Notes
-- Single-user design; state lives client-side (the current index) and server-side scans the folder at startup.
-- If you add/remove files while running, refresh the page to reload the list.
+- Refresh the page if you change files on disk while the app is running.
+- The `/media/{name}` endpoint is secured to the currently selected directory; it won’t serve paths outside of it.

@@ -9,8 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import uvicorn
 
 # ---------------------------
@@ -69,13 +68,20 @@ def setup_logging(directory: Path):
     LOGGER.addHandler(fh)
     LOGGER.info(f"Logger initialized. dir={directory}")
 
+def switch_directory(new_dir: Path):
+    global VIDEO_DIR, FILE_LIST
+    VIDEO_DIR = new_dir
+    setup_logging(VIDEO_DIR)
+    FILE_LIST = discover_videos(VIDEO_DIR)
+    LOGGER.info(f"SCAN dir={VIDEO_DIR} videos={len(FILE_LIST)}")
+
+
 # ---------------------------
 # API Routes
 # ---------------------------
 
 @APP.get("/", response_class=HTMLResponse)
 def index():
-    # Serve a minimal single-page app
     return HTMLResponse(CLIENT_HTML)
 
 @APP.get("/api/videos")
@@ -88,7 +94,28 @@ def api_videos():
             "url": f"/media/{p.name}",
             "score": read_score(p) if read_score(p) is not None else 0
         })
-    return {"videos": items}
+    return {"dir": str(VIDEO_DIR), "videos": items}
+
+@APP.post("/api/scan")
+async def api_scan(req: Request):
+    data = await req.json()
+    new_dir = Path(str(data.get("dir",""))).expanduser().resolve()
+    if not new_dir.exists() or not new_dir.is_dir():
+        raise HTTPException(400, f"Directory not found: {new_dir}")
+    switch_directory(new_dir)
+    return {"ok": True, "dir": str(VIDEO_DIR), "count": len(FILE_LIST)}
+
+@APP.get("/media/{name:path}")
+def serve_media(name: str):
+    target = (VIDEO_DIR / name).resolve()
+    # Security: ensure the resolved path is within VIDEO_DIR
+    try:
+        target.relative_to(VIDEO_DIR)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found")
+    return FileResponse(target, media_type="video/mp4")
 
 @APP.post("/api/score")
 async def api_score(req: Request):
@@ -124,23 +151,30 @@ CLIENT_HTML = r"""
   <style>
     body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
     header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
-    h1 { font-size:18px; margin:0; }
+    h1 { font-size:18px; margin:0 0 8px 0; }
     main { padding:16px; max-width:1100px; margin:0 auto; }
-    .row { display:flex; gap:16px; align-items:center; flex-wrap:wrap; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
     .filename { font-family:monospace; opacity:0.9; }
     .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:8px 12px; border-radius:8px; cursor:pointer; }
     .controls button:hover { background:#3a3a3a; }
     .video-wrap { background:#000; padding:8px; border-radius:12px; }
     .scorebar { margin-top:8px; }
     .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
+    input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:420px; }
+    .grow { flex: 1 1 auto; min-width: 280px; }
   </style>
 </head>
 <body>
   <header>
     <h1>🎬 Video Scorer (FastAPI)</h1>
-    <div class="pill">Keys: ←/→ navigate • 1–5 rate • R reject</div>
+    <div class="pill">Keys: ←/→ navigate • Space play/pause • 1–5 rate • R reject</div>
   </header>
   <main>
+    <div class="row">
+      <input id="dir" type="text" class="grow" placeholder="/path/to/videos"/>
+      <button id="load">Load</button>
+      <div id="dir_display" class="filename"></div>
+    </div>
     <div class="row">
       <div class="filename" id="filename">(loading…)</div>
     </div>
@@ -164,6 +198,7 @@ CLIENT_HTML = r"""
 <script>
 let videos = [];
 let idx = 0;
+let currentDir = "";
 
 function svgReject(selected){
   const circleFill = selected ? "white" : "black";
@@ -201,7 +236,7 @@ function show(i){
   idx = Math.max(0, Math.min(i, videos.length-1));
   const v = videos[idx];
   const player = document.getElementById("player");
-  player.src = v.url + `#t=0.001`; // small offset to force thumb load in some browsers
+  player.src = v.url + `#t=0.001`;
   document.getElementById("filename").textContent = `${idx+1}/${videos.length}  •  ${v.name}`;
   renderScoreBar(v.score || 0);
 }
@@ -210,6 +245,10 @@ async function loadVideos(){
   const res = await fetch("/api/videos");
   const data = await res.json();
   videos = data.videos || [];
+  currentDir = data.dir || "";
+  document.getElementById("dir_display").textContent = currentDir;
+  const dirInput = document.getElementById("dir");
+  if (dirInput && !dirInput.value) dirInput.value = currentDir;
   show(0);
 }
 
@@ -233,6 +272,31 @@ async function postKey(key){
     body: JSON.stringify({ key: key, name: v ? v.name : "" })
   });
 }
+
+async function scanDir(path){
+  const res = await fetch("/api/scan", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({ dir: path })
+  });
+  if (!res.ok){
+    const t = await res.text();
+    alert("Scan failed: " + t);
+    return;
+  }
+  await loadVideos();
+}
+
+document.getElementById("load").addEventListener("click", () => {
+  const path = (document.getElementById("dir").value || "").trim();
+  if (path) scanDir(path);
+});
+document.getElementById("dir").addEventListener("keydown", (e) => {
+  if (e.key === "Enter"){
+    const path = (document.getElementById("dir").value || "").trim();
+    if (path) scanDir(path);
+  }
+});
 
 document.getElementById("prev").addEventListener("click", () => { show(idx-1); });
 document.getElementById("next").addEventListener("click", () => { show(idx+1); });
@@ -281,17 +345,11 @@ def main():
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     args = ap.parse_args()
 
-    VIDEO_DIR = Path(args.dir).expanduser().resolve()
-    if not VIDEO_DIR.exists() or not VIDEO_DIR.is_dir():
-        raise SystemExit(f"Directory not found: {VIDEO_DIR}")
+    start_dir = Path(args.dir).expanduser().resolve()
+    if not start_dir.exists() or not start_dir.is_dir():
+        raise SystemExit(f"Directory not found: {start_dir}")
 
-    setup_logging(VIDEO_DIR)
-    FILE_LIST = discover_videos(VIDEO_DIR)
-    LOGGER.info(f"Discovered {len(FILE_LIST)} videos in {VIDEO_DIR}")
-
-    # Mount static serving for the target directory at /media
-    APP.mount("/media", StaticFiles(directory=str(VIDEO_DIR), html=False), name="media")
-
+    switch_directory(start_dir)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
 if __name__ == "__main__":
