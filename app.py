@@ -202,8 +202,10 @@ CLIENT_HTML = r"""
 <html>
 <head>
   <meta charset="utf-8"/>
-  <title>Video Scorer (FastAPI)</title>
+  <title>Video Scorer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Favicon: small movie camera emoji as SVG data URI -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
   <style>
     body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
     header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
