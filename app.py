@@ -323,7 +323,7 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
         )
 
         # Keystroke logging
-        keystream.change(log_keystroke, inputs=[keystream, st_files, st_index], outputs=[keystream_sink])
+        keystream.input(log_keystroke, inputs=[keystream, st_files, st_index], outputs=[keystream_sink])
 
         # Scoring
         reject_btn.click(
@@ -346,22 +346,31 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
             """
 
 
+
 <script>
 (function(){
+  function appRoot(){ return (window.gradioApp && window.gradioApp()) || document; }
   function clickInside(id){
-    const host = document.getElementById(id);
+    const host = appRoot().querySelector('#' + id);
     if (!host) return;
     const btn = host.querySelector('button') || host;
     btn.click();
   }
-  function sendKeyLog(key){
-    const host = document.getElementById('keystream');
-    if (!host) return;
+  function setHiddenTextbox(val){
+    const host = appRoot().querySelector('#keystream');
+    if (!host) return false;
     const ta = host.querySelector('textarea');
-    if (!ta) return;
-    const payload = JSON.stringify({ key: key, ts: new Date().toISOString() });
-    ta.value = payload;
+    if (!ta) return false;
+    ta.value = val;
     ta.dispatchEvent(new Event('input', { bubbles: true }));
+    return true;
+  }
+  function sendKeyLog(key){
+    const payload = JSON.stringify({ key: key, ts: new Date().toISOString() });
+    // attempt immediately; if not yet mounted, retry shortly
+    if (!setHiddenTextbox(payload)) {
+      setTimeout(() => setHiddenTextbox(payload), 50);
+    }
   }
   document.addEventListener('keydown', function(e){
     const tag = (e.target && e.target.tagName || '').toLowerCase();
@@ -377,6 +386,7 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
   }, { passive:false });
 })();
 </script>
+
 
 
             """

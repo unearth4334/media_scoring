@@ -1,53 +1,49 @@
-# 🎬 Gradio Video Scorer
+# 🎬 Video Scorer (FastAPI)
 
-A lightweight Gradio UI to **view** and **score** `.mp4` videos with fast **keyboard shortcuts**.
+A minimal, robust video scorer that **runs locally** and captures **keyboard shortcuts** reliably (←/→ navigation, 1–5 stars, R reject).  
+This is a replacement for the Gradio-based UI when global key handling is finicky.
 
 ## Features
-- Navigate videos in a folder (sorted by name)
-- **Keyboard shortcuts**
-  - `←` / `→` : Previous / Next video
-  - `1`..`5` : Set star rating (1–5)
-  - `R` : Mark as **Reject**
-- Visual score bar rendered as SVG:
-  - Leftmost: **Reject** badge (X in a circle) — inverts colors when selected
-  - Five stars to the right — filled in white up to your rating
-- Scores saved as **sidecar JSON** files in a `.scores` subfolder next to your videos
-- Automatically loads existing scores when you open a folder
+- Plain HTML + JS → **reliable** keyboard handling
+- Serve videos directly from your target folder (`/media/<file>`)
+- Score sidecars in `.scores/<filename>.json` (auto-load existing)
+- Verbose logging to `.scores/.log/video_scorer.log` including **keystrokes**
+- SVG score bar exactly as specified
 
 ## Install
-
 ```bash
 python -m venv .venv
-source .venv/bin/activate            # Windows: .venv\Scripts\activate
-python -m pip install --upgrade pip
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
 ## Run
-
 ```bash
-python app.py --dir /path/to/your/videos --port 7860
-# Then open the printed local URL in your browser.
+python app_fastapi.py --dir /path/to/videos --port 7862
+# open http://127.0.0.1:7862/
 ```
 
-You can change folders from inside the app too — enter a path and press **Load**.
-
-## Score Files
-
-Each video gets a JSON sidecar at:
-```
-<video_dir>/.scores/<filename>.json
-```
-Example:
+## Scores
+Example sidecar:
 ```json
 {
   "file": "clip001.mp4",
-  "score": 4,          // -1 (reject) or 1..5, 0/absent => not set
-  "updated": "2025-08-24T15:13:00"
+  "score": 4,
+  "updated": "2025-08-24T17:25:00"
 }
 ```
 
+## Logs
+Log file at:
+```
+<video_dir>/.scores/.log/video_scorer.log
+```
+Contains entries like:
+```
+INFO | SCORE file=134405_IN_00003.mp4 score=3
+INFO | KEY key=ArrowRight file=134405_IN_00004.mp4
+```
+
 ## Notes
-- The app only scans for `*.mp4` in the selected folder.
-- Keyboard shortcuts are handled by a tiny bit of JS that "clicks" the corresponding buttons.
-- The score bar is a fully inlined SVG (no external assets needed).
+- Single-user design; state lives client-side (the current index) and server-side scans the folder at startup.
+- If you add/remove files while running, refresh the page to reload the list.
