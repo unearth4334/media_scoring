@@ -32,6 +32,7 @@ VIDEO_DIR: Path = Path.cwd()
 LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
 FILE_PATTERN: str = "*.mp4"
+STYLE_FILE: str = "style_default.css"
 
 def scores_dir_for(directory: Path) -> Path:
     sdir = directory / ".scores"
@@ -221,7 +222,7 @@ def _read_png_parameters_text(png_path: Path, max_bytes: int = 2_000_000) -> Opt
 
 @APP.get("/", response_class=HTMLResponse)
 def index():
-    return HTMLResponse(CLIENT_HTML)
+    return HTMLResponse(CLIENT_HTML.replace('href="/static/style.css"', f'href="/static/{STYLE_FILE}"'))
 
 @APP.get("/api/videos")
 def api_videos():
@@ -509,22 +510,22 @@ function updateDownloadButton(name){
 
 
 function svgReject(selected){
-  const circleFill = selected ? "white" : "black";
-  const xColor = selected ? "black" : "white";
+  const circleFill = selected ? "var(--reject-fill-selected)" : "var(--reject-fill-unselected)";
+  const xColor = selected ? "var(--reject-x-selected)" : "var(--reject-x-unselected)";
   const r = 16, cx=20, cy=20;
   return `
 <svg width="40" height="40" viewBox="0 0 40 40">
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${circleFill}" stroke="white" stroke-width="2" />
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${circleFill}" stroke="var(--reject-stroke-color)" stroke-width="2" />
   <line x1="${cx-10}" y1="${cy-10}" x2="${cx+10}" y2="${cy+10}" stroke="${xColor}" stroke-width="4" stroke-linecap="round" />
   <line x1="${cx-10}" y1="${cy+10}" x2="${cx+10}" y2="${cy-10}" stroke="${xColor}" stroke-width="4" stroke-linecap="round" />
 </svg>`;
 }
 function svgStar(filled){
-  const fill = filled ? "white" : "black";
+  const fill = filled ? "var(--star-fill-selected)" : "var(--star-fill-unselected)";
   return `
 <svg width="40" height="40" viewBox="0 0 40 40">
   <polygon points="20,4 24,16 36,16 26,24 30,36 20,28 10,36 14,24 4,16 16,16"
-    fill="${fill}" stroke="white" stroke-width="2"/>
+    fill="${fill}" stroke="var(--star-stroke-color)" stroke-width="2"/>
 </svg>`;
 }
 function renderScoreBar(score){
@@ -777,13 +778,14 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
     ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
+    ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css or style_pastelcore.css)")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -791,6 +793,7 @@ def main():
         raise SystemExit(f"Directory not found: {start_dir}")
 
     FILE_PATTERN = args.pattern or "*.mp4"
+    STYLE_FILE = args.style or "style_default.css"
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
