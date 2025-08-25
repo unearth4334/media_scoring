@@ -56,7 +56,10 @@ coverage.xml
 Thumbs.db
 
 # Log files
-*.logtest_media/
+*.log
+
+# Test directories
+test_media/
 
 # Ignore self-generated files
 .thumbnails/
