@@ -7,6 +7,8 @@ import json
 import logging
 from pathlib import Path
 from typing import List, Dict, Optional
+import subprocess
+import sys
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -76,6 +78,40 @@ def switch_directory(new_dir: Path):
     LOGGER.info(f"SCAN dir={VIDEO_DIR} videos={len(FILE_LIST)}")
 
 
+
+def extractor_script_path() -> Path:
+    # expect the script to live next to this app.py
+    here = Path(__file__).resolve().parent
+    return here / "extract_comfyui_workflow.py"
+
+def ensure_workflows_dir(for_video: Path) -> Path:
+    wf_dir = for_video.parent / "workflows"
+    wf_dir.mkdir(parents=True, exist_ok=True)
+    return wf_dir
+
+def extract_workflow_for(video_path: Path) -> Dict[str, str]:
+    """Run the external extractor for a single mp4 and write:
+    ./workflows/<filename_without_ext>_workflow.json
+    Returns a dict with status and paths.
+    """
+    if not video_path.exists():
+        return {"name": video_path.name, "status": "error", "error": "file_not_found"}
+    script = extractor_script_path()
+    if not script.exists():
+        return {"name": video_path.name, "status": "error", "error": "missing_extractor"}
+    out_path = ensure_workflows_dir(video_path) / f"{video_path.stem}_workflow.json"
+    cmd = [sys.executable, str(script), str(video_path), "-o", str(out_path)]
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if cp.returncode == 0:
+            LOGGER.info(f"EXTRACT success file={video_path.name} out={out_path}")
+            return {"name": video_path.name, "status": "ok", "output": str(out_path)}
+        else:
+            LOGGER.warning(f"EXTRACT failed file={video_path.name} rc={cp.returncode} stderr={cp.stderr.strip()}")
+            return {"name": video_path.name, "status": "error", "error": f"rc={cp.returncode}", "stderr": cp.stderr}
+    except FileNotFoundError:
+        return {"name": video_path.name, "status": "error", "error": "python_not_found"}
+
 # ---------------------------
 # API Routes
 # ---------------------------
@@ -136,6 +172,26 @@ async def api_key(req: Request):
     fname = str(data.get("name"))
     LOGGER.info(f"KEY key={key} file={fname}")
     return {"ok": True}
+
+@APP.post("/api/extract")
+async def api_extract(req: Request):
+    """Extract ComfyUI workflow JSON for one or more files.
+    JSON body: { "names": ["file1.mp4", ...] }
+    """
+    data = await req.json()
+    names = data.get("names") or []
+    if not isinstance(names, list):
+        raise HTTPException(400, "names must be a list of filenames")
+    results = []
+    for nm in names:
+        vp = (VIDEO_DIR / nm).resolve()
+        try:
+            vp.relative_to(VIDEO_DIR)
+        except Exception:
+            results.append({"name": nm, "status": "error", "error": "forbidden_path"})
+            continue
+        results.append(extract_workflow_for(vp))
+    return {"results": results}
 
 # ---------------------------
 # Client HTML/JS
@@ -221,6 +277,8 @@ CLIENT_HTML = r"""
         <button data-star="3">★3</button>
         <button data-star="4">★4</button>
         <button data-star="5">★5</button>
+        <button id="extract_one">Extract workflow (current)</button>
+        <button id="extract_filtered">Extract workflows (filtered)</button>
       </div>
     </section>
   </main>
@@ -428,6 +486,46 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "5"){ e.preventDefault(); postKey("5"); postScore(5); return; }
   if (e.key === "r" || e.key === "R"){ e.preventDefault(); postKey("R"); postScore(-1); return; }
 });
+
+
+async function extractCurrent(){
+  if (!filtered.length) { alert("No video selected."); return; }
+  const v = filtered[idx];
+  try{
+    const res = await fetch("/api/extract", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ names: [v.name] })
+    });
+    const data = await res.json();
+    const ok = (data.results||[]).filter(r=>r.status==="ok").length;
+    const err = (data.results||[]).length - ok;
+    postKey("ExtractOne");
+    alert(`Extracted: ${ok} OK, ${err} errors`);
+  }catch(e){
+    alert("Extraction failed: " + e);
+  }
+}
+async function extractFiltered(){
+  if (!filtered.length) { alert("No videos in current filter scope."); return; }
+  const names = filtered.map(v => v.name);
+  try{
+    const res = await fetch("/api/extract", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ names })
+    });
+    const data = await res.json();
+    const ok = (data.results||[]).filter(r=>r.status==="ok").length;
+    const err = (data.results||[]).length - ok;
+    postKey("ExtractFiltered");
+    alert(`Extracted: ${ok} OK, ${err} errors`);
+  }catch(e){
+    alert("Bulk extraction failed: " + e);
+  }
+}
+document.getElementById("extract_one").addEventListener("click", extractCurrent);
+document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 
 window.addEventListener("load", loadVideos);
 </script>
