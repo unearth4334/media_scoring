@@ -152,8 +152,9 @@ CLIENT_HTML = r"""
     body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
     header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
     h1 { font-size:18px; margin:0 0 8px 0; }
-    main { padding:16px; max-width:1100px; margin:0 auto; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    main { padding:16px; max-width:1200px; margin:0 auto; }
+    .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
+    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
     .filename { font-family:monospace; opacity:0.9; }
     .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:8px 12px; border-radius:8px; cursor:pointer; }
     .controls button:hover { background:#3a3a3a; }
@@ -162,6 +163,14 @@ CLIENT_HTML = r"""
     .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
     input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:420px; }
     .grow { flex: 1 1 auto; min-width: 280px; }
+    /* Sidebar */
+    aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px solid #333; border-radius:10px; padding:8px; }
+    .item { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
+    .item:hover { background:#2a2a2a; }
+    .item.current { background:#343434; }
+    .item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 230px; }
+    .item .score { font-size:12px; opacity:0.9; }
+    .item.disabled { opacity:0.4; cursor:default; }
   </style>
 </head>
 <body>
@@ -169,7 +178,7 @@ CLIENT_HTML = r"""
     <h1>🎬 Video Scorer (FastAPI)</h1>
     <div class="pill">Keys: ←/→ navigate • Space play/pause • 1–5 rate • R reject</div>
   </header>
-  <main>
+  <main class="layout">
     <div class="row">
       <input id="dir" type="text" class="grow" placeholder="/path/to/videos"/>
       <button id="load">Load</button>
@@ -187,25 +196,33 @@ CLIENT_HTML = r"""
       </select>
       <div id="filter_info" class="filename"></div>
     </div>
-    <div class="row">
-      <div class="filename" id="filename">(loading…)</div>
-    </div>
-    <div class="row">
-      <div class="video-wrap">
-        <video id="player" width="960" height="540" controls preload="metadata"></video>
-        <div class="scorebar" id="scorebar"></div>
+    <aside id="sidebar">
+      <div id="sidebar_list"></div>
+    </aside>
+    <section id="right">
+      <div class="row">
+        <div id="filter_info" class="filename"></div>
       </div>
-    </div>
-    <div class="row controls">
-      <button id="prev">← Prev</button>
-      <button id="next">Next →</button>
-      <button id="reject">Reject (R)</button>
-      <button data-star="1">★1</button>
-      <button data-star="2">★2</button>
-      <button data-star="3">★3</button>
-      <button data-star="4">★4</button>
-      <button data-star="5">★5</button>
-    </div>
+      <div class="row">
+        <div class="filename" id="filename">(loading…)</div>
+      </div>
+      <div class="row">
+        <div class="video-wrap">
+          <video id="player" width="960" height="540" controls preload="metadata"></video>
+          <div class="scorebar" id="scorebar"></div>
+        </div>
+      </div>
+      <div class="row controls">
+        <button id="prev">← Prev</button>
+        <button id="next">Next →</button>
+        <button id="reject">Reject (R)</button>
+        <button data-star="1">★1</button>
+        <button data-star="2">★2</button>
+        <button data-star="3">★3</button>
+        <button data-star="4">★4</button>
+        <button data-star="5">★5</button>
+      </div>
+    </section>
   </main>
 <script>
 let videos = [];
@@ -245,6 +262,42 @@ function renderScoreBar(score){
   bar.innerHTML = html;
 }
 
+
+function scoreBadge(s){
+  if (s === -1) return 'R';
+  if (!s || s < 1) return '—';
+  return s + '★';
+}
+
+function renderSidebar(){
+  const list = document.getElementById('sidebar_list');
+  if (!list) return;
+  let html = '';
+  const namesInFiltered = new Set(filtered.map(v => v.name));
+  videos.forEach((v) => {
+    const inFiltered = namesInFiltered.has(v.name);
+    const s = scoreBadge(v.score || 0);
+    const classes = ['item'];
+    if (!inFiltered) classes.push('disabled');
+    if (filtered.length && filtered[idx] && filtered[idx].name === v.name) classes.push('current');
+    html += `<div class="${classes.join(' ')}" data-name="${v.name}" ${inFiltered ? '' : 'data-disabled="1"'}>` +
+            `<div class="name" title="${v.name}">${v.name}</div>` +
+            `<div class="score">${s}</div>` +
+            `</div>`;
+  });
+  list.innerHTML = html;
+
+  // Attach click handlers only for enabled items
+  list.querySelectorAll('.item').forEach(el => {
+    if (el.getAttribute('data-disabled') === '1') return;
+    el.addEventListener('click', () => {
+      const name = el.getAttribute('data-name');
+      const j = filtered.findIndex(x => x.name === name);
+      if (j >= 0) show(j);
+    });
+  });
+}
+
 function applyFilter(){
   if (minFilter === null){ filtered = videos.slice(); }
   else { filtered = videos.filter(v => (v.score||0) >= minFilter); }
@@ -278,6 +331,7 @@ async function loadVideos(){
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
   applyFilter();
+  renderSidebar();
   show(0);
 }
 
@@ -338,6 +392,7 @@ document.getElementById('min_filter').addEventListener('change', () => {
   minFilter = (val === 'none') ? null : parseInt(val);
   fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':('>='+minFilter)), name: '' })});
   applyFilter();
+  renderSidebar();
   show(0);
 });
 
