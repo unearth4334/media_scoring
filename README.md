@@ -3,6 +3,7 @@
 A minimal, robust video scorer that **captures keyboard shortcuts** and now includes a **directory picker** so you can switch folders on the fly.
 
 ## Features
+- **Minimum rating filter** dropdown (No filter, 1–5). Navigation and queue respect the filter; scoring re-applies it on the fly.
 - Plain HTML + JS → reliable keys (←/→, Space, 1–5, R)
 - Change directory from the UI (textbox + Load button or press Enter)
 - Serves media from the **current** directory via `/media/<file>`

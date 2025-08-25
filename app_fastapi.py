@@ -176,6 +176,18 @@ CLIENT_HTML = r"""
       <div id="dir_display" class="filename"></div>
     </div>
     <div class="row">
+      <label for="min_filter">Minimum rating:</label>
+      <select id="min_filter">
+        <option value="none" selected>No filter</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      <div id="filter_info" class="filename"></div>
+    </div>
+    <div class="row">
       <div class="filename" id="filename">(loading…)</div>
     </div>
     <div class="row">
@@ -197,8 +209,10 @@ CLIENT_HTML = r"""
   </main>
 <script>
 let videos = [];
+let filtered = [];
 let idx = 0;
 let currentDir = "";
+let minFilter = null; // null means no filter; otherwise 1..5
 
 function svgReject(selected){
   const circleFill = selected ? "white" : "black";
@@ -231,13 +245,27 @@ function renderScoreBar(score){
   bar.innerHTML = html;
 }
 
+function applyFilter(){
+  if (minFilter === null){ filtered = videos.slice(); }
+  else { filtered = videos.filter(v => (v.score||0) >= minFilter); }
+  const info = document.getElementById('filter_info');
+  const label = (minFilter===null? 'No filter' : ('rating ≥ ' + minFilter));
+  info.textContent = `${label} — showing ${filtered.length}/${videos.length}`;
+}
+
 function show(i){
-  if (videos.length === 0) return;
-  idx = Math.max(0, Math.min(i, videos.length-1));
-  const v = videos[idx];
-  const player = document.getElementById("player");
+  if (filtered.length === 0){
+    document.getElementById('filename').textContent = '(no items match filter)';
+    const player = document.getElementById('player');
+    player.removeAttribute('src'); player.load();
+    renderScoreBar(0);
+    return;
+  }
+  idx = Math.max(0, Math.min(i, filtered.length-1));
+  const v = filtered[idx];
+  const player = document.getElementById('player');
   player.src = v.url + `#t=0.001`;
-  document.getElementById("filename").textContent = `${idx+1}/${videos.length}  •  ${v.name}`;
+  document.getElementById('filename').textContent = `${idx+1}/${filtered.length} (of ${videos.length})  •  ${v.name}`;
   renderScoreBar(v.score || 0);
 }
 
@@ -246,22 +274,36 @@ async function loadVideos(){
   const data = await res.json();
   videos = data.videos || [];
   currentDir = data.dir || "";
-  document.getElementById("dir_display").textContent = currentDir;
-  const dirInput = document.getElementById("dir");
+  document.getElementById('dir_display').textContent = currentDir;
+  const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
+  applyFilter();
   show(0);
 }
 
 async function postScore(score){
-  const v = videos[idx];
+  // v is from filtered list for current idx
+  const v = filtered[idx];
   if (!v) return;
-  await fetch("/api/score", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
+  await fetch('/api/score', {
+    method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ name: v.name, score: score })
   });
+  // Update underlying source entry
+  const source = videos.find(x => x.name === v.name);
+  if (source) source.score = score;
   v.score = score;
-  renderScoreBar(score);
+  // Re-apply filter and keep continuity
+  const curName = v.name;
+  applyFilter();
+  const newIndex = filtered.findIndex(x => x.name === curName);
+  if (newIndex === -1){
+    // current item no longer matches; move to next best
+    if (filtered.length > 0){ show(Math.min(idx, filtered.length-1)); }
+    else { show(0); }
+  } else {
+    show(newIndex);
+  }
 }
 
 async function postKey(key){
@@ -291,15 +333,23 @@ document.getElementById("load").addEventListener("click", () => {
   const path = (document.getElementById("dir").value || "").trim();
   if (path) scanDir(path);
 });
-document.getElementById("dir").addEventListener("keydown", (e) => {
+document.getElementById('min_filter').addEventListener('change', () => {
+  const val = document.getElementById('min_filter').value;
+  minFilter = (val === 'none') ? null : parseInt(val);
+  fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':('>='+minFilter)), name: '' })});
+  applyFilter();
+  show(0);
+});
+
+document.getElementById('dir').addEventListener('keydown', (e) => {
   if (e.key === "Enter"){
     const path = (document.getElementById("dir").value || "").trim();
     if (path) scanDir(path);
   }
 });
 
-document.getElementById("prev").addEventListener("click", () => { show(idx-1); });
-document.getElementById("next").addEventListener("click", () => { show(idx+1); });
+document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
+document.getElementById('next').addEventListener('click', () => { show(idx+1); });
 document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
 
 document.querySelectorAll("[data-star]").forEach(btn => {
@@ -312,10 +362,7 @@ document.querySelectorAll("[data-star]").forEach(btn => {
 document.addEventListener("keydown", (e) => {
   if (["INPUT","TEXTAREA"].includes((e.target.tagName||"").toUpperCase())) return;
   const player = document.getElementById("player");
-  function togglePlay(){
-    if (!player) return;
-    if (player.paused) { player.play(); } else { player.pause(); }
-  }
+  function togglePlay(){ if (!player) return; if (player.paused) { player.play(); } else { player.pause(); } }
   if (e.key === "ArrowLeft"){ e.preventDefault(); postKey("ArrowLeft"); show(idx-1); return; }
   if (e.key === "ArrowRight"){ e.preventDefault(); postKey("ArrowRight"); show(idx+1); return; }
   if (e.key === " "){ e.preventDefault(); postKey("Space"); togglePlay(); return; }
