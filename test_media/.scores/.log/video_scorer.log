@@ -84,3 +84,11 @@
 2025-08-25 22:35:10,429 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_2.mp4: [Errno 2] No such file or directory: 'ffmpeg'
 2025-08-25 22:35:10,429 | ERROR | Failed to generate video thumbnail for /home/runner/work/media_scoring/media_scoring/test_media/test_video_3.mp4: [Errno 2] No such file or directory: 'ffmpeg'
 2025-08-25 22:35:10,430 | INFO  | Thumbnail generation complete: 5 generated, 0 skipped
+2025-08-25 23:07:14,598 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:07:14,599 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.png|*.jpg|*.mp4 files=12
+2025-08-25 23:07:48,492 | INFO  | KEY key=ExportFiltered file=test1.mp4
+2025-08-25 23:08:05,824 | INFO  | KEY key=Filter=>=3 file=
+2025-08-25 23:08:28,947 | INFO  | KEY key=Filter=none file=
+2025-08-25 23:08:38,005 | INFO  | SCORE file=test1.mp4 score=5
+2025-08-25 23:08:45,890 | INFO  | KEY key=Filter=>=5 file=
+2025-08-25 23:08:54,085 | INFO  | KEY key=ExportFiltered file=test1.mp4

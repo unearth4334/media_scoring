@@ -10,6 +10,8 @@ from typing import List, Dict, Optional
 import subprocess
 import sys
 import threading
+import tempfile
+import zipfile
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -559,6 +561,48 @@ async def api_extract(req: Request):
         results.append(extract_workflow_for(vp))
     return {"results": results}
 
+@APP.post("/api/export-filtered")
+async def api_export_filtered(req: Request):
+    """Export all filtered files as a zip archive for download.
+    JSON body: { "names": ["file1.mp4", "file2.png", ...] }
+    """
+    data = await req.json()
+    names = data.get("names") or []
+    if not isinstance(names, list):
+        raise HTTPException(400, "names must be a list of filenames")
+    
+    if not names:
+        raise HTTPException(400, "No files to export")
+    
+    # Create a temporary zip file
+    temp_zip = tempfile.NamedTemporaryFile(delete=False, suffix='.zip')
+    temp_zip.close()
+    
+    try:
+        with zipfile.ZipFile(temp_zip.name, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for name in names:
+                file_path = (VIDEO_DIR / name).resolve()
+                try:
+                    file_path.relative_to(VIDEO_DIR)
+                except Exception:
+                    continue  # Skip forbidden paths
+                
+                if file_path.exists() and file_path.is_file():
+                    # Add file to zip with just the filename (no path)
+                    zf.write(file_path, name)
+        
+        # Return the zip file
+        return FileResponse(
+            temp_zip.name, 
+            media_type="application/zip", 
+            filename="filtered_media.zip",
+            headers={"Content-Disposition": "attachment; filename=filtered_media.zip"}
+        )
+    except Exception as e:
+        # Clean up temp file on error
+        Path(temp_zip.name).unlink(missing_ok=True)
+        raise HTTPException(500, f"Failed to create zip archive: {str(e)}")
+
 # ---------------------------
 # Client HTML/JS
 # ---------------------------
@@ -623,6 +667,18 @@ CLIENT_HTML = r"""
         <div style="margin-top: 4px;">
           <span id="thumbnail_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
         </div>
+      </div>
+      <div id="export_controls" style="margin-bottom: 8px;">
+        <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
+          <!-- ZIP folder icon SVG -->
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+            <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10 16H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Export Filtered
+        </button>
       </div>
       <div id="sidebar_list"></div>
     </aside>
@@ -1044,8 +1100,38 @@ async function extractFiltered(){
     alert("Bulk extraction failed: " + e);
   }
 }
+async function exportFiltered(){
+  if (!filtered.length) { alert("No items in current filter scope."); return; }
+  const names = filtered.map(v => v.name);
+  if (!names.length){ alert('No files in the current filtered view.'); return; }
+  try{
+    const res = await fetch("/api/export-filtered", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ names })
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    // Create a blob from the response and trigger download
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'filtered_media.zip';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    postKey("ExportFiltered");
+  }catch(e){
+    alert("Export failed: " + e);
+  }
+}
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
+document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);
 </script>
 </body>

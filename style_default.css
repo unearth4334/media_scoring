@@ -48,3 +48,7 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
 #download_btn svg { vertical-align: middle; }
 /* Thumbnail status message */
 #thumbnail_status { color: #ccc; font-size: 12px; opacity: 0.8; margin-left: 8px; }
+/* Export button */
+#export_filtered_btn { color: #eee; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#export_filtered_btn:hover { background: #3a3a3a; }
+#export_filtered_btn svg { vertical-align: middle; }

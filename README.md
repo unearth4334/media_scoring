@@ -184,6 +184,7 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0
 - **Download current**: Save active file locally
 - **Extract one**: Extract workflow JSON for current file
 - **Extract filtered**: Extract workflow JSONs for all filtered files
+- **Export Filtered**: Download all filtered files as a ZIP archive
 
 ---
 
@@ -219,5 +220,5 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 - Recursive glob patterns (`**/*.png`)
 - ✅ Image/video thumbnails in sidebar
 - Multi-directory support
-- Bulk download of filtered items
+- ✅ Bulk download of filtered items
 - Sorting by score/filename/date
