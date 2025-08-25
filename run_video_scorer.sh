@@ -7,6 +7,6 @@ if [ ! -d ".venv" ]; then python3 -m venv .venv; fi
 python -m pip install --upgrade pip >/dev/null
 pip install -r requirements.txt >/dev/null
 eval "$( .venv/bin/python read_config.py --file config.yml --format sh )"
-DIR="${1:-$DIR}"; PORT="${2:-$PORT}"; HOST="${HOST:-$HOST}"
-echo "Starting Video Scorer: dir=$DIR  port=$PORT  host=$HOST"
-exec python app.py --dir "$DIR" --port "$PORT" --host "$HOST"
+DIR="${1:-$DIR}"; PORT="${2:-$PORT}"; HOST="${HOST:-$HOST}"; STYLE="${STYLE:-$STYLE}"
+echo "Starting Video Scorer: dir=$DIR  port=$PORT  host=$HOST  style=$STYLE"
+exec python app.py --dir "$DIR" --port "$PORT" --host "$HOST" --style "$STYLE"

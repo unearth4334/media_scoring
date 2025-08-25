@@ -32,6 +32,7 @@ VIDEO_DIR: Path = Path.cwd()
 LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
 FILE_PATTERN: str = "*.mp4"
+STYLE_FILE: str = "style_default.css"
 
 def scores_dir_for(directory: Path) -> Path:
     sdir = directory / ".scores"
@@ -221,7 +222,7 @@ def _read_png_parameters_text(png_path: Path, max_bytes: int = 2_000_000) -> Opt
 
 @APP.get("/", response_class=HTMLResponse)
 def index():
-    return HTMLResponse(CLIENT_HTML)
+    return HTMLResponse(CLIENT_HTML.replace('href="/static/style.css"', f'href="/static/{STYLE_FILE}"'))
 
 @APP.get("/api/videos")
 def api_videos():
@@ -777,13 +778,14 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
     ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
+    ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css or style_pastelcore.css)")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -791,6 +793,7 @@ def main():
         raise SystemExit(f"Directory not found: {start_dir}")
 
     FILE_PATTERN = args.pattern or "*.mp4"
+    STYLE_FILE = args.style or "style_default.css"
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
