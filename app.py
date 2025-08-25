@@ -383,6 +383,7 @@ CLIENT_HTML = r"""
     .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
     .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
     .filename { font-family:monospace; opacity:0.9; }
+    .controls { display:flex; gap:8px; margin-left:auto; }
     .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:8px 12px; border-radius:8px; cursor:pointer; }
     .controls button:hover { background:#3a3a3a; }
     .video-wrap { background:#000; padding:8px; border-radius:12px; position:relative; }
@@ -433,6 +434,24 @@ CLIENT_HTML = r"""
         <option value="5">5</option>
       </select>
       <div id="filter_info" class="filename"></div>
+      <div class="controls">
+        <button id="prev">Prev</button>
+        <button id="next">Next</button>
+        <button id="reject">Reject</button>
+        <button data-star="1">★1</button>
+        <button data-star="2">★2</button>
+        <button data-star="3">★3</button>
+        <button data-star="4">★4</button>
+        <button data-star="5">★5</button>
+        <button id="extract_one">Extract workflow (current)</button>
+        <button id="extract_filtered">Extract workflows (filtered)</button>
+        <button id="download_btn" title="Download current">
+          <!-- Download icon SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+      </div>
     </div>
     <aside id="sidebar">
       <div id="sidebar_list"></div>
@@ -454,24 +473,6 @@ CLIENT_HTML = r"""
           <img id="imgview" style="max-width:960px; max-height:540px; display:none" />
           <div class="scorebar" id="scorebar"></div>
         </div>
-      </div>
-      <div class="row controls">
-        <button id="prev">Prev</button>
-        <button id="next">Next</button>
-        <button id="reject">Reject</button>
-        <button data-star="1">★1</button>
-        <button data-star="2">★2</button>
-        <button data-star="3">★3</button>
-        <button data-star="4">★4</button>
-        <button data-star="5">★5</button>
-        <button id="extract_one">Extract workflow (current)</button>
-        <button id="extract_filtered">Extract workflows (filtered)</button>
-        <button id="download_btn" title="Download current">
-          <!-- Download icon SVG -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
       </div>
     </section>
   </main>
