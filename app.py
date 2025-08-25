@@ -23,6 +23,30 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 
 import gradio as gr
+import logging
+
+LOGGER = None
+CURRENT_DIR = None
+
+def _get_logger(directory: Path):
+    global LOGGER, CURRENT_DIR
+    if directory is None:
+        directory = Path.cwd()
+    if LOGGER is not None and CURRENT_DIR == str(directory):
+        return LOGGER
+    LOGGER = logging.getLogger('video_scorer')
+    LOGGER.setLevel(logging.DEBUG)
+    # Clear prior handlers
+    for h in list(LOGGER.handlers):
+        LOGGER.removeHandler(h)
+    log_dir = directory / '.scores' / '.log'
+    log_dir.mkdir(parents=True, exist_ok=True)
+    fh = logging.FileHandler(log_dir / 'video_scorer.log', encoding='utf-8')
+    fh.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+    LOGGER.addHandler(fh)
+    CURRENT_DIR = str(directory)
+    LOGGER.debug(f'Logger initialized for directory: {CURRENT_DIR}')
+    return LOGGER
 
 # ------------------------------
 # Helpers for file & score I/O
@@ -158,13 +182,21 @@ def present_video(files: List[str], idx: int, scores: Dict[str,int]) -> Tuple[st
     sc = scores.get(path, read_score_for(Path(path)) or 0)
     svg = render_score_svg(sc if sc is not None else 0)
     score_label = "Reject" if sc == -1 else (str(sc) if sc and sc > 0 else "—")
+    try:
+        log = _get_logger(Path(path).parent)
+        log.debug(f'PRESENT index={idx} file={Path(path).name} score={score_label}')
+    except Exception:
+        pass
     return path, Path(path).name, f"Score: {score_label}", svg
 
 def load_directory(dir_text: str, st_files, st_index, st_scores):
     directory = Path(dir_text).expanduser().resolve()
+    log = _get_logger(directory)
+    log.info(f'LOAD directory: {directory}')
     if not directory.exists() or not directory.is_dir():
         return gr.update(value=""), "(no files)", "Score: —", render_score_svg(0), [], 0, {}
     vids = [str(p) for p in discover_videos(directory)]
+    log.info(f'Discovered {len(vids)} videos')
     # preload known scores
     scmap: Dict[str,int] = {}
     for p in vids:
@@ -178,12 +210,16 @@ def nav_prev(st_files, st_index, st_scores):
     if not st_files:
         return present_video([], 0, {})
     idx = _safe_index(st_index - 1, len(st_files))
+    log = _get_logger(Path(st_files[0]).parent if st_files else Path.cwd())
+    log.info(f'NAV prev -> index {idx}')
     return present_video(st_files, idx, st_scores) + (idx,)
 
 def nav_next(st_files, st_index, st_scores):
     if not st_files:
         return present_video([], 0, {})
     idx = _safe_index(st_index + 1, len(st_files))
+    log = _get_logger(Path(st_files[0]).parent if st_files else Path.cwd())
+    log.info(f'NAV next -> index {idx}')
     return present_video(st_files, idx, st_scores) + (idx,)
 
 def set_reject(st_files, st_index, st_scores):
@@ -191,6 +227,8 @@ def set_reject(st_files, st_index, st_scores):
         return present_video([], 0, {})
     idx = _safe_index(st_index, len(st_files))
     path = Path(st_files[idx])
+    log = _get_logger(path.parent)
+    log.info(f'SET reject: {path.name}')
     write_score_for(path, -1)
     st_scores[st_files[idx]] = -1
     return present_video(st_files, idx, st_scores)
@@ -200,9 +238,28 @@ def set_stars(n: int, st_files, st_index, st_scores):
         return present_video([], 0, {})
     idx = _safe_index(st_index, len(st_files))
     path = Path(st_files[idx])
+    log = _get_logger(path.parent)
+    log.info(f'SET stars={n}: {path.name}')
     write_score_for(path, n)
     st_scores[st_files[idx]] = n
     return present_video(st_files, idx, st_scores)
+
+
+def log_keystroke(payload: str, st_files, st_index):
+    """payload is a JSON string like {"key":"1","ts":"..."}"""
+    try:
+        data = json.loads(payload) if payload else {}
+    except Exception:
+        data = {"raw": payload}
+    # Determine directory for logger
+    directory = Path(st_files[0]).parent if st_files else Path.cwd()
+    log = _get_logger(directory)
+    # Resolve current file name if any
+    fname = Path(st_files[_safe_index(st_index, len(st_files))]).name if st_files else "(none)"
+    log.info(f"KEY key={data.get('key')} ts={data.get('ts')} file={fname}")
+    # return something to keep gradio happy
+    return payload
+
 
 def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None, server_port: Optional[int] = None):
     with gr.Blocks(css="""
@@ -220,6 +277,11 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
             filename = gr.Markdown(" ", elem_classes=["filename"])
         with gr.Row():
             svg_html = gr.HTML(render_score_svg(0))
+
+
+        # Hidden keystroke reporting
+        keystream = gr.Textbox(value="", visible=False, elem_id="keystream", label="keystream")
+        keystream_sink = gr.Textbox(value="", visible=False, elem_id="keystream_sink")
 
         with gr.Row(elem_classes=["controls-row"]):
             prev_btn = gr.Button("← Prev", elem_id="btn_prev")
@@ -260,6 +322,9 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
             outputs=[video, filename, gr.Textbox(visible=False), svg_html, st_index]
         )
 
+        # Keystroke logging
+        keystream.change(log_keystroke, inputs=[keystream, st_files, st_index], outputs=[keystream_sink])
+
         # Scoring
         reject_btn.click(
             set_reject, inputs=[st_files, st_index, st_scores],
@@ -279,24 +344,41 @@ def launch(initial_dir: Optional[str] = None, server_name: Optional[str] = None,
         # Inject small JS to bind keyboard shortcuts to buttons by elem_id.
         gr.HTML(
             """
+
+
 <script>
 (function(){
-  function byId(id){ return document.getElementById(id); }
+  function clickInside(id){
+    const host = document.getElementById(id);
+    if (!host) return;
+    const btn = host.querySelector('button') || host;
+    btn.click();
+  }
+  function sendKeyLog(key){
+    const host = document.getElementById('keystream');
+    if (!host) return;
+    const ta = host.querySelector('textarea');
+    if (!ta) return;
+    const payload = JSON.stringify({ key: key, ts: new Date().toISOString() });
+    ta.value = payload;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+  }
   document.addEventListener('keydown', function(e){
     const tag = (e.target && e.target.tagName || '').toLowerCase();
-    // Don't hijack when typing in inputs/textareas
     if (tag === 'input' || tag === 'textarea') return;
-    if (e.key === 'ArrowLeft') { e.preventDefault(); byId('btn_prev')?.click(); return; }
-    if (e.key === 'ArrowRight') { e.preventDefault(); byId('btn_next')?.click(); return; }
-    if (e.key === '1') { e.preventDefault(); byId('btn_star1')?.click(); return; }
-    if (e.key === '2') { e.preventDefault(); byId('btn_star2')?.click(); return; }
-    if (e.key === '3') { e.preventDefault(); byId('btn_star3')?.click(); return; }
-    if (e.key === '4') { e.preventDefault(); byId('btn_star4')?.click(); return; }
-    if (e.key === '5') { e.preventDefault(); byId('btn_star5')?.click(); return; }
-    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); byId('btn_reject')?.click(); return; }
+    if (e.key === 'ArrowLeft')  { e.preventDefault(); sendKeyLog('ArrowLeft');  clickInside('btn_prev'); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); sendKeyLog('ArrowRight'); clickInside('btn_next'); return; }
+    if (e.key === '1') { e.preventDefault(); sendKeyLog('1'); clickInside('btn_star1'); return; }
+    if (e.key === '2') { e.preventDefault(); sendKeyLog('2'); clickInside('btn_star2'); return; }
+    if (e.key === '3') { e.preventDefault(); sendKeyLog('3'); clickInside('btn_star3'); return; }
+    if (e.key === '4') { e.preventDefault(); sendKeyLog('4'); clickInside('btn_star4'); return; }
+    if (e.key === '5') { e.preventDefault(); sendKeyLog('5'); clickInside('btn_star5'); return; }
+    if (e.key === 'r' || e.key === 'R') { e.preventDefault(); sendKeyLog('R'); clickInside('btn_reject'); return; }
   }, { passive:false });
 })();
 </script>
+
+
             """
         )
 
