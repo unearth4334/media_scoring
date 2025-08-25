@@ -13,6 +13,12 @@ import sys
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 import uvicorn
+import zlib
+
+try:
+    from PIL import Image
+except Exception:
+    Image = None  # Pillow optional; image metadata endpoint will degrade gracefully
 
 # ---------------------------
 # Config / Globals
@@ -134,6 +140,81 @@ def extract_workflow_for(video_path: Path) -> Dict[str, str]:
 # API Routes
 # ---------------------------
 
+
+def _read_png_parameters_text(png_path: Path, max_bytes: int = 2_000_000) -> Optional[str]:
+    """
+    Best-effort parse of PNG tEXt/zTXt/iTXt chunks to extract a 'parameters' text blob
+    (e.g., Automatic1111 / ComfyUI). Returns the text payload if found; otherwise None.
+    """
+    try:
+        with open(png_path, "rb") as f:
+            sig = f.read(8)
+            if sig != b"\x89PNG\r\n\x1a\n":
+                return None
+            read_total = 8
+            param_text = None
+            while True:
+                if read_total > max_bytes:
+                    break
+                len_bytes = f.read(4)
+                if len(len_bytes) < 4:
+                    break
+                length = int.from_bytes(len_bytes, "big")
+                ctype = f.read(4)
+                if len(ctype) < 4:
+                    break
+                data = f.read(length)
+                if len(data) < length:
+                    break
+                _crc = f.read(4)
+                read_total += 12 + length
+                if ctype in (b"tEXt", b"zTXt", b"iTXt"):
+                    try:
+                        if ctype == b"tEXt":
+                            # keyword\0text
+                            if b"\x00" in data:
+                                keyword, text = data.split(b"\x00", 1)
+                                key = keyword.decode("latin-1", "ignore").strip().lower()
+                                if key in ("parameters", "comment", "description"):
+                                    t = text.decode("utf-8", "ignore").strip()
+                                    if t:
+                                        param_text = t
+                        elif ctype == b"zTXt":
+                            # keyword\0compression_method\0 compressed_text
+                            if b"\x00" in data:
+                                parts = data.split(b"\x00", 2)
+                                if len(parts) >= 3:
+                                    keyword = parts[0].decode("latin-1", "ignore").strip().lower()
+                                    comp_method = parts[1][:1] if parts[1] else b"\x00"
+                                    comp_data = parts[2]
+                                    if comp_method == b"\x00":  # zlib/deflate
+                                        try:
+                                            txt = zlib.decompress(comp_data).decode("utf-8", "ignore").strip()
+                                            if keyword in ("parameters", "comment", "description") and txt:
+                                                param_text = txt
+                                        except Exception:
+                                            pass
+                        elif ctype == b"iTXt":
+                            # keyword\0 compression_flag\0 compression_method\0 language_tag\0 translated_keyword\0 text
+                            # We handle only uncompressed (compression_flag==0)
+                            parts = data.split(b'\x00', 5)
+                            if len(parts) >= 6:
+                                keyword = parts[0].decode("utf-8", "ignore").strip().lower()
+                                comp_flag = parts[1][:1] if parts[1] else b"\x00"
+                                # parts[2]=comp_method, parts[3]=language_tag, parts[4]=translated_keyword
+                                text = parts[5]
+                                if comp_flag == b"\x00":
+                                    t = text.decode("utf-8", "ignore").strip()
+                                    if keyword in ("parameters", "comment", "description") and t:
+                                        param_text = t
+                    except Exception:
+                        pass
+                if ctype == b"IEND":
+                    break
+            return param_text
+    except Exception:
+        return None
+
 @APP.get("/", response_class=HTMLResponse)
 def index():
     return HTMLResponse(CLIENT_HTML)
@@ -180,6 +261,53 @@ def serve_media(name: str):
     else:
         mime = "application/octet-stream"
     return FileResponse(target, media_type=mime)
+
+@APP.get("/api/meta/{name:path}")
+def api_meta(name: str):
+    target = (VIDEO_DIR / name).resolve()
+    try:
+        target.relative_to(VIDEO_DIR)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found")
+
+    ext = target.suffix.lower()
+    if ext == ".mp4":
+        # Use ffprobe to retrieve width/height
+        try:
+            cmd = [
+                "ffprobe", "-v", "error",
+                "-select_streams", "video:0",
+                "-show_entries", "stream=width,height",
+                "-of", "json", str(target)
+            ]
+            cp = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            info = json.loads(cp.stdout or "{}")
+            if isinstance(info, dict) and info.get("streams"):
+                st = info["streams"][0]
+                w = st.get("width")
+                h = st.get("height")
+                if w and h:
+                    return {"width": int(w), "height": int(h)}
+        except Exception as e:
+            return {"error": str(e)}
+    elif ext in {".png", ".jpg", ".jpeg"}:
+        try:
+            if Image is None:
+                meta = {"error": "Pillow not installed"}
+            else:
+                with Image.open(target) as im:
+                    meta = {"width": int(im.width), "height": int(im.height)}
+            if ext == ".png":
+                txt = _read_png_parameters_text(target)
+                if txt:
+                    meta["png_text"] = txt
+            return meta
+        except Exception as e:
+            return {"error": str(e)}
+    return {}
+
 
 @APP.get("/download/{name:path}")
 def download_media(name: str):
@@ -257,7 +385,13 @@ CLIENT_HTML = r"""
     .filename { font-family:monospace; opacity:0.9; }
     .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:8px 12px; border-radius:8px; cursor:pointer; }
     .controls button:hover { background:#3a3a3a; }
-    .video-wrap { background:#000; padding:8px; border-radius:12px; }
+    .video-wrap { background:#000; padding:8px; border-radius:12px; position:relative; }
+.overlay-top-left { position:absolute; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
+.overlay-btn { width:32px; height:32px; border-radius:50%; background:#1e1e1e; color:#fff; border:1px solid #777; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0.9; }
+.overlay-btn:hover { background:#2a2a2a; }
+#pnginfo_panel { position:absolute; inset:8px; background:rgba(0,0,0,0.85); color:#fff; padding:12px; border-radius:10px; overflow:auto; z-index:4; display:none; }
+#pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #999; background:#222; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
+#pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
     .scorebar { margin-top:8px; }
     .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
     input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
@@ -309,6 +443,14 @@ CLIENT_HTML = r"""
       </div>
       <div class="row">
         <div class="video-wrap">
+          <div class="overlay-top-left" id="pnginfo_controls" style="display:none;">
+            <div class="overlay-btn" id="pnginfo_btn" title="Show info">i</div>
+            <div class="overlay-btn" id="pngplus_btn" title="More">+</div>
+          </div>
+          <div id="pnginfo_panel">
+            <button id="pnginfo_copy" title="Copy all">Copy</button>
+            <div id="pnginfo_text"></div>
+          </div>
           <video id="player" width="960" height="540" controls preload="metadata" style="display:none"></video>
           <img id="imgview" style="max-width:960px; max-height:540px; display:none" />
           <div class="scorebar" id="scorebar"></div>
@@ -341,6 +483,40 @@ let idx = 0;
 let currentDir = "";
 let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
+
+let currentMeta = null;
+function togglePngInfo(show){
+  const panel = document.getElementById('pnginfo_panel');
+  if (!panel) return;
+  if (show === undefined){ panel.style.display = (panel.style.display==='none' || panel.style.display==='') ? 'block' : 'none'; }
+  else { panel.style.display = show ? 'block' : 'none'; }
+}
+function setupPngInfo(meta, name){
+  currentMeta = meta || null;
+  const controls = document.getElementById('pnginfo_controls');
+  const textDiv = document.getElementById('pnginfo_text');
+  togglePngInfo(false);
+  if (meta && meta.png_text && isImageName(name) && name.toLowerCase().endsWith('.png')){
+    controls.style.display = 'flex';
+    textDiv.textContent = meta.png_text;
+  } else {
+    controls.style.display = 'none';
+    textDiv.textContent = '';
+  }
+}
+document.addEventListener('click', (e)=>{
+  if (e.target && e.target.id === 'pnginfo_btn'){ togglePngInfo(true); }
+  if (e.target && e.target.id === 'pngplus_btn'){ togglePngInfo(true); } // plus also opens
+  if (e.target && e.target.id === 'pnginfo_copy'){ 
+    const text = (document.getElementById('pnginfo_text').textContent)||'';
+    if (!navigator.clipboard){ 
+      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    } else {
+      navigator.clipboard.writeText(text).catch(()=>{});
+    }
+  }
+});
+
 
 function updateDownloadButton(name){
   const db = document.getElementById('download_btn');
@@ -444,6 +620,8 @@ function show(i){
     player.removeAttribute('src'); player.load();
     renderScoreBar(0);
     updateDownloadButton(null);
+    const controls = document.getElementById('pnginfo_controls'); if (controls) controls.style.display='none';
+    const panel = document.getElementById('pnginfo_panel'); if (panel) panel.style.display='none';
     renderSidebar();
     return;
   }
@@ -451,6 +629,15 @@ function show(i){
   const v = filtered[idx];
   showMedia(v.url, v.name);
   document.getElementById('filename').textContent = `${idx+1}/${filtered.length}  •  ${v.name}`;
+  fetch('/api/meta/' + encodeURIComponent(v.name))
+    .then(r => r.ok ? r.json() : null)
+    .then(meta => {
+      if (meta && meta.width && meta.height) {
+        document.getElementById('filename').textContent += ` [${meta.width}x${meta.height}]`;
+      }
+      setupPngInfo(meta, v.name);
+    }).catch(()=>{ setupPngInfo(null, v.name); });
+
   updateDownloadButton(v.name);
   renderScoreBar(v.score || 0);
   renderSidebar();
