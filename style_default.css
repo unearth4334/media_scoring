@@ -53,3 +53,54 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
 #export_filtered_btn { color: #eee; cursor: pointer; display: flex; align-items: center; justify-content: center; }
 #export_filtered_btn:hover { background: #3a3a3a; }
 #export_filtered_btn svg { vertical-align: middle; }
+
+/* Button row layout */
+.button-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Loading button styles */
+.loading-button {
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+  min-height: 32px;
+  flex: 1;
+}
+
+.loading-button .button-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.3s ease;
+}
+
+.loading-button .loading-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #4a9eff 0%, #0066cc 100%);
+  transition: width 0.3s ease;
+  z-index: 1;
+}
+
+.loading-button.loading .button-content {
+  opacity: 0.9;
+  color: white;
+}
+
+.loading-button.loading .loading-bar {
+  animation: loading-progress 2s ease-in-out infinite;
+}
+
+@keyframes loading-progress {
+  0% { width: 0%; }
+  50% { width: 70%; }
+  100% { width: 100%; }
+}

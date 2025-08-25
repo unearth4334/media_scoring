@@ -663,22 +663,28 @@ CLIENT_HTML = r"""
     </div>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
-        <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
+        <div class="button-row">
+          <button id="toggle_thumbnails" class="pill loading-button">
+            <span class="button-content">Toggle Thumbnails</span>
+            <div class="loading-bar"></div>
+          </button>
+          <button id="export_filtered_btn" class="pill loading-button" title="Export all filtered files as ZIP">
+            <span class="button-content">
+              <!-- ZIP folder icon SVG -->
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+                <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path d="M10 16H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              Export Filtered
+            </span>
+            <div class="loading-bar"></div>
+          </button>
+        </div>
         <div style="margin-top: 4px;">
           <span id="thumbnail_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
         </div>
-      </div>
-      <div id="export_controls" style="margin-bottom: 8px;">
-        <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
-          <!-- ZIP folder icon SVG -->
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
-            <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M10 16H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Export Filtered
-        </button>
       </div>
       <div id="sidebar_list"></div>
     </aside>
@@ -716,6 +722,30 @@ let showThumbnails = true; // user preference for showing thumbnails
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
 
+// Loading state management functions
+function setButtonLoading(buttonId, isLoading, loadingText = 'Loading...') {
+  const button = document.getElementById(buttonId);
+  if (!button) return;
+  
+  if (isLoading) {
+    button.classList.add('loading');
+    button.disabled = true;
+    const contentSpan = button.querySelector('.button-content');
+    if (contentSpan) {
+      contentSpan.setAttribute('data-original-text', contentSpan.innerHTML);
+      contentSpan.innerHTML = loadingText;
+    }
+  } else {
+    button.classList.remove('loading');
+    button.disabled = false;
+    const contentSpan = button.querySelector('.button-content');
+    if (contentSpan && contentSpan.getAttribute('data-original-text')) {
+      contentSpan.innerHTML = contentSpan.getAttribute('data-original-text');
+      contentSpan.removeAttribute('data-original-text');
+    }
+  }
+}
+
 function updateThumbnailStatus() {
   fetch('/api/thumbnail-progress')
     .then(r => r.json())
@@ -727,12 +757,18 @@ function updateThumbnailStatus() {
         statusElement.textContent = `Creating thumbnails (${progress.current}/${progress.total})`;
         statusElement.style.display = 'inline';
         
+        // Show loading state on Toggle Thumbnails button
+        setButtonLoading('toggle_thumbnails', true, `Generating (${progress.current}/${progress.total})`);
+        
         // Start polling if not already started
         if (!thumbnailProgressInterval) {
           thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
         }
       } else {
         statusElement.style.display = 'none';
+        
+        // Hide loading state on Toggle Thumbnails button
+        setButtonLoading('toggle_thumbnails', false);
         
         // Stop polling when done
         if (thumbnailProgressInterval) {
@@ -747,6 +783,9 @@ function updateThumbnailStatus() {
       if (statusElement) {
         statusElement.style.display = 'none';
       }
+      
+      // Hide loading state on error
+      setButtonLoading('toggle_thumbnails', false);
       
       // Stop polling on error
       if (thumbnailProgressInterval) {
@@ -1105,6 +1144,10 @@ async function exportFiltered(){
   if (!filtered.length) { alert("No items in current filter scope."); return; }
   const names = filtered.map(v => v.name);
   if (!names.length){ alert('No files in the current filtered view.'); return; }
+  
+  // Show loading state
+  setButtonLoading('export_filtered_btn', true, 'Exporting...');
+  
   try{
     const res = await fetch("/api/export-filtered", {
       method: "POST",
@@ -1128,6 +1171,9 @@ async function exportFiltered(){
     postKey("ExportFiltered");
   }catch(e){
     alert("Export failed: " + e);
+  } finally {
+    // Hide loading state
+    setButtonLoading('export_filtered_btn', false);
   }
 }
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
