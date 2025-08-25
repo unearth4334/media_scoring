@@ -128,3 +128,7 @@
 2025-08-25 23:20:46,143 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.jpg files=11
 2025-08-25 23:20:46,145 | INFO  | Generating thumbnails for 6 files...
 2025-08-25 23:20:46,167 | INFO  | Thumbnail generation complete: 6 generated, 5 skipped
+2025-08-25 23:22:40,079 | INFO  | Logger initialized. dir=/home/runner/work/media_scoring/media_scoring/test_media
+2025-08-25 23:22:40,080 | INFO  | SCAN dir=/home/runner/work/media_scoring/media_scoring/test_media pattern=*.jpg files=11
+2025-08-25 23:22:40,081 | INFO  | All thumbnails already exist, no generation needed
+2025-08-25 23:23:13,266 | INFO  | SCORE file=image1.jpg score=3
