@@ -13,8 +13,9 @@ for /f "usebackq delims=" %%L in (`"%VENV_PY%" read_config.py --file config.yml 
 if not "%~1"=="" set "DIR=%~1"
 if not "%~2"=="" set "PORT=%~2"
 if not "%~3"=="" set "HOST=%~3"
-if not "%~4"=="" set "STYLE=%~4"
-echo Starting Video Scorer: dir=%DIR%  port=%PORT%  host=%HOST%  style=%STYLE%
-"%VENV_PY%" app.py --dir "%DIR%" --port %PORT% --host %HOST% --style "%STYLE%"
+if not "%~4"=="" set "PATTERN=%~4"
+if not "%~5"=="" set "STYLE=%~5"
+echo Starting Video Scorer: dir=%DIR%  port=%PORT%  host=%HOST%  pattern=%PATTERN%  style=%STYLE%
+"%VENV_PY%" app.py --dir "%DIR%" --port %PORT% --host %HOST% --pattern "%PATTERN%" --style "%STYLE%"
 popd
 endlocal

@@ -1,6 +1,7 @@
 dir: ~                        # Default directory to scan
 host: 127.0.0.1               # Host to bind the server
 port: 7862                    # Port to serve
+pattern: "*.mp4"              # Glob pattern for media files (e.g., *.mp4|*.png|*.jpg)
 style: style_default.css      # CSS theme file (style_default.css or style_pastelcore.css)
 generate_thumbnails: true     # Generate thumbnail previews for media files
 thumbnail_height: 64          # Height in pixels for thumbnail previews
