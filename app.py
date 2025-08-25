@@ -1063,7 +1063,7 @@ def main():
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
-    ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css or style_pastelcore.css)")
+    ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
     ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
     ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
     args = ap.parse_args()
