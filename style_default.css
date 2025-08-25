@@ -46,3 +46,5 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
 .helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; }
 /* Download icon button */
 #download_btn svg { vertical-align: middle; }
+/* Thumbnail status message */
+#thumbnail_status { color: #ccc; font-size: 12px; opacity: 0.8; margin-left: 8px; }

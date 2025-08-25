@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import subprocess
 import sys
+import threading
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -35,6 +36,14 @@ FILE_PATTERN: str = "*.mp4"
 STYLE_FILE: str = "style_default.css"
 GENERATE_THUMBNAILS: bool = False
 THUMBNAIL_HEIGHT: int = 64
+
+# Thumbnail generation progress tracking
+THUMBNAIL_PROGRESS = {
+    "generating": False,
+    "current": 0,
+    "total": 0,
+    "current_file": ""
+}
 
 def scores_dir_for(directory: Path) -> Path:
     sdir = directory / ".scores"
@@ -105,9 +114,15 @@ def switch_directory(new_dir: Path, pattern: Optional[str] = None):
     FILE_LIST = discover_files(VIDEO_DIR, FILE_PATTERN)
     LOGGER.info(f"SCAN dir={VIDEO_DIR} pattern={FILE_PATTERN} files={len(FILE_LIST)}")
     
-    # Generate thumbnails if enabled
+    # Generate thumbnails if enabled (in background thread)
     if GENERATE_THUMBNAILS:
-        generate_thumbnails_for_directory(VIDEO_DIR, FILE_LIST)
+        # Start thumbnail generation in background thread
+        thumbnail_thread = threading.Thread(
+            target=generate_thumbnails_for_directory, 
+            args=(VIDEO_DIR, FILE_LIST),
+            daemon=True
+        )
+        thumbnail_thread.start()
 
 
 # ---------------------------
@@ -178,33 +193,64 @@ def generate_thumbnail_for_video(video_path: Path, output_path: Path) -> bool:
 
 def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) -> None:
     """Generate thumbnails for all media files in the directory"""
+    global THUMBNAIL_PROGRESS
+    
     if not GENERATE_THUMBNAILS:
         return
     
-    LOGGER.info(f"Generating thumbnails for {len(file_list)} files...")
-    generated = 0
-    skipped = 0
-    
+    # Initialize progress tracking
+    files_needing_thumbnails = []
     for media_file in file_list:
         thumb_path = thumbnail_path_for(media_file)
-        
-        # Skip if thumbnail already exists
-        if thumb_path.exists():
-            skipped += 1
-            continue
+        if not thumb_path.exists():
+            files_needing_thumbnails.append(media_file)
+    
+    total_files = len(files_needing_thumbnails)
+    if total_files == 0:
+        LOGGER.info("All thumbnails already exist, no generation needed")
+        return
+    
+    THUMBNAIL_PROGRESS.update({
+        "generating": True,
+        "current": 0,
+        "total": total_files,
+        "current_file": ""
+    })
+    
+    LOGGER.info(f"Generating thumbnails for {total_files} files...")
+    generated = 0
+    
+    try:
+        for i, media_file in enumerate(files_needing_thumbnails):
+            # Update progress
+            THUMBNAIL_PROGRESS.update({
+                "current": i + 1,
+                "current_file": media_file.name
+            })
             
-        # Generate thumbnail based on file type
-        success = False
-        name_lower = media_file.name.lower()
-        if name_lower.endswith(('.png', '.jpg', '.jpeg')):
-            success = generate_thumbnail_for_image(media_file, thumb_path)
-        elif name_lower.endswith('.mp4'):
-            success = generate_thumbnail_for_video(media_file, thumb_path)
-        
-        if success:
-            generated += 1
+            thumb_path = thumbnail_path_for(media_file)
             
-    LOGGER.info(f"Thumbnail generation complete: {generated} generated, {skipped} skipped")
+            # Generate thumbnail based on file type
+            success = False
+            name_lower = media_file.name.lower()
+            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                success = generate_thumbnail_for_image(media_file, thumb_path)
+            elif name_lower.endswith('.mp4'):
+                success = generate_thumbnail_for_video(media_file, thumb_path)
+            
+            if success:
+                generated += 1
+                
+    finally:
+        # Reset progress tracking
+        THUMBNAIL_PROGRESS.update({
+            "generating": False,
+            "current": 0,
+            "total": 0,
+            "current_file": ""
+        })
+        
+    LOGGER.info(f"Thumbnail generation complete: {generated} generated, {len(file_list) - total_files} skipped")
 
 
 # ---------------------------
@@ -375,6 +421,11 @@ def serve_media(name: str):
     else:
         mime = "application/octet-stream"
     return FileResponse(target, media_type=mime)
+
+@APP.get("/api/thumbnail-progress")
+def get_thumbnail_progress():
+    """Get current thumbnail generation progress"""
+    return THUMBNAIL_PROGRESS.copy()
 
 @APP.get("/thumbnail/{name:path}")
 def serve_thumbnail(name: str):
@@ -569,6 +620,7 @@ CLIENT_HTML = r"""
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
+        <span id="thumbnail_status" style="margin-left: 8px; font-size: 12px; opacity: 0.8; display: none;"></span>
       </div>
       <div id="sidebar_list"></div>
     </aside>
@@ -602,6 +654,49 @@ let minFilter = null; // null means no filter; otherwise 1..5
 let thumbnailsEnabled = false;
 let thumbnailHeight = 64;
 let showThumbnails = true; // user preference for showing thumbnails
+
+// Thumbnail progress tracking
+let thumbnailProgressInterval = null;
+
+function updateThumbnailStatus() {
+  fetch('/api/thumbnail-progress')
+    .then(r => r.json())
+    .then(progress => {
+      const statusElement = document.getElementById('thumbnail_status');
+      if (!statusElement) return;
+      
+      if (progress.generating && progress.total > 0) {
+        statusElement.textContent = `Creating thumbnails (${progress.current}/${progress.total})`;
+        statusElement.style.display = 'inline';
+        
+        // Start polling if not already started
+        if (!thumbnailProgressInterval) {
+          thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
+        }
+      } else {
+        statusElement.style.display = 'none';
+        
+        // Stop polling when done
+        if (thumbnailProgressInterval) {
+          clearInterval(thumbnailProgressInterval);
+          thumbnailProgressInterval = null;
+        }
+      }
+    })
+    .catch(() => {
+      // Hide status on error
+      const statusElement = document.getElementById('thumbnail_status');
+      if (statusElement) {
+        statusElement.style.display = 'none';
+      }
+      
+      // Stop polling on error
+      if (thumbnailProgressInterval) {
+        clearInterval(thumbnailProgressInterval);
+        thumbnailProgressInterval = null;
+      }
+    });
+}
 
 let currentMeta = null;
 function togglePngInfo(show){
@@ -802,6 +897,11 @@ async function loadVideos(){
     sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
   }
   
+  // Start monitoring thumbnail progress if thumbnails are enabled
+  if (thumbnailsEnabled) {
+    updateThumbnailStatus();
+  }
+  
   applyFilter();
   renderSidebar();
   show(0);
@@ -855,7 +955,13 @@ document.getElementById("pat_help").addEventListener("click", () => {
 });
 document.getElementById("load").addEventListener("click", () => {
   const path = (document.getElementById("dir").value || "").trim();
-  if (path) scanDir(path);
+  if (path) {
+    // Start monitoring thumbnail progress immediately if thumbnails are enabled
+    if (thumbnailsEnabled) {
+      updateThumbnailStatus();
+    }
+    scanDir(path);
+  }
 });
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
