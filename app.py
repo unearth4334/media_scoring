@@ -12,6 +12,7 @@ import sys
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 import zlib
 
@@ -24,6 +25,9 @@ except Exception:
 # Config / Globals
 # ---------------------------
 APP = FastAPI()
+
+# Mount static files to serve CSS and other assets
+APP.mount("/static", StaticFiles(directory=Path(__file__).parent), name="static")
 VIDEO_DIR: Path = Path.cwd()
 LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
@@ -375,40 +379,7 @@ CLIENT_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Favicon: small movie camera emoji as SVG data URI -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
-  <style>
-    body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
-    header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
-    h1 { font-size:18px; margin:0 0 8px 0; }
-    main { padding:16px; max-width:1300px; margin:0 auto; }
-    .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
-    .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
-    .filename { font-family:monospace; opacity:0.9; }
-    .controls { display:flex; gap:8px; margin-left:auto; }
-    .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:4px 6px; border-radius:6px; cursor:pointer; }
-    .controls button:hover { background:#3a3a3a; }
-    .video-wrap { background:#000; padding:8px; border-radius:12px; position:relative; }
-.overlay-top-left { position:absolute; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
-.overlay-btn { width:32px; height:32px; border-radius:50%; background:#1e1e1e; color:#fff; border:1px solid #777; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0.9; }
-.overlay-btn:hover { background:#2a2a2a; }
-#pnginfo_panel { position:absolute; inset:8px; background:rgba(0,0,0,0.85); color:#fff; padding:12px; border-radius:10px; overflow:auto; z-index:4; display:none; }
-#pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #999; background:#222; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
-#pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
-    .scorebar { margin-top:8px; }
-    .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
-    input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
-    .grow { flex: 1 1 auto; min-width: 280px; }
-    /* Sidebar */
-    aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px solid #333; border-radius:10px; padding:8px; }
-    .item { display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
-    .item:hover { background:#2a2a2a; }
-    .item.current { background:#343434; border:1px solid #555; }
-    .item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 230px; }
-    .item .score { font-size:12px; opacity:0.9; }
-    .item.disabled { opacity:0.4; cursor:default; }
-    .helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; }
-    /* Download icon button */
-    #download_btn svg { vertical-align: middle; }
-  </style>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
   <header>
