@@ -620,7 +620,9 @@ CLIENT_HTML = r"""
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
-        <span id="thumbnail_status" style="margin-left: 8px; font-size: 12px; opacity: 0.8; display: none;"></span>
+        <div style="margin-top: 4px;">
+          <span id="thumbnail_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
+        </div>
       </div>
       <div id="sidebar_list"></div>
     </aside>
