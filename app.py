@@ -510,22 +510,22 @@ function updateDownloadButton(name){
 
 
 function svgReject(selected){
-  const circleFill = selected ? "white" : "black";
-  const xColor = selected ? "black" : "white";
+  const circleFill = selected ? "var(--reject-fill-selected)" : "var(--reject-fill-unselected)";
+  const xColor = selected ? "var(--reject-x-selected)" : "var(--reject-x-unselected)";
   const r = 16, cx=20, cy=20;
   return `
 <svg width="40" height="40" viewBox="0 0 40 40">
-  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${circleFill}" stroke="white" stroke-width="2" />
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="${circleFill}" stroke="var(--reject-stroke-color)" stroke-width="2" />
   <line x1="${cx-10}" y1="${cy-10}" x2="${cx+10}" y2="${cy+10}" stroke="${xColor}" stroke-width="4" stroke-linecap="round" />
   <line x1="${cx-10}" y1="${cy+10}" x2="${cx+10}" y2="${cy-10}" stroke="${xColor}" stroke-width="4" stroke-linecap="round" />
 </svg>`;
 }
 function svgStar(filled){
-  const fill = filled ? "white" : "black";
+  const fill = filled ? "var(--star-fill-selected)" : "var(--star-fill-unselected)";
   return `
 <svg width="40" height="40" viewBox="0 0 40 40">
   <polygon points="20,4 24,16 36,16 26,24 30,36 20,28 10,36 14,24 4,16 16,16"
-    fill="${fill}" stroke="white" stroke-width="2"/>
+    fill="${fill}" stroke="var(--star-stroke-color)" stroke-width="2"/>
 </svg>`;
 }
 function renderScoreBar(score){

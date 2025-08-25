@@ -1,3 +1,15 @@
+:root {
+  /* SVG icon colors for light theme */
+  --reject-stroke-color: black;
+  --reject-fill-unselected: white;
+  --reject-fill-selected: black;
+  --reject-x-unselected: black;
+  --reject-x-selected: white;
+  --star-stroke-color: black;
+  --star-fill-unselected: white;
+  --star-fill-selected: black;
+}
+
 body { background:#f8f4f0; color:#5a4a4a; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
 header { padding:12px 16px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
 h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
