@@ -1,4 +1,4 @@
-param([string] $Dir,[int] $Port,[string] $Host,[string] $Style)
+param([string] $Dir,[int] $Port,[string] $Host,[string] $Pattern,[string] $Style)
 $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Definition
 Set-Location $ScriptDir
@@ -10,6 +10,7 @@ $cfg = & $VenvPython "read_config.py" --file "config.yml" --format "json" | Conv
 if (-not $Dir)   { $Dir   = $cfg.dir }
 if (-not $Port)  { $Port  = [int]$cfg.port }
 if (-not $Host)  { $Host  = $cfg.host }
+if (-not $Pattern) { $Pattern = $cfg.pattern }
 if (-not $Style) { $Style = $cfg.style }
-Write-Host "Starting Video Scorer: dir=$Dir  port=$Port  host=$Host  style=$Style"
-& $VenvPython "app.py" --dir $Dir --port $Port --host $Host --style $Style
+Write-Host "Starting Video Scorer: dir=$Dir  port=$Port  host=$Host  pattern=$Pattern  style=$Style"
+& $VenvPython "app.py" --dir $Dir --port $Port --host $Host --pattern $Pattern --style $Style

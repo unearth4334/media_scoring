@@ -101,12 +101,13 @@ Configuration is stored in `config.yml` (or `config.wml` in some setups):
 dir: /path/to/media        # Default directory to scan
 host: 127.0.0.1            # Host to bind the server
 port: 7862                 # Port to serve
+pattern: "*.mp4"           # Glob pattern for media files (e.g., *.mp4|*.png|*.jpg)
 generate_thumbnails: false # Generate thumbnail previews for media files
 thumbnail_height: 64       # Height in pixels for thumbnail previews
 ```
 
 You can override these values at runtime via:
-- **CLI arguments** (`--dir`, `--port`, `--host`)
+- **CLI arguments** (`--dir`, `--port`, `--host`, `--pattern`)
 - **Entrypoint script parameters** (see below)
 
 ---
@@ -120,21 +121,19 @@ All scripts read defaults from **config.yml**, but allow overrides.
 ```bash
 chmod +x run_video_scorer.sh
 ./run_video_scorer.sh                 # use config.yml defaults
-./run_video_scorer.sh /media/dir 9000 # override dir & port
+./run_video_scorer.sh /media/dir 9000 "*.mp4|*.jpg"  # override dir, port & pattern
 ```
 
 ### Windows PowerShell
 ```powershell
-.
-un_video_scorer.ps1                 # use config.yml defaults
-.
-un_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Host 0.0.0.0
+.\run_video_scorer.ps1                 # use config.yml defaults
+.\run_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Pattern "*.mp4|*.jpg" -Host 0.0.0.0
 ```
 
 ### Windows CMD
 ```bat
 run_video_scorer.bat                   REM use config.yml defaults
-run_video_scorer.bat "D:\media" 9000 0.0.0.0
+run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 ```
 
 ---
@@ -166,7 +165,7 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0
 
 4. **Run**:
    ```bash
-   python app.py --dir /path/to/media --port 7862
+   python app.py --dir /path/to/media --port 7862 --pattern "*.mp4|*.png|*.jpg"
    ```
 
 5. Open in browser: [http://127.0.0.1:7862](http://127.0.0.1:7862)
