@@ -445,7 +445,6 @@ CLIENT_HTML = r"""
         <div class="video-wrap">
           <div class="overlay-top-left" id="pnginfo_controls" style="display:none;">
             <div class="overlay-btn" id="pnginfo_btn" title="Show info">i</div>
-            <div class="overlay-btn" id="pngplus_btn" title="More">+</div>
           </div>
           <div id="pnginfo_panel">
             <button id="pnginfo_copy" title="Copy all">Copy</button>
@@ -505,17 +504,24 @@ function setupPngInfo(meta, name){
   }
 }
 document.addEventListener('click', (e)=>{
-  if (e.target && e.target.id === 'pnginfo_btn'){ togglePngInfo(true); }
-  if (e.target && e.target.id === 'pngplus_btn'){ togglePngInfo(true); } // plus also opens
+  if (e.target && e.target.id === 'pnginfo_btn'){ 
+    togglePngInfo();   // <-- toggles open/close
+  }
   if (e.target && e.target.id === 'pnginfo_copy'){ 
     const text = (document.getElementById('pnginfo_text').textContent)||'';
     if (!navigator.clipboard){ 
-      const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      const ta = document.createElement('textarea'); 
+      ta.value = text; 
+      document.body.appendChild(ta); 
+      ta.select(); 
+      document.execCommand('copy'); 
+      document.body.removeChild(ta);
     } else {
       navigator.clipboard.writeText(text).catch(()=>{});
     }
   }
 });
+
 
 
 function updateDownloadButton(name){
