@@ -728,11 +728,6 @@ function renderSidebar(){
     });
   });
 }
-      const j = filtered.findIndex(x => x.name === name);
-      if (j >= 0) show(j);
-    });
-  });
-}
 function applyFilter(){
   filtered = (minFilter === null) ? videos.slice() : videos.filter(v => (v.score||0) >= minFilter);
   const info = document.getElementById('filter_info');
