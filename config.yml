@@ -1,3 +1,3 @@
-dir: ~
-host: 127.0.0.1
-port: 7863
+dir: ~                        # Default directory to scan
+host: 127.0.0.1               # Host to bind the server
+port: 7862                    # Port to serve
