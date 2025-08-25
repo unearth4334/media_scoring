@@ -1,4 +1,4 @@
 dir: ~                        # Default directory to scan
 host: 127.0.0.1               # Host to bind the server
 port: 7862                    # Port to serve
-style: style_pastelcore.css   # CSS theme file (style_default.css or style_pastelcore.css)
+style: style_default.css      # CSS theme file (style_default.css or style_pastelcore.css)
