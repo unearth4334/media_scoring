@@ -30,4 +30,4 @@ python -m pip install --upgrade pip >/dev/null
 pip install -r requirements.txt
 
 # Launch app
-exec python app_fastapi.py --dir "$DIR" --port "$PORT" --host "$HOST"
+exec python app.py --dir "$DIR" --port "$PORT" --host "$HOST"

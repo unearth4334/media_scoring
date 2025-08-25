@@ -39,7 +39,7 @@ REM Upgrade pip and install deps (quiet-ish)
 "%VENV_PY%" -m pip install -r requirements.txt
 
 REM Launch app
-"%VENV_PY%" app_fastapi.py --dir "%DIR%" --port %PORT% --host %HOST%
+"%VENV_PY%" app.py --dir "%DIR%" --port %PORT% --host %HOST%
 
 popd
 endlocal

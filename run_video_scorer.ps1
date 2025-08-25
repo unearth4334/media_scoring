@@ -29,4 +29,4 @@ $VenvPython = Join-Path ".venv" "Scripts/python.exe"
 & $VenvPython -m pip install -r requirements.txt
 
 # Launch app
-& $VenvPython "app_fastapi.py" --dir $Dir --port $Port --host $Host
+& $VenvPython "app.py" --dir $Dir --port $Port --host $Host
