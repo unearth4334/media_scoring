@@ -181,6 +181,19 @@ def serve_media(name: str):
         mime = "application/octet-stream"
     return FileResponse(target, media_type=mime)
 
+@APP.get("/download/{name:path}")
+def download_media(name: str):
+    target = (VIDEO_DIR / name).resolve()
+    try:
+        target.relative_to(VIDEO_DIR)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found")
+    # Force download via Content-Disposition
+    return FileResponse(target, media_type="application/octet-stream", filename=name)
+
+
 @APP.post("/api/score")
 async def api_score(req: Request):
     data = await req.json()
@@ -258,6 +271,8 @@ CLIENT_HTML = r"""
     .item .score { font-size:12px; opacity:0.9; }
     .item.disabled { opacity:0.4; cursor:default; }
     .helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; }
+    /* Download icon button */
+    #download_btn svg { vertical-align: middle; }
   </style>
 </head>
 <body>
@@ -300,9 +315,9 @@ CLIENT_HTML = r"""
         </div>
       </div>
       <div class="row controls">
-        <button id="prev">← Prev</button>
-        <button id="next">Next →</button>
-        <button id="reject">Reject (R)</button>
+        <button id="prev">Prev</button>
+        <button id="next">Next</button>
+        <button id="reject">Reject</button>
         <button data-star="1">★1</button>
         <button data-star="2">★2</button>
         <button data-star="3">★3</button>
@@ -310,6 +325,12 @@ CLIENT_HTML = r"""
         <button data-star="5">★5</button>
         <button id="extract_one">Extract workflow (current)</button>
         <button id="extract_filtered">Extract workflows (filtered)</button>
+        <button id="download_btn" title="Download current">
+          <!-- Download icon SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
       </div>
     </section>
   </main>
@@ -320,6 +341,18 @@ let idx = 0;
 let currentDir = "";
 let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
+
+function updateDownloadButton(name){
+  const db = document.getElementById('download_btn');
+  if (!db) return;
+  if (!name){ db.disabled = true; return; }
+  db.disabled = false;
+  db.onclick = () => {
+    try { window.location.href = '/download/' + encodeURIComponent(name); }
+    catch(e){ alert('Download failed to start: ' + e); }
+  };
+}
+
 
 function svgReject(selected){
   const circleFill = selected ? "white" : "black";
@@ -410,6 +443,7 @@ function show(i){
     const player = document.getElementById('player');
     player.removeAttribute('src'); player.load();
     renderScoreBar(0);
+    updateDownloadButton(null);
     renderSidebar();
     return;
   }
@@ -417,6 +451,7 @@ function show(i){
   const v = filtered[idx];
   showMedia(v.url, v.name);
   document.getElementById('filename').textContent = `${idx+1}/${filtered.length}  •  ${v.name}`;
+  updateDownloadButton(v.name);
   renderScoreBar(v.score || 0);
   renderSidebar();
 }
