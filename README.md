@@ -95,7 +95,6 @@ Configuration is stored in `config.yml` (or `config.wml` in some setups):
 dir: /path/to/media        # Default directory to scan
 host: 127.0.0.1            # Host to bind the server
 port: 7862                 # Port to serve
-pattern: "*.mp4|*.png|*.jpg"  # Default glob pattern
 ```
 
 You can override these values at runtime via:
@@ -118,8 +117,10 @@ chmod +x run_video_scorer.sh
 
 ### Windows PowerShell
 ```powershell
-.un_video_scorer.ps1                 # use config.yml defaults
-.un_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Host 0.0.0.0
+.
+un_video_scorer.ps1                 # use config.yml defaults
+.
+un_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Host 0.0.0.0
 ```
 
 ### Windows CMD
