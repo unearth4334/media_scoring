@@ -384,7 +384,7 @@ CLIENT_HTML = r"""
     .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
     .filename { font-family:monospace; opacity:0.9; }
     .controls { display:flex; gap:8px; margin-left:auto; }
-    .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:8px 12px; border-radius:8px; cursor:pointer; }
+    .controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:4px 6px; border-radius:6px; cursor:pointer; }
     .controls button:hover { background:#3a3a3a; }
     .video-wrap { background:#000; padding:8px; border-radius:12px; position:relative; }
 .overlay-top-left { position:absolute; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
