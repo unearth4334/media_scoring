@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import subprocess
 import sys
+import threading
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -33,6 +34,16 @@ LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
 FILE_PATTERN: str = "*.mp4"
 STYLE_FILE: str = "style_default.css"
+GENERATE_THUMBNAILS: bool = False
+THUMBNAIL_HEIGHT: int = 64
+
+# Thumbnail generation progress tracking
+THUMBNAIL_PROGRESS = {
+    "generating": False,
+    "current": 0,
+    "total": 0,
+    "current_file": ""
+}
 
 def scores_dir_for(directory: Path) -> Path:
     sdir = directory / ".scores"
@@ -102,6 +113,144 @@ def switch_directory(new_dir: Path, pattern: Optional[str] = None):
     setup_logging(VIDEO_DIR)
     FILE_LIST = discover_files(VIDEO_DIR, FILE_PATTERN)
     LOGGER.info(f"SCAN dir={VIDEO_DIR} pattern={FILE_PATTERN} files={len(FILE_LIST)}")
+    
+    # Generate thumbnails if enabled (in background thread)
+    if GENERATE_THUMBNAILS:
+        # Start thumbnail generation in background thread
+        thumbnail_thread = threading.Thread(
+            target=generate_thumbnails_for_directory, 
+            args=(VIDEO_DIR, FILE_LIST),
+            daemon=True
+        )
+        thumbnail_thread.start()
+
+
+# ---------------------------
+# Thumbnail generation
+# ---------------------------
+
+def thumbnails_dir_for(directory: Path) -> Path:
+    """Get thumbnails directory for a media directory"""
+    thumb_dir = directory / ".thumbnails"
+    thumb_dir.mkdir(exist_ok=True, parents=True)
+    return thumb_dir
+
+def thumbnail_path_for(media_path: Path) -> Path:
+    """Get thumbnail path for a media file"""
+    thumb_dir = thumbnails_dir_for(media_path.parent)
+    return thumb_dir / f"{media_path.stem}_thumbnail.jpg"
+
+def generate_thumbnail_for_image(image_path: Path, output_path: Path) -> bool:
+    """Generate thumbnail for an image file"""
+    try:
+        if Image is None:
+            LOGGER.warning("PIL not available, cannot generate image thumbnails")
+            return False
+        
+        with Image.open(image_path) as img:
+            # Calculate width to maintain aspect ratio
+            aspect_ratio = img.width / img.height
+            width = int(THUMBNAIL_HEIGHT * aspect_ratio)
+            
+            # Resize image
+            img.thumbnail((width, THUMBNAIL_HEIGHT), Image.Resampling.LANCZOS)
+            
+            # Convert to RGB if needed (for RGBA images)
+            if img.mode in ('RGBA', 'P'):
+                rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                img = rgb_img
+            
+            # Save as JPEG
+            img.save(output_path, 'JPEG', quality=85, optimize=True)
+            return True
+    except Exception as e:
+        LOGGER.error(f"Failed to generate thumbnail for {image_path}: {e}")
+        return False
+
+def generate_thumbnail_for_video(video_path: Path, output_path: Path) -> bool:
+    """Generate thumbnail for a video file by extracting first frame"""
+    try:
+        # Use ffmpeg to extract first frame
+        cmd = [
+            "ffmpeg", "-y", "-i", str(video_path), 
+            "-vf", f"scale=-1:{THUMBNAIL_HEIGHT}",
+            "-vframes", "1", "-q:v", "2",
+            str(output_path)
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return True
+        else:
+            LOGGER.error(f"ffmpeg failed for {video_path}: {result.stderr}")
+            return False
+    except subprocess.TimeoutExpired:
+        LOGGER.error(f"ffmpeg timeout for {video_path}")
+        return False
+    except Exception as e:
+        LOGGER.error(f"Failed to generate video thumbnail for {video_path}: {e}")
+        return False
+
+def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) -> None:
+    """Generate thumbnails for all media files in the directory"""
+    global THUMBNAIL_PROGRESS
+    
+    if not GENERATE_THUMBNAILS:
+        return
+    
+    # Initialize progress tracking
+    files_needing_thumbnails = []
+    for media_file in file_list:
+        thumb_path = thumbnail_path_for(media_file)
+        if not thumb_path.exists():
+            files_needing_thumbnails.append(media_file)
+    
+    total_files = len(files_needing_thumbnails)
+    if total_files == 0:
+        LOGGER.info("All thumbnails already exist, no generation needed")
+        return
+    
+    THUMBNAIL_PROGRESS.update({
+        "generating": True,
+        "current": 0,
+        "total": total_files,
+        "current_file": ""
+    })
+    
+    LOGGER.info(f"Generating thumbnails for {total_files} files...")
+    generated = 0
+    
+    try:
+        for i, media_file in enumerate(files_needing_thumbnails):
+            # Update progress
+            THUMBNAIL_PROGRESS.update({
+                "current": i + 1,
+                "current_file": media_file.name
+            })
+            
+            thumb_path = thumbnail_path_for(media_file)
+            
+            # Generate thumbnail based on file type
+            success = False
+            name_lower = media_file.name.lower()
+            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                success = generate_thumbnail_for_image(media_file, thumb_path)
+            elif name_lower.endswith('.mp4'):
+                success = generate_thumbnail_for_video(media_file, thumb_path)
+            
+            if success:
+                generated += 1
+                
+    finally:
+        # Reset progress tracking
+        THUMBNAIL_PROGRESS.update({
+            "generating": False,
+            "current": 0,
+            "total": 0,
+            "current_file": ""
+        })
+        
+    LOGGER.info(f"Thumbnail generation complete: {generated} generated, {len(file_list) - total_files} skipped")
 
 
 # ---------------------------
@@ -234,7 +383,13 @@ def api_videos():
             "url": f"/media/{p.name}",
             "score": read_score(p) if read_score(p) is not None else 0
         })
-    return {"dir": str(VIDEO_DIR), "pattern": FILE_PATTERN, "videos": items}
+    return {
+        "dir": str(VIDEO_DIR), 
+        "pattern": FILE_PATTERN, 
+        "videos": items,
+        "thumbnails_enabled": GENERATE_THUMBNAILS,
+        "thumbnail_height": THUMBNAIL_HEIGHT
+    }
 
 @APP.post("/api/scan")
 async def api_scan(req: Request):
@@ -266,6 +421,43 @@ def serve_media(name: str):
     else:
         mime = "application/octet-stream"
     return FileResponse(target, media_type=mime)
+
+@APP.get("/api/thumbnail-progress")
+def get_thumbnail_progress():
+    """Get current thumbnail generation progress"""
+    return THUMBNAIL_PROGRESS.copy()
+
+@APP.get("/thumbnail/{name:path}")
+def serve_thumbnail(name: str):
+    """Serve thumbnail image for a media file"""
+    if not GENERATE_THUMBNAILS:
+        raise HTTPException(404, "Thumbnails not enabled")
+    
+    # Find the original media file
+    target = (VIDEO_DIR / name).resolve()
+    try:
+        target.relative_to(VIDEO_DIR)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "Media file not found")
+    
+    # Get thumbnail path
+    thumb_path = thumbnail_path_for(target)
+    
+    if not thumb_path.exists():
+        # Try to generate thumbnail on demand
+        name_lower = target.name.lower()
+        if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+            generate_thumbnail_for_image(target, thumb_path)
+        elif name_lower.endswith('.mp4'):
+            generate_thumbnail_for_video(target, thumb_path)
+    
+    if not thumb_path.exists():
+        raise HTTPException(404, "Thumbnail not available")
+    
+    return FileResponse(thumb_path, media_type="image/jpeg")
 
 @APP.get("/api/meta/{name:path}")
 def api_meta(name: str):
@@ -426,6 +618,12 @@ CLIENT_HTML = r"""
       </div>
     </div>
     <aside id="sidebar">
+      <div id="sidebar_controls" style="display:none;">
+        <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
+        <div style="margin-top: 4px;">
+          <span id="thumbnail_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
+        </div>
+      </div>
       <div id="sidebar_list"></div>
     </aside>
     <section id="right">
@@ -455,6 +653,52 @@ let idx = 0;
 let currentDir = "";
 let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
+let thumbnailsEnabled = false;
+let thumbnailHeight = 64;
+let showThumbnails = true; // user preference for showing thumbnails
+
+// Thumbnail progress tracking
+let thumbnailProgressInterval = null;
+
+function updateThumbnailStatus() {
+  fetch('/api/thumbnail-progress')
+    .then(r => r.json())
+    .then(progress => {
+      const statusElement = document.getElementById('thumbnail_status');
+      if (!statusElement) return;
+      
+      if (progress.generating && progress.total > 0) {
+        statusElement.textContent = `Creating thumbnails (${progress.current}/${progress.total})`;
+        statusElement.style.display = 'inline';
+        
+        // Start polling if not already started
+        if (!thumbnailProgressInterval) {
+          thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
+        }
+      } else {
+        statusElement.style.display = 'none';
+        
+        // Stop polling when done
+        if (thumbnailProgressInterval) {
+          clearInterval(thumbnailProgressInterval);
+          thumbnailProgressInterval = null;
+        }
+      }
+    })
+    .catch(() => {
+      // Hide status on error
+      const statusElement = document.getElementById('thumbnail_status');
+      if (statusElement) {
+        statusElement.style.display = 'none';
+      }
+      
+      // Stop polling on error
+      if (thumbnailProgressInterval) {
+        clearInterval(thumbnailProgressInterval);
+        thumbnailProgressInterval = null;
+      }
+    });
+}
 
 let currentMeta = null;
 function togglePngInfo(show){
@@ -492,6 +736,10 @@ document.addEventListener('click', (e)=>{
     } else {
       navigator.clipboard.writeText(text).catch(()=>{});
     }
+  }
+  if (e.target && e.target.id === 'toggle_thumbnails'){ 
+    showThumbnails = !showThumbnails;
+    renderSidebar();
   }
 });
 
@@ -553,9 +801,18 @@ function renderSidebar(){
     const classes = ['item'];
     if (!inFiltered) classes.push('disabled');
     if (filtered.length && filtered[idx] && filtered[idx].name === v.name) classes.push('current');
+    
+    let thumbHtml = '';
+    if (thumbnailsEnabled && showThumbnails) {
+      thumbHtml = `<div class="thumbnail"><img src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
+    }
+    
     html += `<div class="${classes.join(' ')}" data-name="${v.name}" ${inFiltered ? '' : 'data-disabled="1"'}>` +
+            thumbHtml +
+            `<div class="content">` +
             `<div class="name" title="${v.name}">${v.name}</div>` +
             `<div class="score">${s}</div>` +
+            `</div>` +
             `</div>`;
   });
   list.innerHTML = html;
@@ -627,11 +884,26 @@ async function loadVideos(){
   videos = data.videos || [];
   currentDir = data.dir || "";
   currentPattern = data.pattern || currentPattern;
+  thumbnailsEnabled = data.thumbnails_enabled || false;
+  thumbnailHeight = data.thumbnail_height || 64;
+  
   document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
   const patInput = document.getElementById('pattern');
   if (patInput && !patInput.value) patInput.value = currentPattern;
+  
+  // Show/hide thumbnail controls
+  const sidebarControls = document.getElementById('sidebar_controls');
+  if (sidebarControls) {
+    sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
+  }
+  
+  // Start monitoring thumbnail progress if thumbnails are enabled
+  if (thumbnailsEnabled) {
+    updateThumbnailStatus();
+  }
+  
   applyFilter();
   renderSidebar();
   show(0);
@@ -685,7 +957,13 @@ document.getElementById("pat_help").addEventListener("click", () => {
 });
 document.getElementById("load").addEventListener("click", () => {
   const path = (document.getElementById("dir").value || "").trim();
-  if (path) scanDir(path);
+  if (path) {
+    // Start monitoring thumbnail progress immediately if thumbnails are enabled
+    if (thumbnailsEnabled) {
+      updateThumbnailStatus();
+    }
+    scanDir(path);
+  }
 });
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
@@ -778,7 +1056,7 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
     ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
@@ -786,6 +1064,8 @@ def main():
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
     ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
+    ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
+    ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -794,6 +1074,8 @@ def main():
 
     FILE_PATTERN = args.pattern or "*.mp4"
     STYLE_FILE = args.style or "style_default.css"
+    GENERATE_THUMBNAILS = args.generate_thumbnails
+    THUMBNAIL_HEIGHT = args.thumbnail_height
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 

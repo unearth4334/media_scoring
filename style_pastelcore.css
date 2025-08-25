@@ -33,13 +33,19 @@ input[type=text] { background:#faf8fa; color:#5a4a5a; border:1px solid #d0c0d0; 
 .grow { flex: 1 1 auto; min-width: 280px; }
 /* Sidebar */
 aside#sidebar { max-height: 66vh; overflow:auto; background:#f0e8f0; border:1px solid #d4b8c9; border-radius:10px; padding:8px; }
-.item { display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
+#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #d4b8c9; margin-bottom:8px; }
+.item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .item:hover { background:#e8d8e8; }
 .item.current { background:#d4e5f7; border:1px solid #a8c2e8; }
-.item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 230px; color:#6b5b6b; }
-.item .score { font-size:12px; opacity:0.8; color:#7d5a78; }
+.item .thumbnail { flex-shrink:0; border-radius:4px; overflow:hidden; background:#fff; border:1px solid #d0c0d0; }
+.item .thumbnail img { display:block; border-radius:4px; }
+.item .content { flex:1; display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; min-width:0; }
+.item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6b5b6b; }
+.item .score { font-size:12px; opacity:0.8; color:#7d5a78; flex-shrink:0; }
 .item.disabled { opacity:0.4; cursor:default; }
 .helpbtn { background:#e8d5e3; border:1px solid #d4b8c9; padding:6px 8px; border-radius:8px; cursor:pointer; color:#7d5a78; }
 /* Download icon button */
 #download_btn svg { vertical-align: middle; }
 #download_btn svg path { stroke: #6a5a6a; }
+/* Thumbnail status message */
+#thumbnail_status { color: #9b7b9b; font-size: 12px; opacity: 0.8; margin-left: 8px; }

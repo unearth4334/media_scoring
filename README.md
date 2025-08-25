@@ -34,6 +34,12 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 - Lists all files in current directory
 - Current item highlighted
 - Displays each file’s score badge (—, ★, R)
+- **Optional thumbnail previews**:
+  - Enabled via `generate_thumbnails: true` in config.yml
+  - Shows scaled preview images (64px height by default)
+  - Supports images (.png, .jpg, .jpeg) and videos (.mp4)
+  - Video thumbnails extracted from first frame
+  - "Toggle Thumbnails" button to show/hide when enabled
 
 ### Metadata
 - **PNG info parsing**:
@@ -95,6 +101,8 @@ Configuration is stored in `config.yml` (or `config.wml` in some setups):
 dir: /path/to/media        # Default directory to scan
 host: 127.0.0.1            # Host to bind the server
 port: 7862                 # Port to serve
+generate_thumbnails: false # Generate thumbnail previews for media files
+thumbnail_height: 64       # Height in pixels for thumbnail previews
 ```
 
 You can override these values at runtime via:
@@ -209,7 +217,7 @@ This project is licensed under the [Apache License 2.0](LICENSE).
 ## 🔮 Roadmap
 
 - Recursive glob patterns (`**/*.png`)
-- Image/video thumbnails in sidebar
+- ✅ Image/video thumbnails in sidebar
 - Multi-directory support
 - Bulk download of filtered items
 - Sorting by score/filename/date
