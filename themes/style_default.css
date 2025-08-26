@@ -28,7 +28,7 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
 #pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #999; background:#222; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
 #pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
 .scorebar { margin-top:8px; }
-.pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; }
+.pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; color:#eee; }
 input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
 /* Sidebar */
@@ -44,7 +44,7 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
 .item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .item .score { font-size:12px; opacity:0.9; flex-shrink:0; }
 .item.disabled { opacity:0.4; cursor:default; }
-.helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; }
+.helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; color:#eee; }
 /* Download icon button */
 #download_btn svg { vertical-align: middle; }
 /* Thumbnail status message */

@@ -31,6 +31,7 @@ APP = FastAPI()
 
 # Mount static files to serve CSS and other assets
 APP.mount("/static", StaticFiles(directory=Path(__file__).parent), name="static")
+APP.mount("/themes", StaticFiles(directory=Path(__file__).parent / "themes"), name="themes")
 VIDEO_DIR: Path = Path.cwd()
 LOGGER: logging.Logger = logging.getLogger("video_scorer_fastapi")
 FILE_LIST: List[Path] = []
@@ -373,7 +374,7 @@ def _read_png_parameters_text(png_path: Path, max_bytes: int = 2_000_000) -> Opt
 
 @APP.get("/", response_class=HTMLResponse)
 def index():
-    return HTMLResponse(CLIENT_HTML.replace('href="/static/style.css"', f'href="/static/{STYLE_FILE}"'))
+    return HTMLResponse(CLIENT_HTML.replace('href="/themes/style_default.css"', f'href="/themes/{STYLE_FILE}"'))
 
 @APP.get("/api/videos")
 def api_videos():
@@ -616,7 +617,7 @@ CLIENT_HTML = r"""
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <!-- Favicon: small movie camera emoji as SVG data URI -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/themes/style_default.css">
   <style>
     /* Simple spinner animation */
     .spinner {
@@ -684,7 +685,7 @@ CLIENT_HTML = r"""
           <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
           <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
             <!-- ZIP folder icon SVG -->
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+            <svg width="16" height="12" viewBox="0 0 24 24" fill="none" style="margin-right: 2px;">
               <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1178,7 +1179,7 @@ def main():
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
     ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
-    ap.add_argument("--style", default="style_default.css", help="CSS style file (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
+    ap.add_argument("--style", default="style_default.css", help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
     ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
     ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
     args = ap.parse_args()
