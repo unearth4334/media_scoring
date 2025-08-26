@@ -224,9 +224,9 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
     
     try:
         for i, media_file in enumerate(files_needing_thumbnails):
-            # Update progress
+            # Update progress at start with current file info
             THUMBNAIL_PROGRESS.update({
-                "current": i + 1,
+                "current": i,
                 "current_file": media_file.name
             })
             
@@ -242,6 +242,12 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
             
             if success:
                 generated += 1
+                
+            # Update progress after processing each file
+            THUMBNAIL_PROGRESS.update({
+                "current": i + 1,
+                "current_file": media_file.name
+            })
                 
     finally:
         # Reset progress tracking
