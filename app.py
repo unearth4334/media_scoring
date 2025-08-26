@@ -617,6 +617,23 @@ CLIENT_HTML = r"""
   <!-- Favicon: small movie camera emoji as SVG data URI -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
   <link rel="stylesheet" href="/static/style.css">
+  <style>
+    /* Simple spinner animation */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      vertical-align: middle;
+      border: 2px solid #ccc;
+      border-top: 2px solid #333;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      margin-left: 6px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -716,32 +733,12 @@ let showThumbnails = true; // user preference for showing thumbnails
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
 
-// Progress spinner tracking
-let progressSpinnerInterval = null;
-
 // Progress status management functions
 function showProgress(message) {
   const statusElement = document.getElementById('progress_status');
   if (statusElement) {
     statusElement.style.display = 'inline';
-    
-    // Start spinner animation
-    const spinnerChars = ['/', '|', '\\', '-'];
-    let spinnerIndex = 0;
-    
-    // Update immediately
-    statusElement.textContent = message + ' ' + spinnerChars[spinnerIndex];
-    
-    // Clear any existing spinner
-    if (progressSpinnerInterval) {
-      clearInterval(progressSpinnerInterval);
-    }
-    
-    // Start new spinner animation
-    progressSpinnerInterval = setInterval(() => {
-      spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
-      statusElement.textContent = message + ' ' + spinnerChars[spinnerIndex];
-    }, 200); // Update every 200ms for smooth animation
+    statusElement.innerHTML = `${message} <span class="spinner"></span>`;
   }
 }
 
@@ -749,12 +746,7 @@ function hideProgress() {
   const statusElement = document.getElementById('progress_status');
   if (statusElement) {
     statusElement.style.display = 'none';
-  }
-  
-  // Clear spinner animation
-  if (progressSpinnerInterval) {
-    clearInterval(progressSpinnerInterval);
-    progressSpinnerInterval = null;
+    statusElement.innerHTML = '';
   }
 }
 
@@ -764,14 +756,12 @@ function updateThumbnailStatus() {
     .then(progress => {
       if (progress.generating && progress.total > 0) {
         showProgress(`Generating thumbnails (${progress.current}/${progress.total})`);
-        
         // Start polling if not already started
         if (!thumbnailProgressInterval) {
           thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
         }
       } else {
         hideProgress();
-        
         // Stop polling when done
         if (thumbnailProgressInterval) {
           clearInterval(thumbnailProgressInterval);
@@ -782,7 +772,6 @@ function updateThumbnailStatus() {
     .catch(() => {
       // Hide progress on error
       hideProgress();
-      
       // Stop polling on error
       if (thumbnailProgressInterval) {
         clearInterval(thumbnailProgressInterval);
@@ -834,8 +823,6 @@ document.addEventListener('click', (e)=>{
   }
 });
 
-
-
 function updateDownloadButton(name){
   const db = document.getElementById('download_btn');
   if (!db) return;
@@ -846,7 +833,6 @@ function updateDownloadButton(name){
     catch(e){ alert('Download failed to start: ' + e); }
   };
 }
-
 
 function svgReject(selected){
   const circleFill = selected ? "var(--reject-fill-selected)" : "var(--reject-fill-unselected)";
@@ -1159,7 +1145,7 @@ async function exportFiltered(){
     const a = document.createElement('a');
     a.style.display = 'none';
     a.href = url;
-    a.download = 'filtered_media.zip';
+    a.download = 'media.zip';
     document.body.appendChild(a);
     a.click();
     window.URL.revokeObjectURL(url);
