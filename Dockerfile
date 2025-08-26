@@ -1,10 +1,14 @@
-FROM python:3.11-slim
+FROM python:3.11-slim-bookworm
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      ffmpeg \
+      curl \
+      ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
 
 # Set working directory
 WORKDIR /app

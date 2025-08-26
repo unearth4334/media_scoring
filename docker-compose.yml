@@ -3,16 +3,18 @@ services:
     build: .
     container_name: media-scorer
     ports:
-      - "7862:7862"
+      - "${HOST_PORT:-8786}:7862"
     volumes:
-      - /share/sd/SecretFolder:/media
+      - "${MEDIA_PATH}:/media"
       - ./config:/app/config
       - scores_data:/app/.scores
       - thumbnails_data:/app/.thumbnails
       - workflows_data:/app/workflows
     environment:
-      - PUID=0
-      - PGID=0
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - MEDIA_PATTERN=${MEDIA_PATTERN}
+      - GENERATE_THUMBNAILS=${GENERATE_THUMBNAILS}
     restart: unless-stopped
 
 volumes:
