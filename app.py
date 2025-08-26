@@ -138,10 +138,37 @@ def thumbnails_dir_for(directory: Path) -> Path:
     thumb_dir.mkdir(exist_ok=True, parents=True)
     return thumb_dir
 
-def thumbnail_path_for(media_path: Path) -> Path:
-    """Get thumbnail path for a media file"""
-    thumb_dir = thumbnails_dir_for(media_path.parent)
-    return thumb_dir / f"{media_path.stem}_thumbnail.jpg"
+def thumbnail_path_for(media_file: Path) -> Path:
+    """Return expected thumbnail path for a media file"""
+    sdir = scores_dir_for(media_file.parent)
+    return sdir / f"{media_file.stem}_thumbnail.jpg"
+
+def _compute_thumbnail_progress():
+    """
+    Dynamically compute thumbnail progress:
+    - total = number of eligible media files (mp4/png/jpg/jpeg)
+    - current = number of those with an existing thumbnail file
+    - generating = background flag
+    - completed = current == total and total > 0
+    """
+    try:
+        eligible = [p for p in FILE_LIST if p.suffix.lower() in {".mp4", ".png", ".jpg", ".jpeg"}]
+        total = len(eligible)
+        current = 0
+        for p in eligible:
+            if thumbnail_path_for(p).exists():
+                current += 1
+        return {
+            "generating": bool(THUMBNAIL_PROGRESS.get("generating", False)),
+            "current": current,
+            "total": total,
+            "current_file": THUMBNAIL_PROGRESS.get("current_file", ""),
+            "completed": (total > 0 and current >= total)
+        }
+    except Exception:
+        # fallback
+        return {"generating": False, "current": 0, "total": 0, "current_file": "", "completed": False}
+
 
 def generate_thumbnail_for_image(image_path: Path, output_path: Path) -> bool:
     """Generate thumbnail for an image file"""
@@ -258,11 +285,12 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
                 "current_file": "",
                 "completed": True
             })
+            # Give a small delay to allow UI polling to catch the final state
+            import time
+            time.sleep(0.2)
                 
     finally:
-        # Reset progress tracking after a brief delay to ensure UI sees completion
-        import time
-        time.sleep(0.5)  # Give UI time to see completion state
+        # Reset progress tracking
         THUMBNAIL_PROGRESS.update({
             "generating": False,
             "current": 0,
@@ -445,8 +473,39 @@ def serve_media(name: str):
 
 @APP.get("/api/thumbnail-progress")
 def get_thumbnail_progress():
-    """Get current thumbnail generation progress"""
-    return THUMBNAIL_PROGRESS.copy()
+    """Get current thumbnail generation progress (dynamic)."""
+    return _compute_thumbnail_progress()
+
+# Background worker (simplified snippet for clarity)
+def generate_thumbnails(file_list: List[Path]):
+    LOGGER.info(f"Starting thumbnail generation for {len(file_list)} files...")
+    THUMBNAIL_PROGRESS.update({"generating": True, "current_file": ""})
+    generated = 0
+    for media_file in file_list:
+        THUMBNAIL_PROGRESS.update({"current_file": media_file.name})
+        try:
+            out_path = thumbnail_path_for(media_file)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            if media_file.suffix.lower() == ".mp4":
+                # Generate a video thumbnail with ffmpeg
+                cmd = [
+                    "ffmpeg", "-y", "-i", str(media_file),
+                    "-vf", "thumbnail,scale=320:-1",
+                    "-frames:v", "1", str(out_path)
+                ]
+                subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+            elif media_file.suffix.lower() in {".png", ".jpg", ".jpeg"}:
+                # Generate a reduced-size image thumbnail with Pillow if available
+                if Image:
+                    with Image.open(media_file) as im:
+                        im.thumbnail((320, 320))
+                        im.convert("RGB").save(out_path, "JPEG")
+            generated += 1
+        except Exception as e:
+            LOGGER.warning(f"Thumbnail failed for {media_file.name}: {e}")
+    THUMBNAIL_PROGRESS.update({"generating": False, "current_file": ""})
+    LOGGER.info(f"Thumbnail generation complete: {generated} generated of {len(file_list)} files")
+
 
 @APP.get("/thumbnail/{name:path}")
 def serve_thumbnail(name: str):
