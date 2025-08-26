@@ -685,7 +685,7 @@ CLIENT_HTML = r"""
           <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
           <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
             <!-- ZIP folder icon SVG -->
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 6px;">
+            <svg width="16" height="12" viewBox="0 0 24 24" fill="none" style="margin-right: 2px;">
               <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
               <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
