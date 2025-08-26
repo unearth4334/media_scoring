@@ -639,7 +639,7 @@ CLIENT_HTML = r"""
 <body>
   <header>
     <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject</div>
+    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
   </header>
   <main class="layout">
     <div class="row">
@@ -653,6 +653,7 @@ CLIENT_HTML = r"""
       <label for="min_filter">Minimum rating:</label>
       <select id="min_filter">
         <option value="none" selected>No filter</option>
+        <option value="unrated">Unrated</option>
         <option value="1">1</option>
         <option value="2">2</option>
         <option value="3">3</option>
@@ -664,6 +665,7 @@ CLIENT_HTML = r"""
         <button id="prev">Prev</button>
         <button id="next">Next</button>
         <button id="reject">Reject</button>
+        <button id="clear">Clear</button>
         <button data-star="1">★1</button>
         <button data-star="2">★2</button>
         <button data-star="3">★3</button>
@@ -905,9 +907,22 @@ function renderSidebar(){
   });
 }
 function applyFilter(){
-  filtered = (minFilter === null) ? videos.slice() : videos.filter(v => (v.score||0) >= minFilter);
+  if (minFilter === null) {
+    filtered = videos.slice();
+  } else if (minFilter === 'unrated') {
+    filtered = videos.filter(v => !v.score || v.score === 0);
+  } else {
+    filtered = videos.filter(v => (v.score||0) >= minFilter);
+  }
   const info = document.getElementById('filter_info');
-  const label = (minFilter===null? 'No filter' : ('rating ≥ ' + minFilter));
+  let label;
+  if (minFilter === null) {
+    label = 'No filter';
+  } else if (minFilter === 'unrated') {
+    label = 'Unrated only';
+  } else {
+    label = 'rating ≥ ' + minFilter;
+  }
   info.textContent = `${label} — showing ${filtered.length}/${videos.length}`;
 }
 function isVideoName(n){ return n.toLowerCase().endsWith('.mp4'); }
@@ -1045,8 +1060,14 @@ document.getElementById("load").addEventListener("click", () => {
 });
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
-  minFilter = (val === 'none') ? null : parseInt(val);
-  fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':('>='+minFilter)), name: '' })});
+  if (val === 'none') {
+    minFilter = null;
+  } else if (val === 'unrated') {
+    minFilter = 'unrated';
+  } else {
+    minFilter = parseInt(val);
+  }
+  fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(minFilter==='unrated'?'unrated':('>='+minFilter))), name: '' })});
   applyFilter(); renderSidebar(); show(0);
 });
 document.getElementById('dir').addEventListener('keydown', (e) => {
@@ -1064,6 +1085,7 @@ document.getElementById('pattern').addEventListener('keydown', (e) => {
 document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
 document.getElementById('next').addEventListener('click', () => { show(idx+1); });
 document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
+document.getElementById("clear").addEventListener("click", () => { postScore(0); });
 document.querySelectorAll("[data-star]").forEach(btn => {
   btn.addEventListener("click", () => {
     const n = parseInt(btn.getAttribute("data-star"));
@@ -1083,6 +1105,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "4"){ e.preventDefault(); postKey("4"); postScore(4); return; }
   if (e.key === "5"){ e.preventDefault(); postKey("5"); postScore(5); return; }
   if (e.key === "r" || e.key === "R"){ e.preventDefault(); postKey("R"); postScore(-1); return; }
+  if (e.key === "c" || e.key === "C"){ e.preventDefault(); postKey("C"); postScore(0); return; }
 });
 async function extractCurrent(){
   if (!filtered.length) { alert("No item selected."); return; }
