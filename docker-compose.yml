@@ -5,14 +5,14 @@ services:
     ports:
       - "${HOST_PORT:-7862}:${HOST_PORT:-7862}"
     volumes:
-      - "${MEDIA_PATH}:/media"
+      - "${HOST_MEDIA_PATH}:/media"
       - ./config:/app/config
       - scores_data:/app/.scores
       - thumbnails_data:/app/.thumbnails
       - workflows_data:/app/workflows
     environment:
       - PUID=${PUID}
-      - PGID=${PGID}
+      - PGID=${GUID}
       - MEDIA_PATH=${MEDIA_PATH}
       - HOST_PORT=${HOST_PORT}
       - MEDIA_PATTERN=${MEDIA_PATTERN}
