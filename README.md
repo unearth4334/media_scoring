@@ -78,6 +78,12 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 ├── requirements.txt            # Python dependencies
 ├── LICENSE                     # Apache 2.0 license
 ├── README.md                   # This documentation
+├── DOCKER.md                   # Docker deployment guide
+│
+├── Dockerfile                  # Docker container configuration
+├── docker-compose.yml          # Basic Docker Compose setup
+├── docker-compose.override.yml # Advanced Docker Compose with env vars
+├── .env.example               # Example environment configuration
 │
 ├── run_video_scorer.sh         # Linux/macOS entrypoint
 ├── run_video_scorer.ps1        # Windows PowerShell entrypoint
@@ -140,6 +146,8 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 
 ## 🛠 Installation
 
+### Option 1: Local Installation
+
 1. **Clone / extract** this project.
 
 2. **Create a virtual environment**:
@@ -169,6 +177,31 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
    ```
 
 5. Open in browser: [http://127.0.0.1:7862](http://127.0.0.1:7862)
+
+### Option 2: Docker Installation
+
+For containerized deployment (recommended for NAS/server hosting):
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/unearth4334/media_scoring.git
+   cd media_scoring
+   ```
+
+2. **Configure for your setup**:
+   ```bash
+   cp .env.example .env
+   # Edit .env file to set your media path and preferences
+   ```
+
+3. **Deploy with Docker Compose**:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access**: Open browser to `http://your-server-ip:7862`
+
+📖 **See [DOCKER.md](DOCKER.md) for complete Docker deployment guide including QNAP NAS setup.**
 
 ---
 

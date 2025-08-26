@@ -1,0 +1,21 @@
+services:
+  media-scorer:
+    build: .
+    container_name: media-scorer
+    ports:
+      - "7862:7862"
+    volumes:
+      - /share/sd/SecretFolder:/media
+      - ./config:/app/config
+      - scores_data:/app/.scores
+      - thumbnails_data:/app/.thumbnails
+      - workflows_data:/app/workflows
+    environment:
+      - PUID=0
+      - PGID=0
+    restart: unless-stopped
+
+volumes:
+  scores_data:
+  thumbnails_data:
+  workflows_data:

@@ -67,3 +67,7 @@ test_media/
 .thumbnails/
 .scores/
 workflows/
+
+# Docker
+.env
+docker-compose.override.yml.bak
