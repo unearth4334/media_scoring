@@ -716,12 +716,32 @@ let showThumbnails = true; // user preference for showing thumbnails
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
 
+// Progress spinner tracking
+let progressSpinnerInterval = null;
+
 // Progress status management functions
 function showProgress(message) {
   const statusElement = document.getElementById('progress_status');
   if (statusElement) {
-    statusElement.textContent = message;
     statusElement.style.display = 'inline';
+    
+    // Start spinner animation
+    const spinnerChars = ['/', '|', '\\', '-'];
+    let spinnerIndex = 0;
+    
+    // Update immediately
+    statusElement.textContent = message + ' ' + spinnerChars[spinnerIndex];
+    
+    // Clear any existing spinner
+    if (progressSpinnerInterval) {
+      clearInterval(progressSpinnerInterval);
+    }
+    
+    // Start new spinner animation
+    progressSpinnerInterval = setInterval(() => {
+      spinnerIndex = (spinnerIndex + 1) % spinnerChars.length;
+      statusElement.textContent = message + ' ' + spinnerChars[spinnerIndex];
+    }, 200); // Update every 200ms for smooth animation
   }
 }
 
@@ -729,6 +749,12 @@ function hideProgress() {
   const statusElement = document.getElementById('progress_status');
   if (statusElement) {
     statusElement.style.display = 'none';
+  }
+  
+  // Clear spinner animation
+  if (progressSpinnerInterval) {
+    clearInterval(progressSpinnerInterval);
+    progressSpinnerInterval = null;
   }
 }
 
