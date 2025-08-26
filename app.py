@@ -690,61 +690,113 @@ CLIENT_HTML = r"""
     .refresh-btn:hover {
       background: #444;
     }
+    
+    /* Collapsible toolbar styles */
+    .toolbar-toggle {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 1000;
+      background: #333;
+      color: #fff;
+      border: 1px solid #666;
+      border-radius: 4px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .toolbar-toggle:hover {
+      background: #444;
+    }
+    
+    .toolbar-container {
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .toolbar-container.collapsed {
+      max-height: 0;
+      opacity: 0;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .toolbar-container.collapsed header {
+      margin: 0;
+      padding: 0;
+    }
+    
+    .toolbar-container.collapsed .toolbar-rows {
+      display: none;
+    }
+    
+    /* Adjust body spacing when toolbar is collapsed */
+    body.toolbar-collapsed main {
+      padding-top: 8px;
+      transition: padding-top 0.3s ease;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
-  </header>
-  <main class="layout">
-    <div class="row">
-      <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
-      <div id="toggle_buttons" class="toggle-container"></div>
-      <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-      <button id="pat_help" class="helpbtn">?</button>
-      <button id="load" class="refresh-btn" title="Load/Refresh">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-          <path d="M21 3v5h-5"/>
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-          <path d="M3 21v-5h5"/>
-        </svg>
-      </button>
-      <div id="dir_display" class="filename"></div>
-    </div>
-    <div class="row">
-      <label for="min_filter">Rating ≥</label>
-      <select id="min_filter">
-        <option value="none" selected>No filter</option>
-        <option value="unrated">Unrated</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
-      <div id="filter_info" class="filename"></div>
-      <div class="controls">
-        <button id="prev">Prev</button>
-        <button id="next">Next</button>
-        <button id="reject">Reject</button>
-        <button id="clear">Clear</button>
-        <button data-star="1">★1</button>
-        <button data-star="2">★2</button>
-        <button data-star="3">★3</button>
-        <button data-star="4">★4</button>
-        <button data-star="5">★5</button>
-        <button id="extract_one">Extract workflow (current)</button>
-        <button id="extract_filtered">Extract workflows (filtered)</button>
-        <button id="download_btn" title="Download current">
-          <!-- Download icon SVG -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <button class="toolbar-toggle" id="toolbar-toggle" title="Toggle Toolbar">⌄</button>
+  <div class="toolbar-container" id="toolbar-container">
+    <header>
+      <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+    </header>
+    <div class="toolbar-rows">
+      <div class="row">
+        <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
+        <div id="toggle_buttons" class="toggle-container"></div>
+        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+        <button id="pat_help" class="helpbtn">?</button>
+        <button id="load" class="refresh-btn" title="Load/Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M3 21v-5h5"/>
           </svg>
         </button>
+        <div id="dir_display" class="filename"></div>
+      </div>
+      <div class="row">
+        <label for="min_filter">Rating ≥</label>
+        <select id="min_filter">
+          <option value="none" selected>No filter</option>
+          <option value="unrated">Unrated</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <div id="filter_info" class="filename"></div>
+        <div class="controls">
+          <button id="prev">Prev</button>
+          <button id="next">Next</button>
+          <button id="reject">Reject</button>
+          <button id="clear">Clear</button>
+          <button data-star="1">★1</button>
+          <button data-star="2">★2</button>
+          <button data-star="3">★3</button>
+          <button data-star="4">★4</button>
+          <button data-star="5">★5</button>
+          <button id="extract_one">Extract workflow (current)</button>
+          <button id="extract_filtered">Extract workflows (filtered)</button>
+          <button id="download_btn" title="Download current">
+            <!-- Download icon SVG -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
+  </div>
+  <main class="layout">
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
@@ -787,6 +839,37 @@ CLIENT_HTML = r"""
     </section>
   </main>
 <script>
+// Toolbar collapse functionality
+let toolbarCollapsed = false;
+
+function toggleToolbar() {
+  const container = document.getElementById('toolbar-container');
+  const toggleBtn = document.getElementById('toolbar-toggle');
+  const body = document.body;
+  
+  toolbarCollapsed = !toolbarCollapsed;
+  
+  if (toolbarCollapsed) {
+    container.classList.add('collapsed');
+    body.classList.add('toolbar-collapsed');
+    toggleBtn.textContent = '⌃';
+    toggleBtn.title = 'Show Toolbar';
+  } else {
+    container.classList.remove('collapsed');
+    body.classList.remove('toolbar-collapsed');
+    toggleBtn.textContent = '⌄';
+    toggleBtn.title = 'Hide Toolbar';
+  }
+}
+
+// Add toolbar toggle event listener
+document.addEventListener('DOMContentLoaded', function() {
+  const toggleBtn = document.getElementById('toolbar-toggle');
+  if (toggleBtn) {
+    toggleBtn.addEventListener('click', toggleToolbar);
+  }
+});
+
 let videos = [];
 let filtered = [];
 let idx = 0;

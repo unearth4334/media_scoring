@@ -60,3 +60,50 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
   gap: 8px;
   margin-bottom: 8px;
 }
+
+/* Collapsible toolbar styles */
+.toolbar-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 1000;
+  background: #2f2f2f;
+  color: #eee;
+  border: 1px solid #666;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.toolbar-toggle:hover {
+  background: #3a3a3a;
+}
+
+.toolbar-container {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.toolbar-container.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.toolbar-container.collapsed header {
+  margin: 0;
+  padding: 0;
+}
+
+.toolbar-container.collapsed .toolbar-rows {
+  display: none;
+}
+
+/* Adjust body spacing when toolbar is collapsed */
+body.toolbar-collapsed main {
+  padding-top: 8px;
+  transition: padding-top 0.3s ease;
+}
