@@ -752,6 +752,38 @@ CLIENT_HTML = r"""
     <div class="header-content">
       <h1>🎬 Video/Image Scorer (FastAPI)</h1>
       <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+      <div class="header-row">
+        <label for="min_filter">Rating ≥</label>
+        <select id="min_filter">
+          <option value="none" selected>No filter</option>
+          <option value="unrated">Unrated</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <div id="filter_info" class="filename"></div>
+        <div class="controls">
+          <button id="prev">Prev</button>
+          <button id="next">Next</button>
+          <button id="reject">Reject</button>
+          <button id="clear">Clear</button>
+          <button data-star="1">★1</button>
+          <button data-star="2">★2</button>
+          <button data-star="3">★3</button>
+          <button data-star="4">★4</button>
+          <button data-star="5">★5</button>
+          <button id="extract_one">Extract workflow (current)</button>
+          <button id="extract_filtered">Extract workflows (filtered)</button>
+          <button id="download_btn" title="Download current">
+            <!-- Download icon SVG -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
     <button id="toggle_header" class="header-toggle" title="Hide/Show Toolbar">⌃</button>
   </header>
@@ -770,38 +802,6 @@ CLIENT_HTML = r"""
         </svg>
       </button>
       <div id="dir_display" class="filename"></div>
-    </div>
-    <div class="row">
-      <label for="min_filter">Rating ≥</label>
-      <select id="min_filter">
-        <option value="none" selected>No filter</option>
-        <option value="unrated">Unrated</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
-      <div id="filter_info" class="filename"></div>
-      <div class="controls">
-        <button id="prev">Prev</button>
-        <button id="next">Next</button>
-        <button id="reject">Reject</button>
-        <button id="clear">Clear</button>
-        <button data-star="1">★1</button>
-        <button data-star="2">★2</button>
-        <button data-star="3">★3</button>
-        <button data-star="4">★4</button>
-        <button data-star="5">★5</button>
-        <button id="extract_one">Extract workflow (current)</button>
-        <button id="extract_filtered">Extract workflows (filtered)</button>
-        <button id="download_btn" title="Download current">
-          <!-- Download icon SVG -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </button>
-      </div>
     </div>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
