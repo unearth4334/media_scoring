@@ -690,12 +690,70 @@ CLIENT_HTML = r"""
     .refresh-btn:hover {
       background: #444;
     }
+    
+    /* Header toggle styles */
+    #main_header {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    
+    #main_header.header-hidden {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .header-content {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .header-toggle {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    
+    .header-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+    
+    /* Show toggle button when header is hidden */
+    body.header-hidden .header-toggle {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+    }
+    
+    body.header-hidden .header-toggle:hover {
+      background: rgba(0, 0, 0, 0.9);
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+  <header id="main_header">
+    <div class="header-content">
+      <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+    </div>
+    <button id="toggle_header" class="header-toggle" title="Hide/Show Toolbar">⌃</button>
   </header>
   <main class="layout">
     <div class="row">
@@ -800,6 +858,34 @@ let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for tog
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
+
+// Header toggle functionality
+function toggleHeader() {
+  const header = document.getElementById('main_header');
+  const body = document.body;
+  const isHidden = body.classList.contains('header-hidden');
+  
+  if (isHidden) {
+    // Show header
+    body.classList.remove('header-hidden');
+    header.classList.remove('header-hidden');
+    localStorage.setItem('headerHidden', 'false');
+  } else {
+    // Hide header
+    body.classList.add('header-hidden');
+    header.classList.add('header-hidden');
+    localStorage.setItem('headerHidden', 'true');
+  }
+}
+
+// Initialize header state from localStorage
+function initializeHeaderState() {
+  const headerHidden = localStorage.getItem('headerHidden') === 'true';
+  if (headerHidden) {
+    document.body.classList.add('header-hidden');
+    document.getElementById('main_header').classList.add('header-hidden');
+  }
+}
 
 // Progress status management functions
 function showProgress(message) {
@@ -955,6 +1041,9 @@ function setupPngInfo(meta, name){
   }
 }
 document.addEventListener('click', (e)=>{
+  if (e.target && e.target.id === 'toggle_header'){ 
+    toggleHeader();
+  }
   if (e.target && e.target.id === 'pnginfo_btn'){ 
     togglePngInfo();   // <-- toggles open/close
   }
@@ -1339,7 +1428,10 @@ async function exportFiltered(){
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
-window.addEventListener("load", loadVideos);
+window.addEventListener("load", () => {
+  initializeHeaderState();
+  loadVideos();
+});
 </script>
 </body>
 </html>

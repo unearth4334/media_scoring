@@ -11,7 +11,7 @@
 }
 
 body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
-header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; }
+header { padding:12px 16px; background:#242424; border-bottom:1px solid #333; position: relative; transition: all 0.3s ease; }
 h1 { font-size:18px; margin:0 0 8px 0; }
 main { padding:16px; max-width:1300px; margin:0 auto; }
 .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
@@ -59,4 +59,54 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#202020; border:1px 
   display: flex;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+/* Header toggle styles */
+#main_header.header-hidden {
+  transform: translateY(-100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.header-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #eee;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.header-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Show toggle button when header is hidden */
+body.header-hidden .header-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 1000;
+}
+
+body.header-hidden .header-toggle:hover {
+  background: rgba(0, 0, 0, 0.9);
 }
