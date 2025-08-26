@@ -39,6 +39,7 @@ FILE_PATTERN: str = "*.mp4"
 STYLE_FILE: str = "style_default.css"
 GENERATE_THUMBNAILS: bool = False
 THUMBNAIL_HEIGHT: int = 64
+TOGGLE_EXTENSIONS: List[str] = ["jpg", "png", "mp4"]
 
 # Thumbnail generation progress tracking
 THUMBNAIL_PROGRESS = {
@@ -391,7 +392,8 @@ def api_videos():
         "pattern": FILE_PATTERN, 
         "videos": items,
         "thumbnails_enabled": GENERATE_THUMBNAILS,
-        "thumbnail_height": THUMBNAIL_HEIGHT
+        "thumbnail_height": THUMBNAIL_HEIGHT,
+        "toggle_extensions": TOGGLE_EXTENSIONS
     }
 
 @APP.post("/api/scan")
@@ -634,6 +636,60 @@ CLIENT_HTML = r"""
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    
+    /* Toggle button styles */
+    .toggle-container {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    
+    .toggle-btn {
+      padding: 4px 8px;
+      border: 1px solid #666;
+      background: #333;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      text-transform: uppercase;
+      min-width: 35px;
+      text-align: center;
+      transition: all 0.2s ease;
+    }
+    
+    .toggle-btn.active {
+      background: #4CAF50;
+      border-color: #45a049;
+      color: white;
+    }
+    
+    .toggle-btn.inactive {
+      background: #555;
+      border-color: #444;
+      color: #999;
+      opacity: 0.6;
+    }
+    
+    .toggle-btn:hover {
+      opacity: 0.8;
+    }
+    
+    .refresh-btn {
+      padding: 6px 8px;
+      border: 1px solid #666;
+      background: #333;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #444;
+    }
   </style>
 </head>
 <body>
@@ -643,10 +699,18 @@ CLIENT_HTML = r"""
   </header>
   <main class="layout">
     <div class="row">
-      <input id="dir" type="text" class="grow" placeholder="/path/to/folder"/>
-      <input id="pattern" type="text" style="min-width:240px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+      <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
+      <div id="toggle_buttons" class="toggle-container"></div>
+      <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
       <button id="pat_help" class="helpbtn">?</button>
-      <button id="load">Load</button>
+      <button id="load" class="refresh-btn" title="Load/Refresh">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+          <path d="M21 3v5h-5"/>
+          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+          <path d="M3 21v-5h5"/>
+        </svg>
+      </button>
       <div id="dir_display" class="filename"></div>
     </div>
     <div class="row">
@@ -732,6 +796,7 @@ let minFilter = null; // null means no filter; otherwise 1..5
 let thumbnailsEnabled = false;
 let thumbnailHeight = 64;
 let showThumbnails = true; // user preference for showing thumbnails
+let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -751,6 +816,92 @@ function hideProgress() {
     statusElement.style.display = 'none';
     statusElement.innerHTML = '';
   }
+}
+
+// Toggle button functionality
+function initializeToggleButtons() {
+  const container = document.getElementById('toggle_buttons');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  toggleExtensions.forEach(ext => {
+    const btn = document.createElement('button');
+    btn.className = 'toggle-btn';
+    btn.textContent = ext.toUpperCase();
+    btn.dataset.extension = ext;
+    btn.onclick = () => toggleExtension(ext);
+    container.appendChild(btn);
+  });
+  
+  // Update button states based on current pattern
+  updateToggleButtonStates();
+  
+  // Add pattern input listener
+  const patternInput = document.getElementById('pattern');
+  if (patternInput) {
+    patternInput.addEventListener('input', updateToggleButtonStates);
+  }
+}
+
+function toggleExtension(extension) {
+  const patternInput = document.getElementById('pattern');
+  if (!patternInput) return;
+  
+  const currentPattern = patternInput.value.trim();
+  const extPattern = `*.${extension}`;
+  
+  let newPattern;
+  if (isExtensionInPattern(extension, currentPattern)) {
+    // Remove the extension
+    newPattern = removeExtensionFromPattern(extension, currentPattern);
+  } else {
+    // Add the extension
+    newPattern = addExtensionToPattern(extension, currentPattern);
+  }
+  
+  patternInput.value = newPattern;
+  updateToggleButtonStates();
+}
+
+function isExtensionInPattern(extension, pattern) {
+  const extPattern = `*.${extension}`;
+  return pattern.split('|').some(part => part.trim() === extPattern);
+}
+
+function removeExtensionFromPattern(extension, pattern) {
+  const extPattern = `*.${extension}`;
+  const parts = pattern.split('|').map(p => p.trim()).filter(p => p !== extPattern);
+  return parts.length > 0 ? parts.join('|') : '*.mp4';
+}
+
+function addExtensionToPattern(extension, pattern) {
+  const extPattern = `*.${extension}`;
+  if (!pattern.trim()) {
+    return extPattern;
+  }
+  
+  const parts = pattern.split('|').map(p => p.trim()).filter(p => p && p !== extPattern);
+  parts.push(extPattern);
+  return parts.join('|');
+}
+
+function updateToggleButtonStates() {
+  const patternInput = document.getElementById('pattern');
+  if (!patternInput) return;
+  
+  const currentPattern = patternInput.value.trim();
+  
+  toggleExtensions.forEach(ext => {
+    const btn = document.querySelector(`[data-extension="${ext}"]`);
+    if (btn) {
+      if (isExtensionInPattern(ext, currentPattern)) {
+        btn.className = 'toggle-btn active';
+      } else {
+        btn.className = 'toggle-btn inactive';
+      }
+    }
+  });
 }
 
 function updateThumbnailStatus() {
@@ -980,12 +1131,16 @@ async function loadVideos(){
   currentPattern = data.pattern || currentPattern;
   thumbnailsEnabled = data.thumbnails_enabled || false;
   thumbnailHeight = data.thumbnail_height || 64;
+  toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
   
   document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
   const patInput = document.getElementById('pattern');
   if (patInput && !patInput.value) patInput.value = currentPattern;
+  
+  // Initialize toggle buttons
+  initializeToggleButtons();
   
   // Show/hide thumbnail controls
   const sidebarControls = document.getElementById('sidebar_controls');
@@ -1194,7 +1349,7 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT, TOGGLE_EXTENSIONS
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
     ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
@@ -1204,6 +1359,7 @@ def main():
     ap.add_argument("--style", default="style_default.css", help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
     ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
     ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
+    ap.add_argument("--toggle-extensions", nargs='*', default=["jpg", "png", "mp4"], help="File extensions for toggle buttons")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -1214,6 +1370,7 @@ def main():
     STYLE_FILE = args.style or "style_default.css"
     GENERATE_THUMBNAILS = args.generate_thumbnails
     THUMBNAIL_HEIGHT = args.thumbnail_height
+    TOGGLE_EXTENSIONS = args.toggle_extensions or ["jpg", "png", "mp4"]
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
