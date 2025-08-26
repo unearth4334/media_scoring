@@ -10,7 +10,12 @@ This guide explains how to deploy the Video & Image Scorer in a Docker container
    cd media_scoring
    ```
 
-2. **Copy and configure environment file**:
+2. **Validate your Docker setup** (optional but recommended):
+   ```bash
+   ./validate-docker-setup.sh
+   ```
+
+3. **Copy and configure environment file**:
    ```bash
    cp .env.example .env
    ```

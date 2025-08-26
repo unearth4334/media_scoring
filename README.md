@@ -84,6 +84,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 ├── docker-compose.yml          # Basic Docker Compose setup
 ├── docker-compose.override.yml # Advanced Docker Compose with env vars
 ├── .env.example               # Example environment configuration
+├── validate-docker-setup.sh   # Docker setup validation script
 │
 ├── run_video_scorer.sh         # Linux/macOS entrypoint
 ├── run_video_scorer.ps1        # Windows PowerShell entrypoint
