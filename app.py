@@ -248,6 +248,16 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
                 "current": i + 1,
                 "current_file": media_file.name
             })
+        
+        # Ensure final progress shows completion before resetting
+        if files_needing_thumbnails:
+            THUMBNAIL_PROGRESS.update({
+                "current": len(files_needing_thumbnails),
+                "current_file": ""
+            })
+            # Give a small delay to allow UI polling to catch the final state
+            import time
+            time.sleep(0.1)
                 
     finally:
         # Reset progress tracking
