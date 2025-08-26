@@ -753,6 +753,21 @@ CLIENT_HTML = r"""
       <h1>🎬 Video/Image Scorer (FastAPI)</h1>
       <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
       <div class="header-row">
+        <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
+        <div id="toggle_buttons" class="toggle-container"></div>
+        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+        <button id="pat_help" class="helpbtn">?</button>
+        <button id="load" class="refresh-btn" title="Load/Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M3 21v-5h5"/>
+          </svg>
+        </button>
+        <div id="dir_display" class="filename"></div>
+      </div>
+      <div class="header-row">
         <label for="min_filter">Rating ≥</label>
         <select id="min_filter">
           <option value="none" selected>No filter</option>
@@ -788,21 +803,6 @@ CLIENT_HTML = r"""
     <button id="toggle_header" class="header-toggle" title="Hide/Show Toolbar">⌃</button>
   </header>
   <main class="layout">
-    <div class="row">
-      <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
-      <div id="toggle_buttons" class="toggle-container"></div>
-      <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-      <button id="pat_help" class="helpbtn">?</button>
-      <button id="load" class="refresh-btn" title="Load/Refresh">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-          <path d="M21 3v5h-5"/>
-          <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-          <path d="M3 21v-5h5"/>
-        </svg>
-      </button>
-      <div id="dir_display" class="filename"></div>
-    </div>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
