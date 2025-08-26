@@ -44,7 +44,8 @@ THUMBNAIL_PROGRESS = {
     "generating": False,
     "current": 0,
     "total": 0,
-    "current_file": ""
+    "current_file": "",
+    "completed": False
 }
 
 def scores_dir_for(directory: Path) -> Path:
@@ -216,7 +217,8 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
         "generating": True,
         "current": 0,
         "total": total_files,
-        "current_file": ""
+        "current_file": "",
+        "completed": False
     })
     
     LOGGER.info(f"Generating thumbnails for {total_files} files...")
@@ -253,19 +255,20 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
         if files_needing_thumbnails:
             THUMBNAIL_PROGRESS.update({
                 "current": len(files_needing_thumbnails),
-                "current_file": ""
+                "current_file": "",
+                "completed": True
             })
-            # Give a small delay to allow UI polling to catch the final state
-            import time
-            time.sleep(0.1)
                 
     finally:
-        # Reset progress tracking
+        # Reset progress tracking after a brief delay to ensure UI sees completion
+        import time
+        time.sleep(0.5)  # Give UI time to see completion state
         THUMBNAIL_PROGRESS.update({
             "generating": False,
             "current": 0,
             "total": 0,
-            "current_file": ""
+            "current_file": "",
+            "completed": False
         })
         
     LOGGER.info(f"Thumbnail generation complete: {generated} generated, {len(file_list) - total_files} skipped")
@@ -777,6 +780,18 @@ function updateThumbnailStatus() {
         setButtonLoading('toggle_thumbnails', true, `Generating (${progress.current}/${progress.total})`);
         
         // Start polling if not already started
+        if (!thumbnailProgressInterval) {
+          thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
+        }
+      } else if (progress.completed) {
+        // Handle completion state - show completed message briefly
+        statusElement.textContent = `Thumbnails completed (${progress.current}/${progress.total})`;
+        statusElement.style.display = 'inline';
+        
+        // Show completed state on Toggle Thumbnails button
+        setButtonLoading('toggle_thumbnails', true, `Complete (${progress.current}/${progress.total})`);
+        
+        // Continue polling to catch when backend resets the state
         if (!thumbnailProgressInterval) {
           thumbnailProgressInterval = setInterval(updateThumbnailStatus, 500);
         }
