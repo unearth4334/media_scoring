@@ -17,10 +17,13 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host files.pythonhosted.org --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .
+
+# Make entrypoint script executable
+RUN chmod +x docker-entrypoint.sh
 
 # Create media directory
 RUN mkdir -p /media
@@ -32,5 +35,5 @@ EXPOSE 7862
 ENV PUID=0
 ENV PGID=0
 
-# Start the application
-CMD ["python", "app.py", "--dir", "/media", "--host", "0.0.0.0", "--port", "7862"]
+# Use the entrypoint script that properly handles configuration
+CMD ["./docker-entrypoint.sh"]
