@@ -12,5 +12,12 @@ if (-not $Port)  { $Port  = [int]$cfg.port }
 if (-not $Host)  { $Host  = $cfg.host }
 if (-not $Pattern) { $Pattern = $cfg.pattern }
 if (-not $Style) { $Style = $cfg.style }
-Write-Host "Starting Video Scorer: dir=$Dir  port=$Port  host=$Host  pattern=$Pattern  style=$Style"
-& $VenvPython "app.py" --dir $Dir --port $Port --host $Host --pattern $Pattern --style $Style
+$ToggleExtensions = $cfg.toggle_extensions
+Write-Host "Starting Video Scorer: dir=$Dir  port=$Port  host=$Host  pattern=$Pattern  style=$Style  toggle_ext=$ToggleExtensions"
+$ThumbnailArgs = ""
+if ($cfg.generate_thumbnails) {
+    $ThumbnailArgs = "--generate-thumbnails --thumbnail-height $($cfg.thumbnail_height)"
+}
+$ToggleExtArgs = "--toggle-extensions"
+foreach ($ext in $ToggleExtensions) { $ToggleExtArgs += " $ext" }
+Invoke-Expression "& `"$VenvPython`" app.py --dir `"$Dir`" --port $Port --host `"$Host`" --pattern `"$Pattern`" --style `"$Style`" $ThumbnailArgs $ToggleExtArgs"
