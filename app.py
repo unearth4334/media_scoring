@@ -643,8 +643,12 @@ CLIENT_HTML = r"""
   </header>
   <main class="layout">
     <div class="row">
-      <input id="dir" type="text" class="grow" placeholder="/path/to/folder"/>
-      <input id="pattern" type="text" style="min-width:240px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+      <input id="dir" type="text" class="grow shortened" placeholder="/path/to/folder"/>
+      <div class="extension-toggles">
+        <button id="toggle_png" class="ext-toggle" data-ext="png" title="Toggle PNG/JPG/JPEG files">PNG</button>
+        <button id="toggle_mp4" class="ext-toggle" data-ext="mp4" title="Toggle MP4 files">MP4</button>
+      </div>
+      <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
       <button id="pat_help" class="helpbtn">?</button>
       <button id="load">Load</button>
       <div id="dir_display" class="filename"></div>
@@ -1181,10 +1185,109 @@ async function exportFiltered(){
     hideProgress();
   }
 }
+
+// Extension toggle state management
+let extensionToggles = {
+  png: true, // Default enabled to match existing "*.mp4" pattern being off
+  mp4: true
+};
+
+function updateToggleButtons() {
+  const pngToggle = document.getElementById('toggle_png');
+  const mp4Toggle = document.getElementById('toggle_mp4');
+  
+  if (pngToggle) {
+    if (extensionToggles.png) {
+      pngToggle.classList.add('active');
+      pngToggle.classList.remove('disabled');
+    } else {
+      pngToggle.classList.remove('active');
+      pngToggle.classList.add('disabled');
+    }
+  }
+  
+  if (mp4Toggle) {
+    if (extensionToggles.mp4) {
+      mp4Toggle.classList.add('active');
+      mp4Toggle.classList.remove('disabled');
+    } else {
+      mp4Toggle.classList.remove('active');
+      mp4Toggle.classList.add('disabled');
+    }
+  }
+}
+
+function updatePatternFromToggles() {
+  const patterns = [];
+  if (extensionToggles.png) {
+    patterns.push('*.png', '*.jpg', '*.jpeg');
+  }
+  if (extensionToggles.mp4) {
+    patterns.push('*.mp4');
+  }
+  
+  const newPattern = patterns.length > 0 ? patterns.join('|') : '*';
+  const patternInput = document.getElementById('pattern');
+  if (patternInput) {
+    patternInput.value = newPattern;
+  }
+  currentPattern = newPattern;
+}
+
+function parsePatternToToggles(pattern) {
+  // Reset toggles
+  extensionToggles.png = false;
+  extensionToggles.mp4 = false;
+  
+  if (!pattern) return;
+  
+  const normalizedPattern = pattern.toLowerCase();
+  
+  // Check for image extensions (png, jpg, jpeg)
+  if (normalizedPattern.includes('*.png') || normalizedPattern.includes('*.jpg') || normalizedPattern.includes('*.jpeg')) {
+    extensionToggles.png = true;
+  }
+  
+  // Check for mp4 extension
+  if (normalizedPattern.includes('*.mp4')) {
+    extensionToggles.mp4 = true;
+  }
+}
+
+function initializeToggles() {
+  const patternInput = document.getElementById('pattern');
+  if (patternInput && patternInput.value) {
+    parsePatternToToggles(patternInput.value);
+  }
+  updateToggleButtons();
+}
+
+// Add event listeners for extension toggles
+document.getElementById('toggle_png')?.addEventListener('click', () => {
+  extensionToggles.png = !extensionToggles.png;
+  updateToggleButtons();
+  updatePatternFromToggles();
+});
+
+document.getElementById('toggle_mp4')?.addEventListener('click', () => {
+  extensionToggles.mp4 = !extensionToggles.mp4;
+  updateToggleButtons();
+  updatePatternFromToggles();
+});
+
+// Update toggles when pattern input changes manually
+document.getElementById('pattern')?.addEventListener('input', (e) => {
+  parsePatternToToggles(e.target.value);
+  updateToggleButtons();
+});
+
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
-window.addEventListener("load", loadVideos);
+window.addEventListener("load", () => {
+  loadVideos();
+  initializeToggles();
+});
 </script>
 </body>
 </html>
