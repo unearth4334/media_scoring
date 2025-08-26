@@ -1007,7 +1007,6 @@ async function postScore(score){
     show(idx);
   }
   renderSidebar();
-  renderScoreBar(score);
 }
 async function postKey(key){
   const v = filtered[idx];
