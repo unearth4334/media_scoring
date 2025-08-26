@@ -714,7 +714,7 @@ CLIENT_HTML = r"""
       <div id="dir_display" class="filename"></div>
     </div>
     <div class="row">
-      <label for="min_filter">Minimum rating:</label>
+      <label for="min_filter">Rating ≥</label>
       <select id="min_filter">
         <option value="none" selected>No filter</option>
         <option value="unrated">Unrated</option>
