@@ -42,8 +42,6 @@ coverage.xml
 .pyre/
 
 # Environments\
-.env.*
-*.env
 test_env/
 
 # VS Code
@@ -68,5 +66,4 @@ test_media/
 workflows/
 
 # Docker
-.env
 docker-compose.override.yml.bak
