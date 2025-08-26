@@ -41,10 +41,7 @@ coverage.xml
 # Pyre type checker
 .pyre/
 
-# Environments
-.env
-.env.*
-*.env
+# Environments\
 test_env/
 
 # VS Code
@@ -67,3 +64,6 @@ test_media/
 .thumbnails/
 .scores/
 workflows/
+
+# Docker
+docker-compose.override.yml.bak

@@ -1,0 +1,25 @@
+services:
+  media-scorer:
+    build: .
+    container_name: media-scorer
+    ports:
+      - "${HOST_PORT:-7862}:${HOST_PORT:-7862}"
+    volumes:
+      - "${HOST_MEDIA_PATH}:/media"
+      - ./config:/app/config
+      - scores_data:/app/.scores
+      - thumbnails_data:/app/.thumbnails
+      - workflows_data:/app/workflows
+    environment:
+      - PUID=${PUID}
+      - PGID=${GUID}
+      - MEDIA_PATH=${MEDIA_PATH}
+      - HOST_PORT=${HOST_PORT}
+      - MEDIA_PATTERN=${MEDIA_PATTERN}
+      - GENERATE_THUMBNAILS=${GENERATE_THUMBNAILS}
+    restart: unless-stopped
+
+volumes:
+  scores_data:
+  thumbnails_data:
+  workflows_data:
