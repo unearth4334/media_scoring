@@ -59,11 +59,11 @@ Thumbs.db
 # Log files
 *.log
 
-# Test directories
+# Test directories and files
 test_media/
+
 
 # Ignore self-generated files
 .thumbnails/
 .scores/
 workflows/
-test_media/
