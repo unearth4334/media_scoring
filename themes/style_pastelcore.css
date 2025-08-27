@@ -13,7 +13,7 @@
 body { background:#e3e6a0; color:#5a4a4a; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
 header { padding:12px 16px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
 h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
-main { padding:16px; max-width:1300px; margin:0 auto; }
+main { padding:16px; max-width:1300px; margin:0 auto; flex:1; overflow:auto; }
 .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
 .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
 .filename { font-family:monospace; opacity:0.8; color:#6b5b6b; }

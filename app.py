@@ -711,6 +711,74 @@ CLIENT_HTML = r"""
       background: #444;
     }
     
+    /* Resizable top pane layout */
+    body {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      margin: 0;
+      overflow: hidden;
+    }
+    
+    .top-pane {
+      min-height: 120px;
+      max-height: 50vh;
+      resize: vertical;
+      overflow: auto;
+      border-bottom: 3px solid #444;
+      cursor: ns-resize;
+      position: relative;
+    }
+    
+    .top-pane::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .top-pane::-webkit-scrollbar-track {
+      background: #2a2a2a;
+    }
+    
+    .top-pane::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+    
+    .resize-handle {
+      position: absolute;
+      bottom: -3px;
+      left: 0;
+      right: 0;
+      height: 6px;
+      background: #444;
+      cursor: ns-resize;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .resize-handle::after {
+      content: '⋯';
+      color: #888;
+      font-size: 16px;
+      letter-spacing: 2px;
+    }
+    
+    .resize-handle:hover {
+      background: #555;
+    }
+    
+    .resize-handle:hover::after {
+      color: #aaa;
+    }
+    
+    .main-content {
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    
     .toolbar-container {
       transition: all 0.3s ease;
       overflow: hidden;
@@ -732,71 +800,74 @@ CLIENT_HTML = r"""
       display: none;
     }
     
-    /* Adjust body spacing when toolbar is collapsed */
-    body.toolbar-collapsed main {
-      padding-top: 8px;
-      transition: padding-top 0.3s ease;
+    /* Adjust main spacing when toolbar is collapsed */
+    body.toolbar-collapsed .top-pane {
+      min-height: 60px;
     }
   </style>
 </head>
 <body>
-  <button class="toolbar-toggle" id="toolbar-toggle" title="Toggle Toolbar">⌄</button>
-  <div class="toolbar-container" id="toolbar-container">
-    <header>
-      <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
-    </header>
-    <div class="toolbar-rows">
-      <div class="row">
-        <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
-        <div id="toggle_buttons" class="toggle-container"></div>
-        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-        <button id="pat_help" class="helpbtn">?</button>
-        <button id="load" class="refresh-btn" title="Load/Refresh">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-            <path d="M21 3v5h-5"/>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-            <path d="M3 21v-5h5"/>
-          </svg>
-        </button>
-        <div id="dir_display" class="filename"></div>
-      </div>
-      <div class="row">
-        <label for="min_filter">Rating ≥</label>
-        <select id="min_filter">
-          <option value="none" selected>No filter</option>
-          <option value="unrated">Unrated</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <div id="filter_info" class="filename"></div>
-        <div class="controls">
-          <button id="prev">Prev</button>
-          <button id="next">Next</button>
-          <button id="reject">Reject</button>
-          <button id="clear">Clear</button>
-          <button data-star="1">★1</button>
-          <button data-star="2">★2</button>
-          <button data-star="3">★3</button>
-          <button data-star="4">★4</button>
-          <button data-star="5">★5</button>
-          <button id="extract_one">Extract workflow (current)</button>
-          <button id="extract_filtered">Extract workflows (filtered)</button>
-          <button id="download_btn" title="Download current">
-            <!-- Download icon SVG -->
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <div class="top-pane" id="top-pane">
+    <button class="toolbar-toggle" id="toolbar-toggle" title="Toggle Toolbar">⌄</button>
+    <div class="toolbar-container" id="toolbar-container">
+      <header>
+        <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+        <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+      </header>
+      <div class="toolbar-rows">
+        <div class="row">
+          <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
+          <div id="toggle_buttons" class="toggle-container"></div>
+          <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+          <button id="pat_help" class="helpbtn">?</button>
+          <button id="load" class="refresh-btn" title="Load/Refresh">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+              <path d="M21 3v5h-5"/>
+              <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+              <path d="M3 21v-5h5"/>
             </svg>
           </button>
+          <div id="dir_display" class="filename"></div>
+        </div>
+        <div class="row">
+          <label for="min_filter">Rating ≥</label>
+          <select id="min_filter">
+            <option value="none" selected>No filter</option>
+            <option value="unrated">Unrated</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+          <div id="filter_info" class="filename"></div>
+          <div class="controls">
+            <button id="prev">Prev</button>
+            <button id="next">Next</button>
+            <button id="reject">Reject</button>
+            <button id="clear">Clear</button>
+            <button data-star="1">★1</button>
+            <button data-star="2">★2</button>
+            <button data-star="3">★3</button>
+            <button data-star="4">★4</button>
+            <button data-star="5">★5</button>
+            <button id="extract_one">Extract workflow (current)</button>
+            <button id="extract_filtered">Extract workflows (filtered)</button>
+            <button id="download_btn" title="Download current">
+              <!-- Download icon SVG -->
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
+    <div class="resize-handle" id="resize-handle"></div>
   </div>
-  <main class="layout">
+  <div class="main-content">
+    <main class="layout">
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
@@ -838,7 +909,64 @@ CLIENT_HTML = r"""
       </div>
     </section>
   </main>
+  </div>
 <script>
+// Resizable top pane functionality
+let isResizing = false;
+let startY = 0;
+let startHeight = 0;
+
+function initResizablePane() {
+  const topPane = document.getElementById('top-pane');
+  const resizeHandle = document.getElementById('resize-handle');
+  
+  // Set initial height if not set
+  if (!topPane.style.height) {
+    topPane.style.height = '200px';
+  }
+  
+  // Mouse down on resize handle
+  resizeHandle.addEventListener('mousedown', (e) => {
+    isResizing = true;
+    startY = e.clientY;
+    startHeight = parseInt(window.getComputedStyle(topPane).height, 10);
+    document.body.style.cursor = 'ns-resize';
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  
+  // Mouse move - resize the pane
+  document.addEventListener('mousemove', (e) => {
+    if (!isResizing) return;
+    
+    const newHeight = startHeight + (e.clientY - startY);
+    const minHeight = 120;
+    const maxHeight = window.innerHeight * 0.6; // Max 60% of viewport height
+    
+    if (newHeight >= minHeight && newHeight <= maxHeight) {
+      topPane.style.height = newHeight + 'px';
+    }
+  });
+  
+  // Mouse up - stop resizing
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
+  });
+  
+  // Handle window resize
+  window.addEventListener('resize', () => {
+    const currentHeight = parseInt(topPane.style.height, 10);
+    const maxHeight = window.innerHeight * 0.6;
+    if (currentHeight > maxHeight) {
+      topPane.style.height = maxHeight + 'px';
+    }
+  });
+}
+
 // Toolbar collapse functionality
 let toolbarCollapsed = false;
 
@@ -862,8 +990,10 @@ function toggleToolbar() {
   }
 }
 
-// Add toolbar toggle event listener
+// Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function() {
+  initResizablePane();
+  
   const toggleBtn = document.getElementById('toolbar-toggle');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleToolbar);
