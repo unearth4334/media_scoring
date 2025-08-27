@@ -12,6 +12,8 @@
 
 body { background:#e3e6a0; color:#5a4a4a; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
 header { padding:12px 16px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
+header > * { max-width:1300px; margin:0 auto; }
+.toolbar-rows { max-width:1300px; margin:0 auto; padding:0 16px; }
 h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
 main { padding:16px; max-width:1300px; margin:0 auto; }
 .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
