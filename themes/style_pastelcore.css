@@ -16,6 +16,7 @@ h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
 main { padding:16px; max-width:1300px; margin:0 auto; }
 .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
 .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
+.toolbar-rows { padding: 0 16px; }
 .filename { font-family:monospace; opacity:0.8; color:#6b5b6b; }
 .controls { display:flex; gap:8px; margin-left:auto; }
 .controls button { background:#d4e5f7; color:#4a5a7a; border:1px solid #a8c2e8; padding:4px 6px; border-radius:6px; cursor:pointer; }
