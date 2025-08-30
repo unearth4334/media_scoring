@@ -29,6 +29,22 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
 #pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #999; background:#222; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
 #pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
 .scorebar { margin-top:8px; }
+.maximize-btn { 
+  background: transparent; 
+  border: 1px solid #777; 
+  border-radius: 4px; 
+  color: #eee; 
+  cursor: pointer; 
+  padding: 4px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  opacity: 0.8;
+}
+.maximize-btn:hover { 
+  background: #2a2a2a; 
+  opacity: 1;
+}
 .pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; color:#eee; }
 input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
