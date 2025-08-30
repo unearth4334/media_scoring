@@ -26,10 +26,11 @@ def main():
     if args.format == 'json':
         print(json.dumps({'dir': dir_, 'port': port, 'host': host, 'pattern': pattern, 'style': style, 'generate_thumbnails': generate_thumbnails, 'thumbnail_height': thumbnail_height, 'toggle_extensions': toggle_extensions})); return
     if args.format == 'sh':
-        print(f'DIR={json.dumps(dir_)}'); print(f'PORT={port}'); print(f'HOST={json.dumps(host)}'); print(f'PATTERN={json.dumps(pattern)}'); print(f'STYLE={json.dumps(style)}'); print(f'GENERATE_THUMBNAILS={json.dumps(generate_thumbnails)}'); print(f'THUMBNAIL_HEIGHT={thumbnail_height}'); print(f'TOGGLE_EXTENSIONS={json.dumps(toggle_extensions)}'); return
+        print(f'DIR={json.dumps(dir_)}'); print(f'PORT={port}'); print(f'HOST={json.dumps(host)}'); print(f'PATTERN={json.dumps(pattern)}'); print(f'STYLE={json.dumps(style)}'); print(f'GENERATE_THUMBNAILS={json.dumps(generate_thumbnails)}'); print(f'THUMBNAIL_HEIGHT={thumbnail_height}'); print(f'TOGGLE_EXTENSIONS={json.dumps(json.dumps(toggle_extensions))}'); return
     if args.format == 'ps':
-        print(f'$Dir = {json.dumps(dir_)}'); print(f'$Port = {port}'); print(f'$Host = {json.dumps(host)}'); print(f'$Pattern = {json.dumps(pattern)}'); print(f'$Style = {json.dumps(style)}'); print(f'$GenerateThumbnails = {json.dumps(generate_thumbnails)}'); print(f'$ThumbnailHeight = {thumbnail_height}'); print(f'$ToggleExtensions = {json.dumps(toggle_extensions)}'); return
+        print(f'$Dir = {json.dumps(dir_)}'); print(f'$Port = {port}'); print(f'$Host = {json.dumps(host)}'); print(f'$Pattern = {json.dumps(pattern)}'); print(f'$Style = {json.dumps(style)}'); print(f'$GenerateThumbnails = {json.dumps(generate_thumbnails)}'); print(f'$ThumbnailHeight = {thumbnail_height}'); print(f'$ToggleExtensions = {json.dumps(json.dumps(toggle_extensions))}'); return
     if args.format == 'bat':
         esc_dir = dir_.replace('%','%%'); esc_host = host.replace('%','%%'); esc_pattern = pattern.replace('%','%%'); esc_style = style.replace('%','%%')
-        print(f'set "DIR={esc_dir}"'); print(f'set "PORT={port}"'); print(f'set "HOST={esc_host}"'); print(f'set "PATTERN={esc_pattern}"'); print(f'set "STYLE={esc_style}"'); print(f'set "GENERATE_THUMBNAILS={generate_thumbnails}"'); print(f'set "THUMBNAIL_HEIGHT={thumbnail_height}"'); print(f'set "TOGGLE_EXTENSIONS={json.dumps(toggle_extensions)}"'); return
+        esc_toggle_extensions = json.dumps(toggle_extensions).replace('%','%%')
+        print(f'set "DIR={esc_dir}"'); print(f'set "PORT={port}"'); print(f'set "HOST={esc_host}"'); print(f'set "PATTERN={esc_pattern}"'); print(f'set "STYLE={esc_style}"'); print(f'set "GENERATE_THUMBNAILS={generate_thumbnails}"'); print(f'set "THUMBNAIL_HEIGHT={thumbnail_height}"'); print(f'set "TOGGLE_EXTENSIONS={esc_toggle_extensions}"'); return
 if __name__ == '__main__': main()
