@@ -741,7 +741,7 @@ CLIENT_HTML = r"""
     
     .toolbar-container {
       transition: all 0.3s ease;
-      overflow: hidden;
+      overflow: visible;
     }
     
     .toolbar-container.collapsed {
