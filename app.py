@@ -40,6 +40,7 @@ STYLE_FILE: str = "style_default.css"
 GENERATE_THUMBNAILS: bool = False
 THUMBNAIL_HEIGHT: int = 64
 TOGGLE_EXTENSIONS: List[str] = ["jpg", "png", "mp4"]
+DIRECTORY_SORT_DESC: bool = True
 
 # Thumbnail generation progress tracking
 THUMBNAIL_PROGRESS = {
@@ -566,7 +567,7 @@ async def api_directories(path: str = ""):
                 })
         
         # Sort directories alphabetically
-        directories.sort(key=lambda x: x["name"].lower())
+        directories.sort(key=lambda x: x["name"].lower(), reverse=DIRECTORY_SORT_DESC)
         
         return {"directories": directories, "current_path": str(target_path)}
     except Exception as e:
@@ -1629,17 +1630,50 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT, TOGGLE_EXTENSIONS
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT, TOGGLE_EXTENSIONS, DIRECTORY_SORT_DESC
+
+    # Load config from file first
+    config_file = Path("config.yml")
+    if config_file.exists():
+        try:
+            import yaml
+            with open(config_file, 'r', encoding='utf-8') as f:
+                cfg = yaml.safe_load(f) or {}
+            # Apply config defaults to global variables
+            global_dir = cfg.get('dir', str(Path.cwd()))
+            global_pattern = cfg.get('pattern', '*.mp4')
+            global_style = cfg.get('style', 'style_default.css')
+            global_thumbnails = bool(cfg.get('generate_thumbnails', False))
+            global_thumb_height = int(cfg.get('thumbnail_height', 64))
+            global_toggle_ext = cfg.get('toggle_extensions', ['jpg', 'png', 'mp4'])
+            DIRECTORY_SORT_DESC = bool(cfg.get('directory_sort_desc', True))
+        except Exception as e:
+            print(f"Warning: Could not load config.yml: {e}", file=sys.stderr)
+            global_dir = str(Path.cwd())
+            global_pattern = '*.mp4'
+            global_style = 'style_default.css'
+            global_thumbnails = False
+            global_thumb_height = 64
+            global_toggle_ext = ['jpg', 'png', 'mp4']
+    else:
+        global_dir = str(Path.cwd())
+        global_pattern = '*.mp4'
+        global_style = 'style_default.css'
+        global_thumbnails = False
+        global_thumb_height = 64
+        global_toggle_ext = ['jpg', 'png', 'mp4']
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
-    ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
+    ap.add_argument("--dir", required=False, default=global_dir, help="Directory with media files")
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
-    ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
-    ap.add_argument("--style", default="style_default.css", help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
-    ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
-    ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
-    ap.add_argument("--toggle-extensions", nargs='*', default=["jpg", "png", "mp4"], help="File extensions for toggle buttons")
+    ap.add_argument("--pattern", default=global_pattern, help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
+    ap.add_argument("--style", default=global_style, help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
+    ap.add_argument("--generate-thumbnails", action="store_true", default=global_thumbnails, help="Generate thumbnail previews for media files")
+    ap.add_argument("--thumbnail-height", type=int, default=global_thumb_height, help="Height in pixels for thumbnail previews")
+    ap.add_argument("--toggle-extensions", nargs='*', default=global_toggle_ext, help="File extensions for toggle buttons")
+    ap.add_argument("--directory-sort-desc", action="store_true", help="Sort directory dropdown in descending order")
+    ap.add_argument("--directory-sort-asc", action="store_true", help="Sort directory dropdown in ascending order")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -1651,6 +1685,12 @@ def main():
     GENERATE_THUMBNAILS = args.generate_thumbnails
     THUMBNAIL_HEIGHT = args.thumbnail_height
     TOGGLE_EXTENSIONS = args.toggle_extensions or ["jpg", "png", "mp4"]
+    # Handle directory sort direction - CLI args can override config default
+    if args.directory_sort_asc:
+        DIRECTORY_SORT_DESC = False
+    elif args.directory_sort_desc:
+        DIRECTORY_SORT_DESC = True
+    # If neither CLI arg is specified, DIRECTORY_SORT_DESC keeps its global default (set from config or True)
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 

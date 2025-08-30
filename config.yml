@@ -6,3 +6,4 @@ style: style_default.css   # CSS theme file (style_default.css, style_pastelcore
 generate_thumbnails: true     # Generate thumbnail previews for media files
 thumbnail_height: 64          # Height in pixels for thumbnail previews
 toggle_extensions: ["jpg", "png", "mp4"]  # File extensions for toggle buttons (default active extensions)
+directory_sort_desc: true     # Sort directory dropdown in descending order (true) or ascending (false)
