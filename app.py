@@ -798,6 +798,7 @@ CLIENT_HTML = r"""
   </div>
   <main class="layout">
     <aside id="sidebar">
+      <div id="sidebar-resize-handle" title="Click to hide/show, drag to resize"></div>
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
           <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
@@ -1423,6 +1424,119 @@ document.getElementById("extract_one").addEventListener("click", extractCurrent)
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);
+
+// Sidebar resize/hide functionality
+let sidebarWidth = 320; // Default width
+let isResizing = false;
+let sidebarHidden = false;
+
+function setSidebarWidth(width) {
+  sidebarWidth = width;
+  document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
+  // Store in localStorage for persistence
+  localStorage.setItem('sidebarWidth', width.toString());
+}
+
+function toggleSidebar() {
+  const layout = document.querySelector('.layout');
+  const sidebar = document.getElementById('sidebar');
+  
+  if (sidebarHidden) {
+    // Show sidebar
+    layout.classList.remove('sidebar-hidden');
+    setSidebarWidth(sidebarWidth || 320);
+    sidebarHidden = false;
+    localStorage.setItem('sidebarHidden', 'false');
+  } else {
+    // Hide sidebar
+    layout.classList.add('sidebar-hidden');
+    sidebarHidden = true;
+    localStorage.setItem('sidebarHidden', 'true');
+  }
+}
+
+// Initialize sidebar state from localStorage
+function initSidebar() {
+  const savedWidth = localStorage.getItem('sidebarWidth');
+  const savedHidden = localStorage.getItem('sidebarHidden');
+  
+  if (savedWidth) {
+    sidebarWidth = parseInt(savedWidth);
+    setSidebarWidth(sidebarWidth);
+  }
+  
+  if (savedHidden === 'true') {
+    sidebarHidden = true;
+    document.querySelector('.layout').classList.add('sidebar-hidden');
+  }
+}
+
+// Setup resize handle functionality
+document.addEventListener('DOMContentLoaded', function() {
+  initSidebar();
+  setupResizeHandle();
+});
+
+// Also setup immediately in case DOMContentLoaded has already fired
+if (document.readyState === 'loading') {
+  // Document still loading, wait for DOMContentLoaded
+} else {
+  // Document already loaded
+  initSidebar();
+  setupResizeHandle();
+}
+
+function setupResizeHandle() {
+  const resizeHandle = document.getElementById('sidebar-resize-handle');
+  if (!resizeHandle) return;
+  
+  let clickTimeout;
+  let hasDragged = false;
+  
+  resizeHandle.addEventListener('mousedown', function(e) {
+    e.preventDefault();
+    hasDragged = false;
+    
+    // Clear any existing timeout
+    if (clickTimeout) {
+      clearTimeout(clickTimeout);
+      clickTimeout = null;
+    }
+    
+    isResizing = true;
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+    
+    function onMouseMove(e) {
+      if (!isResizing) return;
+      hasDragged = true;
+      
+      const newWidth = Math.max(200, Math.min(600, startWidth + (e.clientX - startX)));
+      setSidebarWidth(newWidth);
+    }
+    
+    function onMouseUp() {
+      isResizing = false;
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+      
+      // If no drag occurred, treat as click to toggle
+      if (!hasDragged) {
+        clickTimeout = setTimeout(() => {
+          toggleSidebar();
+        }, 10);
+      }
+    }
+    
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+  
+  // Prevent text selection during resize
+  resizeHandle.addEventListener('selectstart', function(e) {
+    e.preventDefault();
+  });
+}
 </script>
 </body>
 </html>
