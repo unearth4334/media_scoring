@@ -544,6 +544,34 @@ async def api_key(req: Request):
     LOGGER.info(f"KEY key={key} file={fname}")
     return {"ok": True}
 
+@APP.get("/api/directories")
+async def api_directories(path: str = ""):
+    """List directories in the given path, excluding dot folders"""
+    try:
+        if not path:
+            target_path = VIDEO_DIR
+        else:
+            target_path = Path(path).expanduser().resolve()
+        
+        # Security check: ensure we're not accessing forbidden paths
+        if not target_path.exists() or not target_path.is_dir():
+            raise HTTPException(404, "Directory not found")
+        
+        directories = []
+        for item in target_path.iterdir():
+            if item.is_dir() and not item.name.startswith('.'):
+                directories.append({
+                    "name": item.name,
+                    "path": str(item)
+                })
+        
+        # Sort directories alphabetically
+        directories.sort(key=lambda x: x["name"].lower())
+        
+        return {"directories": directories, "current_path": str(target_path)}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to list directories: {str(e)}")
+
 @APP.post("/api/extract")
 async def api_extract(req: Request):
     """Extract ComfyUI workflow JSON for one or more files.
@@ -713,7 +741,7 @@ CLIENT_HTML = r"""
     
     .toolbar-container {
       transition: all 0.3s ease;
-      overflow: hidden;
+      overflow: visible;
     }
     
     .toolbar-container.collapsed {
@@ -737,6 +765,60 @@ CLIENT_HTML = r"""
       padding-top: 8px;
       transition: padding-top 0.3s ease;
     }
+
+    /* Directory navigation buttons */
+    .nav-btn {
+      background: #2f2f2f;
+      color: #eee;
+      border: 1px solid #666;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+    }
+    .nav-btn:hover {
+      background: #3a3a3a;
+    }
+
+    /* Directory dropdown */
+    .dir-dropdown-container {
+      position: relative;
+    }
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #2f2f2f;
+      border: 1px solid #666;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      min-width: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 2px;
+    }
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #eee;
+      border-bottom: 1px solid #444;
+    }
+    .dropdown-item:hover {
+      background: #3a3a3a;
+    }
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+    .dropdown-empty {
+      padding: 8px 12px;
+      color: #999;
+      font-style: italic;
+    }
   </style>
 </head>
 <body>
@@ -748,6 +830,19 @@ CLIENT_HTML = r"""
     </header>
     <div class="toolbar-rows">
       <div class="row">
+        <button id="dir_up" class="nav-btn" title="Go up one directory">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 15l-6-6-6 6"/>
+          </svg>
+        </button>
+        <div class="dir-dropdown-container">
+          <button id="dir_browse" class="nav-btn" title="Browse directories">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+          <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
+        </div>
         <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
         <div id="toggle_buttons" class="toggle-container"></div>
         <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
@@ -1320,6 +1415,108 @@ document.getElementById('pattern').addEventListener('keydown', (e) => {
     if (path) scanDir(path);
   }
 });
+
+// Directory navigation functions
+async function goUpDirectory() {
+  const dirInput = document.getElementById('dir');
+  const currentPath = dirInput.value.trim();
+  if (!currentPath) return;
+  
+  const path = new Path(currentPath);
+  const parentPath = path.parent;
+  if (parentPath && parentPath !== currentPath) {
+    dirInput.value = parentPath;
+    // Optionally trigger scan immediately
+    // scanDir(parentPath);
+  }
+}
+
+async function loadDirectories(basePath) {
+  try {
+    const response = await fetch(`/api/directories?path=${encodeURIComponent(basePath)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load directories: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.directories;
+  } catch (error) {
+    console.error('Error loading directories:', error);
+    return [];
+  }
+}
+
+function showDirectoryDropdown() {
+  const dirInput = document.getElementById('dir');
+  const dropdown = document.getElementById('dir_dropdown');
+  const currentPath = dirInput.value.trim() || './';
+  
+  // Clear existing dropdown content
+  dropdown.innerHTML = '<div class="dropdown-item" style="opacity: 0.6;">Loading...</div>';
+  dropdown.style.display = 'block';
+  
+  loadDirectories(currentPath).then(directories => {
+    dropdown.innerHTML = '';
+    
+    if (directories.length === 0) {
+      dropdown.innerHTML = '<div class="dropdown-empty">No directories found</div>';
+    } else {
+      directories.forEach(dir => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = dir.name;
+        item.title = dir.path;
+        item.addEventListener('click', () => {
+          const currentValue = dirInput.value.trim();
+          let newPath;
+          if (currentValue.endsWith('/')) {
+            newPath = currentValue + dir.name;
+          } else {
+            newPath = currentValue + '/' + dir.name;
+          }
+          dirInput.value = newPath;
+          hideDirectoryDropdown();
+        });
+        dropdown.appendChild(item);
+      });
+    }
+  }).catch(error => {
+    dropdown.innerHTML = '<div class="dropdown-empty">Error loading directories</div>';
+  });
+}
+
+function hideDirectoryDropdown() {
+  const dropdown = document.getElementById('dir_dropdown');
+  dropdown.style.display = 'none';
+}
+
+// Simple Path utility for JavaScript (since we don't have Node.js path module)
+class Path {
+  constructor(pathStr) {
+    this.path = pathStr.replace(/\\/g, '/'); // Normalize to forward slashes
+  }
+  
+  get parent() {
+    const normalizedPath = this.path.replace(/\/+$/, ''); // Remove trailing slashes
+    const lastSlash = normalizedPath.lastIndexOf('/');
+    if (lastSlash <= 0) return '/';
+    return normalizedPath.substring(0, lastSlash);
+  }
+}
+
+// Add event listeners for directory navigation
+document.getElementById('dir_up').addEventListener('click', goUpDirectory);
+document.getElementById('dir_browse').addEventListener('click', showDirectoryDropdown);
+
+// Hide dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdownContainer = document.querySelector('.dir-dropdown-container');
+  const dropdown = document.getElementById('dir_dropdown');
+  
+  if (!dropdownContainer.contains(e.target)) {
+    hideDirectoryDropdown();
+  }
+});
+
 document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
 document.getElementById('next').addEventListener('click', () => { show(idx+1); });
 document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
