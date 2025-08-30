@@ -797,6 +797,9 @@ CLIENT_HTML = r"""
     </div>
   </div>
   <main class="layout">
+    <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">
+      <span id="sidebar-toggle-icon">◀</span>
+    </button>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
@@ -867,6 +870,36 @@ document.addEventListener('DOMContentLoaded', function() {
   const toggleBtn = document.getElementById('toolbar-toggle');
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleToolbar);
+  }
+});
+
+// Sidebar collapse functionality
+let sidebarCollapsed = false;
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  const toggleBtn = document.getElementById('sidebar-toggle');
+  const toggleIcon = document.getElementById('sidebar-toggle-icon');
+  const main = document.querySelector('main.layout');
+  
+  sidebarCollapsed = !sidebarCollapsed;
+  
+  if (sidebarCollapsed) {
+    main.classList.add('sidebar-collapsed');
+    toggleIcon.textContent = '▶';
+    toggleBtn.title = 'Show sidebar';
+  } else {
+    main.classList.remove('sidebar-collapsed');
+    toggleIcon.textContent = '◀';
+    toggleBtn.title = 'Hide sidebar';
+  }
+}
+
+// Add sidebar toggle event listener
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebarToggleBtn = document.getElementById('sidebar-toggle');
+  if (sidebarToggleBtn) {
+    sidebarToggleBtn.addEventListener('click', toggleSidebar);
   }
 });
 
