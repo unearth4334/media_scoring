@@ -11,11 +11,12 @@
 }
 
 body { background:#e3e6a0; color:#5a4a4a; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
-header { padding:12px 16px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
+header { padding:12px 50px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
 h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
 main { padding:16px; max-width:1300px; margin:0 auto; }
 .layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
 .row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
+.toolbar-rows { padding: 12px 50px; }
 .filename { font-family:monospace; opacity:0.8; color:#6b5b6b; }
 .controls { display:flex; gap:8px; margin-left:auto; }
 .controls button { background:#d4e5f7; color:#4a5a7a; border:1px solid #a8c2e8; padding:4px 6px; border-radius:6px; cursor:pointer; }
@@ -50,3 +51,50 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#f0e8f0; border:1px 
 #download_btn svg path { stroke: #6a5a6a; }
 /* Thumbnail status message */
 #thumbnail_status { color: #9b7b9b; font-size: 12px; opacity: 0.8; margin-left: 8px; }
+
+/* Collapsible toolbar styles */
+.toolbar-toggle {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 1000;
+  background: #d4e5f7;
+  color: #4a5a7a;
+  border: 1px solid #a8c2e8;
+  border-radius: 4px;
+  padding: 6px 8px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.toolbar-toggle:hover {
+  background: #c2d7f0;
+}
+
+.toolbar-container {
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.toolbar-container.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.toolbar-container.collapsed header {
+  margin: 0;
+  padding: 0;
+}
+
+.toolbar-container.collapsed .toolbar-rows {
+  display: none;
+}
+
+/* Adjust body spacing when toolbar is collapsed */
+body.toolbar-collapsed main {
+  padding-top: 8px;
+  transition: padding-top 0.3s ease;
+}
