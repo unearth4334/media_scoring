@@ -44,3 +44,136 @@ aside#sidebar { max-height: 66vh; overflow:auto; background:#1a0a1a; border:1px 
 .helpbtn { background:#9932cc; border:1px solid #da70d6; padding:6px 8px; border-radius:8px; cursor:pointer; color:#ffffff; }
 /* Download icon button */
 #download_btn svg { vertical-align: middle; }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  /* Mobile layout adjustments */
+  main { padding: 8px; }
+  
+  /* Switch to single column layout on mobile */
+  .layout { 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px; 
+  }
+  
+  /* Mobile header adjustments */
+  header { padding: 8px 12px; }
+  h1 { font-size: 16px; }
+  .pill { font-size: 12px; padding: 3px 6px; }
+  
+  /* Make inputs more mobile-friendly */
+  input[type=text] { 
+    min-width: 0; 
+    flex: 1; 
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  .grow { min-width: 0; }
+  
+  /* Mobile-friendly buttons */
+  .controls { 
+    flex-wrap: wrap; 
+    margin-left: 0; 
+    gap: 6px; 
+  }
+  .controls button { 
+    padding: 8px 12px; 
+    font-size: 14px; 
+    min-height: 44px; /* iOS touch target recommendation */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  /* Star rating buttons on mobile */
+  .controls button[data-star] {
+    min-width: 44px;
+    padding: 8px 10px;
+  }
+  
+  /* Help and action buttons */
+  .helpbtn, button { 
+    min-height: 44px; 
+    font-size: 14px; 
+    padding: 8px 12px;
+  }
+  
+  /* Mobile sidebar adjustments */
+  aside#sidebar { 
+    max-height: 40vh; 
+    order: -1; /* Move sidebar above main content */
+  }
+  
+  /* Mobile-friendly sidebar items */
+  .item { 
+    padding: 12px 8px; 
+    min-height: 44px;
+  }
+  .item .name { 
+    font-size: 14px; 
+    max-width: none; /* Remove width restriction on mobile */
+  }
+  .item .score { font-size: 14px; }
+  
+  /* Mobile video/image container */
+  .video-wrap { 
+    padding: 4px; 
+  }
+  #player, #imgview { 
+    max-width: 100%; 
+    height: auto; 
+  }
+  
+  /* Mobile row layout */
+  .row { 
+    flex-direction: column; 
+    align-items: stretch; 
+    gap: 8px; 
+  }
+  
+  /* Mobile filter row */
+  .row:nth-child(2) { 
+    flex-direction: row; 
+    flex-wrap: wrap; 
+    align-items: center; 
+  }
+  
+  /* Mobile filename display */
+  .filename { 
+    font-size: 12px; 
+    word-break: break-all; 
+  }
+  
+  /* Button row mobile layout */
+  .button-row { 
+    flex-direction: column; 
+    gap: 6px; 
+  }
+  .button-row button { 
+    width: 100%; 
+    justify-content: center; 
+  }
+}
+
+@media (max-width: 480px) {
+  /* Extra small mobile adjustments */
+  header { padding: 6px 8px; }
+  main { padding: 6px; }
+  
+  h1 { font-size: 14px; }
+  .pill { font-size: 11px; }
+  
+  /* Smaller gaps on very small screens */
+  .layout { gap: 8px; }
+  .row { gap: 6px; }
+  .controls { gap: 4px; }
+  
+  /* Compact sidebar for very small screens */
+  aside#sidebar { 
+    max-height: 35vh; 
+    padding: 6px; 
+  }
+  
+  /* Smaller item padding */
+  .item { padding: 8px 6px; }
+}
