@@ -19,6 +19,13 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
 #right { display:flex; flex-direction:column; align-items:center; }
 .toolbar-rows { padding: 12px 50px; }
 .filename { font-family:monospace; opacity:0.9; }
+#dir_display { 
+  font-family:monospace; 
+  opacity:0.9; 
+  margin-left: auto; 
+  text-align: right; 
+  white-space: nowrap; 
+}
 .controls { display:flex; gap:8px; margin-left:auto; }
 .controls button { background:#9932cc; color:#ffffff; border:1px solid #da70d6; padding:4px 6px; border-radius:6px; cursor:pointer; }
 .controls button:hover { background:#ba55d3; }
