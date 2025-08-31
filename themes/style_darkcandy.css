@@ -29,8 +29,8 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
 #pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
 .scorebar { margin-top:8px; }
 .pill { background:#1a0a1a; padding:4px 8px; border-radius:999px; border:1px solid #ff69b4; color:#ff69b4; }
-input[type=text] { background:#1a1a1a; color:#ffffff; border:1px solid #00ffff; padding:8px 10px; border-radius:8px; min-width:280px; }
-.grow { flex: 1 1 auto; min-width: 280px; }
+input[type=text] { background:#1a1a1a; color:#ffffff; border:1px solid #00ffff; padding:8px 10px; border-radius:8px; min-width:200px; }
+.grow { flex: 1 1 auto; min-width: 200px; }
 /* Sidebar */
 aside#sidebar { max-height: 66vh; overflow:auto; background:#1a0a1a; border:1px solid #ff69b4; border-radius:10px; padding:8px; }
 .item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
