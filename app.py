@@ -974,6 +974,7 @@ let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
 let thumbnailsEnabled = false;
 let thumbnailHeight = 64;
+let isMaximized = false;
 let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
 
@@ -1156,6 +1157,115 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+function toggleMaximize(){
+  const videoWrap = document.querySelector('.video-wrap');
+  const player = document.getElementById('player');
+  const imgview = document.getElementById('imgview');
+  const maximizeBtn = document.getElementById('maximize-btn');
+  
+  if (!videoWrap || !maximizeBtn) return;
+  
+  isMaximized = !isMaximized;
+  
+  if (isMaximized) {
+    // Calculate available space
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Get current media dimensions
+    let mediaWidth, mediaHeight;
+    if (player && player.style.display !== 'none') {
+      mediaWidth = player.videoWidth || 960;
+      mediaHeight = player.videoHeight || 540;
+    } else if (imgview && imgview.style.display !== 'none') {
+      mediaWidth = imgview.naturalWidth || 960;
+      mediaHeight = imgview.naturalHeight || 540;
+    } else {
+      mediaWidth = 960;
+      mediaHeight = 540;
+    }
+    
+    // Calculate scale to fit screen while maintaining aspect ratio
+    const scaleX = (viewportWidth - 32) / mediaWidth; // 32px for padding
+    const scaleY = (viewportHeight - 120) / mediaHeight; // 120px for UI elements
+    const scale = Math.min(scaleX, scaleY, 3); // Cap at 3x zoom
+    
+    // Apply maximized styles
+    videoWrap.style.position = 'fixed';
+    videoWrap.style.top = '50%';
+    videoWrap.style.left = '50%';
+    videoWrap.style.transform = 'translate(-50%, -50%)';
+    videoWrap.style.zIndex = '1000';
+    videoWrap.style.background = '#000';
+    videoWrap.style.maxWidth = 'none';
+    videoWrap.style.maxHeight = 'none';
+    
+    if (player && player.style.display !== 'none') {
+      player.style.width = (mediaWidth * scale) + 'px';
+      player.style.height = (mediaHeight * scale) + 'px';
+      player.style.maxWidth = 'none';
+      player.style.maxHeight = 'none';
+    }
+    
+    if (imgview && imgview.style.display !== 'none') {
+      imgview.style.width = (mediaWidth * scale) + 'px';
+      imgview.style.height = (mediaHeight * scale) + 'px';
+      imgview.style.maxWidth = 'none';
+      imgview.style.maxHeight = 'none';
+    }
+    
+    // Update button icon and title
+    maximizeBtn.innerHTML = svgMinimize();
+    maximizeBtn.title = 'Return to actual size';
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.id = 'maximize-backdrop';
+    backdrop.style.position = 'fixed';
+    backdrop.style.top = '0';
+    backdrop.style.left = '0';
+    backdrop.style.width = '100%';
+    backdrop.style.height = '100%';
+    backdrop.style.backgroundColor = 'rgba(0,0,0,0.8)';
+    backdrop.style.zIndex = '999';
+    backdrop.addEventListener('click', toggleMaximize);
+    document.body.appendChild(backdrop);
+    
+  } else {
+    // Reset to normal size
+    videoWrap.style.position = '';
+    videoWrap.style.top = '';
+    videoWrap.style.left = '';
+    videoWrap.style.transform = '';
+    videoWrap.style.zIndex = '';
+    videoWrap.style.background = '';
+    videoWrap.style.maxWidth = '';
+    videoWrap.style.maxHeight = '';
+    
+    if (player && player.style.display !== 'none') {
+      player.style.width = '960px';
+      player.style.height = '540px';
+      player.style.maxWidth = '';
+      player.style.maxHeight = '';
+    }
+    
+    if (imgview && imgview.style.display !== 'none') {
+      imgview.style.width = '';
+      imgview.style.height = '';
+      imgview.style.maxWidth = '960px';
+      imgview.style.maxHeight = '540px';
+    }
+    
+    // Update button icon and title
+    maximizeBtn.innerHTML = svgMaximize();
+    maximizeBtn.title = 'Maximize media';
+    
+    // Remove backdrop
+    const backdrop = document.getElementById('maximize-backdrop');
+    if (backdrop) backdrop.remove();
+  }
+}
+
 function updateDownloadButton(name){
   const db = document.getElementById('download_btn');
   if (!db) return;
@@ -1186,14 +1296,37 @@ function svgStar(filled){
     fill="${fill}" stroke="var(--star-stroke-color)" stroke-width="2"/>
 </svg>`;
 }
+function svgMaximize(){
+  return `
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
+function svgMinimize(){
+  return `
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <path d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+}
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
-  let html = `<div style="display:flex; gap:8px; align-items:center;">`;
+  let html = `<div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">`;
+  html += `<div style="display:flex; gap:8px; align-items:center;">`;
   html += svgReject(score === -1);
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
   for (let i=0;i<5;i++) html += svgStar(i<stars);
   html += `</div>`;
+  html += `<button id="maximize-btn" class="maximize-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
+  html += isMaximized ? svgMinimize() : svgMaximize();
+  html += `</button>`;
+  html += `</div>`;
   bar.innerHTML = html;
+  
+  // Attach event listener to the new button
+  const maximizeBtn = document.getElementById('maximize-btn');
+  if (maximizeBtn) {
+    maximizeBtn.addEventListener('click', toggleMaximize);
+  }
 }
 function scoreBadge(s){
   if (s === -1) return 'R';
