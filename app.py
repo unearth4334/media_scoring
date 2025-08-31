@@ -827,7 +827,7 @@ CLIENT_HTML = r"""
   <div class="toolbar-container" id="toolbar-container">
     <header>
       <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear • Esc exit maximized</div>
     </header>
     <div class="toolbar-rows">
       <div class="row">
@@ -1665,6 +1665,7 @@ document.addEventListener("keydown", (e) => {
   if (["INPUT","TEXTAREA"].includes((e.target.tagName||"").toUpperCase())) return;
   const player = document.getElementById("player");
   function togglePlay(){ if (!player || player.style.display==='none') return; if (player.paused) { player.play(); } else { player.pause(); } }
+  if (e.key === "Escape" && isMaximized){ e.preventDefault(); postKey("Escape"); toggleMaximize(); return; }
   if (e.key === "ArrowLeft"){ e.preventDefault(); postKey("ArrowLeft"); show(idx-1); return; }
   if (e.key === "ArrowRight"){ e.preventDefault(); postKey("ArrowRight"); show(idx+1); return; }
   if (e.key === " "){ e.preventDefault(); postKey("Space"); togglePlay(); return; }
