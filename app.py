@@ -798,7 +798,9 @@ CLIENT_HTML = r"""
   </div>
   <main class="layout">
     <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">
-      <span id="sidebar-toggle-icon">◀</span>
+      <svg id="sidebar-toggle-icon" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M8 2L4 6L8 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </button>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
@@ -886,11 +888,13 @@ function toggleSidebar() {
   
   if (sidebarCollapsed) {
     main.classList.add('sidebar-collapsed');
-    toggleIcon.textContent = '▶';
+    // Change to right-pointing triangle
+    toggleIcon.querySelector('path').setAttribute('d', 'M4 2L8 6L4 10');
     toggleBtn.title = 'Show sidebar';
   } else {
     main.classList.remove('sidebar-collapsed');
-    toggleIcon.textContent = '◀';
+    // Change to left-pointing triangle
+    toggleIcon.querySelector('path').setAttribute('d', 'M8 2L4 6L8 10');
     toggleBtn.title = 'Hide sidebar';
   }
 }
