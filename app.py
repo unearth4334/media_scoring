@@ -905,8 +905,8 @@ CLIENT_HTML = r"""
           </button>
           <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
         </div>
-        <div class="dir-input-container" style="flex:1; position: relative;">
-          <input id="dir" type="text" style="min-width:200px; width:100%; padding-right:30px;" placeholder="/path/to/folder"/>
+        <div class="dir-input-container" style="position: relative;">
+          <input id="dir" type="text" style="min-width:200px; max-width:400px; width:400px; padding-right:30px;" placeholder="/path/to/folder"/>
           <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
             <svg width="12" height="8" viewBox="0 0 12 8" fill="white">
               <path d="M6 8L0 0h12z"/>
@@ -1504,6 +1504,65 @@ function show(i){
   renderScoreBar(v.score || 0);
   renderSidebar();
 }
+// Function to estimate text width
+function estimateTextWidth(text, element) {
+  const canvas = document.createElement('canvas');
+  const context = canvas.getContext('2d');
+  const computedStyle = window.getComputedStyle(element);
+  context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+  return context.measureText(text).width;
+}
+
+// Function to resize directory input based on dir_display width
+function resizeDirectoryInput() {
+  const dirDisplay = document.getElementById('dir_display');
+  const dirInput = document.getElementById('dir');
+  const refreshBtn = document.getElementById('load');
+  
+  if (dirDisplay && dirInput && refreshBtn && dirDisplay.textContent) {
+    const row = dirDisplay.closest('.row');
+    if (!row) return;
+    
+    const rowWidth = row.offsetWidth;
+    const displayWidth = dirDisplay.offsetWidth;
+    
+    // Calculate widths of other elements in the row
+    const otherElements = row.querySelectorAll('button, input, select, .toggle-container');
+    let otherElementsWidth = 0;
+    
+    otherElements.forEach(el => {
+      if (el !== dirInput && el !== dirDisplay) {
+        otherElementsWidth += el.offsetWidth;
+      }
+    });
+    
+    // Account for gaps (12px each) - count the number of direct children in the row
+    const childCount = row.children.length;
+    const gapWidth = (childCount - 1) * 12; // 12px gap between elements
+    
+    // Calculate available width for directory input
+    // Row width - other elements - gaps - dir_display width - some padding
+    const availableWidth = rowWidth - otherElementsWidth - gapWidth - displayWidth - 40; // 40px extra padding
+    
+    // Set reasonable bounds
+    const minWidth = 200;
+    const maxWidth = 600;
+    const finalWidth = Math.max(minWidth, Math.min(availableWidth, maxWidth));
+    
+    dirInput.style.width = `${finalWidth}px`;
+    dirInput.style.maxWidth = `${finalWidth}px`;
+    
+    console.log('Resize calculation:', {
+      rowWidth,
+      displayWidth,
+      otherElementsWidth,
+      gapWidth,
+      availableWidth,
+      finalWidth
+    });
+  }
+}
+
 async function loadVideos(){
   const res = await fetch("/api/videos");
   const data = await res.json();
@@ -1519,6 +1578,9 @@ async function loadVideos(){
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
   const patInput = document.getElementById('pattern');
   if (patInput && !patInput.value) patInput.value = currentPattern;
+  
+  // Resize directory input after updating dir_display
+  resizeDirectoryInput();
   
   // Initialize toggle buttons
   initializeToggleButtons();
@@ -1593,6 +1655,8 @@ document.getElementById("load").addEventListener("click", () => {
     }
     scanDir(path);
   }
+  // Resize directory input after refresh
+  setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
