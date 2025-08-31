@@ -60,8 +60,9 @@ input[type=text] { background:#faf8fa; color:#5a4a5a; border:1px solid #d0c0d0; 
 #dir { min-width: 180px; max-width: 320px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
 /* Sidebar */
-aside#sidebar { max-height: 66vh; overflow:auto; background:#f0e8f0; border:1px solid #d4b8c9; border-radius:10px; padding:8px; }
-#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #d4b8c9; margin-bottom:8px; }
+aside#sidebar { max-height: 66vh; overflow: hidden; background:#f0e8f0; border:1px solid #d4b8c9; border-radius:10px; padding:8px; display: flex; flex-direction: column; }
+#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #d4b8c9; margin-bottom:8px; flex-shrink: 0; }
+#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
 .item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .item:hover { background:#e8d8e8; }
 .item.current { background:#d4e5f7; border:1px solid #a8c2e8; }

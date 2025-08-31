@@ -59,7 +59,9 @@ input[type=text] { background:#1a1a1a; color:#ffffff; border:1px solid #00ffff; 
 #dir { min-width: 180px; max-width: 320px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
 /* Sidebar */
-aside#sidebar { max-height: 66vh; overflow:auto; background:#1a0a1a; border:1px solid #ff69b4; border-radius:10px; padding:8px; }
+aside#sidebar { max-height: 66vh; overflow: hidden; background:#1a0a1a; border:1px solid #ff69b4; border-radius:10px; padding:8px; display: flex; flex-direction: column; }
+#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #ff69b4; margin-bottom:8px; flex-shrink: 0; }
+#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
 .item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
 .item .content { flex:1; display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; min-width:0; }
 .item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items:start; }
