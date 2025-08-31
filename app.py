@@ -573,6 +573,39 @@ async def api_directories(path: str = ""):
     except Exception as e:
         raise HTTPException(500, f"Failed to list directories: {str(e)}")
 
+@APP.get("/api/sibling-directories")
+async def api_sibling_directories(path: str = ""):
+    """List sibling directories (directories at the same level), excluding dot folders"""
+    try:
+        if not path:
+            target_path = VIDEO_DIR
+        else:
+            target_path = Path(path).expanduser().resolve()
+        
+        # Security check: ensure we're not accessing forbidden paths
+        if not target_path.exists() or not target_path.is_dir():
+            raise HTTPException(404, "Directory not found")
+        
+        # Get parent directory
+        parent_path = target_path.parent
+        if not parent_path.exists() or not parent_path.is_dir():
+            return {"directories": [], "current_path": str(target_path), "parent_path": str(parent_path)}
+        
+        directories = []
+        for item in parent_path.iterdir():
+            if item.is_dir() and not item.name.startswith('.') and item != target_path:
+                directories.append({
+                    "name": item.name,
+                    "path": str(item)
+                })
+        
+        # Sort directories alphabetically
+        directories.sort(key=lambda x: x["name"].lower(), reverse=DIRECTORY_SORT_DESC)
+        
+        return {"directories": directories, "current_path": str(target_path), "parent_path": str(parent_path)}
+    except Exception as e:
+        raise HTTPException(500, f"Failed to list sibling directories: {str(e)}")
+
 @APP.post("/api/extract")
 async def api_extract(req: Request):
     """Extract ComfyUI workflow JSON for one or more files.
@@ -820,6 +853,34 @@ CLIENT_HTML = r"""
       color: #999;
       font-style: italic;
     }
+    
+    /* Directory input with triangle dropdown */
+    .dir-input-container {
+      position: relative;
+    }
+    .dir-triangle-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    }
+    .dir-triangle-btn:hover {
+      background: #3a3a3a;
+      opacity: 1;
+    }
+    .dir-triangle-btn svg {
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
@@ -844,7 +905,15 @@ CLIENT_HTML = r"""
           </button>
           <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
         </div>
-        <input id="dir" type="text" style="min-width:200px; flex:1;" placeholder="/path/to/folder"/>
+        <div class="dir-input-container" style="flex:1; position: relative;">
+          <input id="dir" type="text" style="min-width:200px; width:100%; padding-right:30px;" placeholder="/path/to/folder"/>
+          <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="white">
+              <path d="M6 8L0 0h12z"/>
+            </svg>
+          </button>
+          <div id="dir_siblings_dropdown" class="dropdown-menu" style="display: none;"></div>
+        </div>
         <div id="toggle_buttons" class="toggle-container"></div>
         <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
         <button id="pat_help" class="helpbtn">?</button>
@@ -1623,6 +1692,58 @@ function hideDirectoryDropdown() {
   dropdown.style.display = 'none';
 }
 
+// Sibling directory functions
+async function loadSiblingDirectories(currentPath) {
+  try {
+    const response = await fetch(`/api/sibling-directories?path=${encodeURIComponent(currentPath)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to load sibling directories: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.directories;
+  } catch (error) {
+    console.error('Error loading sibling directories:', error);
+    return [];
+  }
+}
+
+function showSiblingDirectoryDropdown() {
+  const dirInput = document.getElementById('dir');
+  const dropdown = document.getElementById('dir_siblings_dropdown');
+  const currentPath = dirInput.value.trim() || './';
+  
+  // Clear existing dropdown content
+  dropdown.innerHTML = '<div class="dropdown-item" style="opacity: 0.6;">Loading...</div>';
+  dropdown.style.display = 'block';
+  
+  loadSiblingDirectories(currentPath).then(directories => {
+    dropdown.innerHTML = '';
+    
+    if (directories.length === 0) {
+      dropdown.innerHTML = '<div class="dropdown-empty">No sibling directories found</div>';
+    } else {
+      directories.forEach(dir => {
+        const item = document.createElement('div');
+        item.className = 'dropdown-item';
+        item.textContent = dir.name;
+        item.title = dir.path;
+        item.addEventListener('click', () => {
+          dirInput.value = dir.path;
+          hideSiblingDirectoryDropdown();
+        });
+        dropdown.appendChild(item);
+      });
+    }
+  }).catch(error => {
+    dropdown.innerHTML = '<div class="dropdown-empty">Error loading sibling directories</div>';
+  });
+}
+
+function hideSiblingDirectoryDropdown() {
+  const dropdown = document.getElementById('dir_siblings_dropdown');
+  dropdown.style.display = 'none';
+}
+
 // Simple Path utility for JavaScript (since we don't have Node.js path module)
 class Path {
   constructor(pathStr) {
@@ -1640,14 +1761,21 @@ class Path {
 // Add event listeners for directory navigation
 document.getElementById('dir_up').addEventListener('click', goUpDirectory);
 document.getElementById('dir_browse').addEventListener('click', showDirectoryDropdown);
+document.getElementById('dir_siblings').addEventListener('click', showSiblingDirectoryDropdown);
 
 // Hide dropdown when clicking outside
 document.addEventListener('click', (e) => {
   const dropdownContainer = document.querySelector('.dir-dropdown-container');
   const dropdown = document.getElementById('dir_dropdown');
+  const siblingContainer = document.querySelector('.dir-input-container');
+  const siblingDropdown = document.getElementById('dir_siblings_dropdown');
   
   if (!dropdownContainer.contains(e.target)) {
     hideDirectoryDropdown();
+  }
+  
+  if (!siblingContainer.contains(e.target)) {
+    hideSiblingDirectoryDropdown();
   }
 });
 
