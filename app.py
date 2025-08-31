@@ -797,8 +797,7 @@ CLIENT_HTML = r"""
     </div>
   </div>
   <main class="layout">
-    <button id="sidebar-toggle" class="sidebar-toggle" title="Toggle sidebar">
-      <span id="sidebar-toggle-icon">◀</span>
+    <button id="sidebar-toggle" class="sidebar-toggle" title="Hide sidebar">
     </button>
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
@@ -879,18 +878,15 @@ let sidebarCollapsed = false;
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
   const toggleBtn = document.getElementById('sidebar-toggle');
-  const toggleIcon = document.getElementById('sidebar-toggle-icon');
   const main = document.querySelector('main.layout');
   
   sidebarCollapsed = !sidebarCollapsed;
   
   if (sidebarCollapsed) {
     main.classList.add('sidebar-collapsed');
-    toggleIcon.textContent = '▶';
     toggleBtn.title = 'Show sidebar';
   } else {
     main.classList.remove('sidebar-collapsed');
-    toggleIcon.textContent = '◀';
     toggleBtn.title = 'Hide sidebar';
   }
 }
