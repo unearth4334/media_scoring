@@ -905,8 +905,8 @@ CLIENT_HTML = r"""
           </button>
           <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
         </div>
-        <div class="dir-input-container" style="flex:1; position: relative;">
-          <input id="dir" type="text" style="min-width:200px; width:100%; padding-right:30px;" placeholder="/path/to/folder"/>
+        <div class="dir-input-container" style="position: relative;">
+          <input id="dir" type="text" style="min-width:200px; max-width:400px; width:400px; padding-right:30px;" placeholder="/path/to/folder"/>
           <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
             <svg width="12" height="8" viewBox="0 0 12 8" fill="white">
               <path d="M6 8L0 0h12z"/>
