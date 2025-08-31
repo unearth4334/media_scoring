@@ -212,6 +212,9 @@ For containerized deployment (recommended for NAS/server hosting):
 - **Space**: Play/Pause (videos only)
 - **1–5**: Assign star rating
 - **R**: Reject file
+- **F**: Enter fullscreen mode (images/videos)
+- **Escape**: Exit fullscreen mode
+- **Double-click**: Enter fullscreen mode (images/videos)
 - **ⓘ**: Toggle PNG metadata overlay (if available)
 - **Copy**: Copy PNG metadata text
 - **Download current**: Save active file locally

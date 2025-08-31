@@ -1309,6 +1309,9 @@ function showMedia(url, name){
   }
   const b1 = document.getElementById('extract_one'); const b2 = document.getElementById('extract_filtered');
   if (b1 && b2){ const enable = isVideoName(name); b1.disabled = !enable; b2.disabled = !enable; }
+  
+  // Add fullscreen event listeners each time media is shown
+  addFullscreenListeners();
 }
 function show(i){
   if (filtered.length === 0){
@@ -1477,7 +1480,56 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "5"){ e.preventDefault(); postKey("5"); postScore(5); return; }
   if (e.key === "r" || e.key === "R"){ e.preventDefault(); postKey("R"); postScore(-1); return; }
   if (e.key === "c" || e.key === "C"){ e.preventDefault(); postKey("C"); postScore(0); return; }
+  if (e.key === "Escape"){ e.preventDefault(); exitFullscreen(); return; }
+  if (e.key === "f" || e.key === "F"){ e.preventDefault(); enterFullscreen(); return; }
 });
+
+// Fullscreen functionality
+function enterFullscreen() {
+  const player = document.getElementById("player");
+  const imgview = document.getElementById("imgview");
+  
+  // Determine which element is currently visible
+  let element = null;
+  if (player && player.style.display !== 'none') {
+    element = player;
+  } else if (imgview && imgview.style.display !== 'none') {
+    element = imgview;
+  }
+  
+  if (element && element.requestFullscreen) {
+    element.requestFullscreen().catch(err => {
+      console.log("Error attempting to enable fullscreen:", err);
+    });
+  }
+}
+
+function exitFullscreen() {
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(err => {
+      console.log("Error attempting to exit fullscreen:", err);
+    });
+  }
+}
+
+// Helper function to add fullscreen event listeners
+function addFullscreenListeners() {
+  const player = document.getElementById("player");
+  const imgview = document.getElementById("imgview");
+  
+  if (player) {
+    // Remove existing listener to avoid duplicates
+    player.removeEventListener('dblclick', enterFullscreen);
+    player.addEventListener('dblclick', enterFullscreen);
+  }
+  
+  if (imgview) {
+    // Remove existing listener to avoid duplicates
+    imgview.removeEventListener('dblclick', enterFullscreen);
+    imgview.addEventListener('dblclick', enterFullscreen);
+  }
+}
+
 async function extractCurrent(){
   if (!filtered.length) { alert("No item selected."); return; }
   const v = filtered[idx];
