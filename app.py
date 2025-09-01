@@ -973,7 +973,7 @@ CLIENT_HTML = r"""
             </svg>
             <span id="sort_order_text">A-Z</span>
           </button>
-          <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
+          <button id="toggle_thumbnails" class="pill" title="Toggle Thumbnails"></button>
           <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
             <!-- ZIP folder icon SVG -->
             <svg width="16" height="12" viewBox="0 0 24 24" fill="none" style="margin-right: 2px;">
@@ -1041,6 +1041,9 @@ document.addEventListener('DOMContentLoaded', function() {
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleToolbar);
   }
+  
+  // Initialize thumbnail button icon
+  updateThumbnailButton();
 });
 
 let videos = [];
@@ -1231,6 +1234,7 @@ document.addEventListener('click', (e)=>{
   }
   if (e.target && e.target.id === 'toggle_thumbnails'){ 
     showThumbnails = !showThumbnails;
+    updateThumbnailButton();
     renderSidebar();
   }
   if (e.target && e.target.id === 'sort_toggle'){ 
@@ -1406,6 +1410,25 @@ function svgMinimize(){
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
   <path d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
+}
+function svgThumbnail(hidden){
+  const gridColor = "currentColor";
+  const slashColor = hidden ? "currentColor" : "transparent";
+  return `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+  <!-- Grid/thumbnail icon -->
+  <rect x="3" y="3" width="7" height="7" stroke="${gridColor}" stroke-width="2" fill="none"/>
+  <rect x="14" y="3" width="7" height="7" stroke="${gridColor}" stroke-width="2" fill="none"/>
+  <rect x="3" y="14" width="7" height="7" stroke="${gridColor}" stroke-width="2" fill="none"/>
+  <rect x="14" y="14" width="7" height="7" stroke="${gridColor}" stroke-width="2" fill="none"/>
+  <!-- Diagonal slash when hidden -->
+  ${hidden ? `<line x1="2" y1="2" x2="22" y2="22" stroke="${slashColor}" stroke-width="3" stroke-linecap="round"/>` : ''}
+</svg>`;
+}
+function updateThumbnailButton(){
+  const btn = document.getElementById('toggle_thumbnails');
+  if (!btn) return;
+  btn.innerHTML = svgThumbnail(!showThumbnails);
 }
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
@@ -1621,6 +1644,9 @@ async function loadVideos(){
   if (sidebarControls) {
     sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
   }
+  
+  // Initialize thumbnail button icon
+  updateThumbnailButton();
   
   // Start monitoring thumbnail progress if thumbnails are enabled
   if (thumbnailsEnabled) {
