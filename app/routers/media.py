@@ -70,34 +70,6 @@ async def scan_directory(req: Request):
     }
 
 
-@router.get("/media/{name:path}")
-def serve_media(name: str):
-    """Serve media files."""
-    state = get_state()
-    target = (state.video_dir / name).resolve()
-    
-    # Security: ensure the resolved path is within video directory
-    try:
-        target.relative_to(state.video_dir)
-    except Exception:
-        raise HTTPException(403, "Forbidden path")
-    
-    if not target.exists() or not target.is_file():
-        raise HTTPException(404, "File not found")
-    
-    ext = target.suffix.lower()
-    if ext == ".mp4":
-        mime = "video/mp4"
-    elif ext == ".png":
-        mime = "image/png"
-    elif ext in {".jpg", ".jpeg"}:
-        mime = "image/jpeg"
-    else:
-        mime = "application/octet-stream"
-    
-    return FileResponse(target, media_type=mime)
-
-
 @router.get("/meta/{name:path}")
 def get_media_metadata(name: str):
     """Get metadata for a media file."""
@@ -147,24 +119,6 @@ def get_media_metadata(name: str):
         except Exception as e:
             return {"error": str(e)}
     return {}
-
-
-@router.get("/download/{name:path}")
-def download_media(name: str):
-    """Download a media file."""
-    state = get_state()
-    target = (state.video_dir / name).resolve()
-    
-    try:
-        target.relative_to(state.video_dir)
-    except Exception:
-        raise HTTPException(403, "Forbidden path")
-    
-    if not target.exists() or not target.is_file():
-        raise HTTPException(404, "File not found")
-    
-    # Force download via Content-Disposition
-    return FileResponse(target, media_type="application/octet-stream", filename=name)
 
 
 @router.post("/score")

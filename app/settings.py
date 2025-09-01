@@ -36,7 +36,7 @@ class Settings(BaseModel):
         """Expand and resolve directory path."""
         if isinstance(v, str):
             return Path(v).expanduser().resolve()
-        return v
+        return v.resolve() if isinstance(v, Path) else v
     
     @field_validator('port')
     @classmethod

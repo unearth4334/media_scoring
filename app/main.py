@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .settings import Settings
 from .state import init_state
-from .routers import core, media, extract, thumbnails_api
+from .routers import core, media, extract, thumbnails_api, root
 from .services.files import switch_directory
 from .services.thumbnails import start_thumbnail_generation
 
@@ -30,6 +30,7 @@ def create_app(settings: Settings) -> FastAPI:
     
     # Include routers
     app.include_router(core.router)
+    app.include_router(root.router)  # Root-level routes (media, download, thumbnail)
     app.include_router(media.router)
     app.include_router(extract.router)
     app.include_router(thumbnails_api.router)
@@ -42,11 +43,14 @@ def create_app(settings: Settings) -> FastAPI:
 
 def _initialize_app(state):
     """Initialize the application with directory scanning."""
+    # Ensure directory is resolved to absolute path
+    resolved_dir = state.video_dir.resolve()
+    
     # Switch to initial directory and discover files
-    file_list = switch_directory(state.video_dir, state.file_pattern)
+    file_list = switch_directory(resolved_dir, state.file_pattern)
     
     # Start thumbnail generation if enabled
-    start_thumbnail_generation(state.video_dir, file_list)
+    start_thumbnail_generation(resolved_dir, file_list)
 
 
 def cli_main():
