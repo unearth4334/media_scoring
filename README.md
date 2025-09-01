@@ -72,7 +72,28 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 
 ```
 .
-├── app.py                     # Main FastAPI app
+├── app.py                     # Main FastAPI app (entry point)
+├── src/                       # Source code modules
+│   ├── api/                   # API endpoint modules
+│   │   ├── main.py            # Main routes (index, videos, media serving)
+│   │   ├── scoring.py         # Scoring API endpoints
+│   │   ├── scanning.py        # Directory scanning & navigation
+│   │   ├── thumbnails.py      # Thumbnail generation & serving
+│   │   ├── metadata.py        # Media metadata extraction
+│   │   ├── workflow.py        # Workflow extraction & export
+│   │   └── templates.py       # HTML template management
+│   └── core/                  # Core business logic
+│       ├── config.py          # Configuration management
+│       ├── state.py           # Application state management
+│       ├── files.py           # File discovery utilities
+│       ├── scoring.py         # Scoring system logic
+│       ├── thumbnails.py      # Thumbnail generation
+│       ├── logging.py         # Logging utilities
+│       ├── png_metadata.py    # PNG metadata parsing
+│       └── workflow.py        # Workflow extraction logic
+├── templates/                 # HTML templates
+│   └── index.html             # Main web interface template
+├── static/                    # Static assets (if needed)
 ├── extract_comfyui_workflow.py # Extracts workflow JSON from MP4 metadata
 ├── config.yml                  # Default config values (dir, host, port, pattern)
 ├── requirements.txt            # Python dependencies

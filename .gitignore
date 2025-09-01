@@ -67,3 +67,6 @@ workflows/
 
 # Docker
 docker-compose.override.yml.bak
+
+# Backup files
+app_original.py
