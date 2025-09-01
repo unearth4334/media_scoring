@@ -965,6 +965,14 @@ CLIENT_HTML = r"""
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
+          <button id="sort_toggle" class="pill" title="Toggle sort order (A-Z / Z-A)">
+            <!-- Sort icon SVG -->
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" style="margin-right: 4px;">
+              <path d="M3 6h18M3 12h12M3 18h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M17 8l2-2 2 2M21 16l-2 2-2-2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span id="sort_order_text">A-Z</span>
+          </button>
           <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
           <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
             <!-- ZIP folder icon SVG -->
@@ -1046,6 +1054,7 @@ let thumbnailHeight = 64;
 let isMaximized = false;
 let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
+let sortDescending = false; // track sort order: false = A-Z, true = Z-A
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -1224,7 +1233,28 @@ document.addEventListener('click', (e)=>{
     showThumbnails = !showThumbnails;
     renderSidebar();
   }
+  if (e.target && e.target.id === 'sort_toggle'){ 
+    toggleSortOrder();
+  }
 });
+
+function toggleSortOrder() {
+  sortDescending = !sortDescending;
+  const sortText = document.getElementById('sort_order_text');
+  if (sortText) {
+    sortText.textContent = sortDescending ? 'Z-A' : 'A-Z';
+  }
+  renderSidebar();
+}
+
+function sortVideos(videoArray) {
+  const sorted = [...videoArray].sort((a, b) => {
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    return sortDescending ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
+  });
+  return sorted;
+}
 
 function toggleMaximize(){
   const videoWrap = document.querySelector('.video-wrap');
@@ -1407,7 +1437,8 @@ function renderSidebar(){
   if (!list) return;
   let html = '';
   const namesInFiltered = new Set(filtered.map(v => v.name));
-  videos.forEach((v) => {
+  const sortedVideos = sortVideos(videos);
+  sortedVideos.forEach((v) => {
     const inFiltered = namesInFiltered.has(v.name);
     const s = scoreBadge(v.score || 0);
     const classes = ['item'];

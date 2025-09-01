@@ -40,6 +40,7 @@ let thumbnailHeight = 64;
 let isMaximized = false;
 let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
+let sortDescending = false; // track sort order: false = A-Z, true = Z-A
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -218,7 +219,28 @@ document.addEventListener('click', (e)=>{
     showThumbnails = !showThumbnails;
     renderSidebar();
   }
+  if (e.target && e.target.id === 'sort_toggle'){ 
+    toggleSortOrder();
+  }
 });
+
+function toggleSortOrder() {
+  sortDescending = !sortDescending;
+  const sortText = document.getElementById('sort_order_text');
+  if (sortText) {
+    sortText.textContent = sortDescending ? 'Z-A' : 'A-Z';
+  }
+  renderSidebar();
+}
+
+function sortVideos(videoArray) {
+  const sorted = [...videoArray].sort((a, b) => {
+    const nameA = a.name.toLowerCase();
+    const nameB = b.name.toLowerCase();
+    return sortDescending ? nameB.localeCompare(nameA) : nameA.localeCompare(nameB);
+  });
+  return sorted;
+}
 
 function toggleMaximize(){
   const videoWrap = document.querySelector('.video-wrap');
@@ -401,7 +423,8 @@ function renderSidebar(){
   if (!list) return;
   let html = '';
   const namesInFiltered = new Set(filtered.map(v => v.name));
-  videos.forEach((v) => {
+  const sortedVideos = sortVideos(videos);
+  sortedVideos.forEach((v) => {
     const inFiltered = namesInFiltered.has(v.name);
     const s = scoreBadge(v.score || 0);
     const classes = ['item'];
