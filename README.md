@@ -72,7 +72,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 
 ```
 .
-├── app.py                     # Main FastAPI app
+├── run.py                     # Main entry point
 ├── extract_comfyui_workflow.py # Extracts workflow JSON from MP4 metadata
 ├── config.yml                  # Default config values (dir, host, port, pattern)
 ├── requirements.txt            # Python dependencies
@@ -174,7 +174,7 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 
 4. **Run**:
    ```bash
-   python app.py --dir /path/to/media --port 7862 --pattern "*.mp4|*.png|*.jpg"
+   python run.py --dir /path/to/media --port 7862 --pattern "*.mp4|*.png|*.jpg"
    ```
 
 5. Open in browser: [http://127.0.0.1:7862](http://127.0.0.1:7862)

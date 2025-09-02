@@ -42,7 +42,7 @@ A Python FastAPI web application for scoring and managing video and image files 
 
 3. **Verify installation**:
    ```bash
-   python app.py --help
+   python run.py --help
    ```
 
 ### Run the Application
@@ -56,7 +56,7 @@ A Python FastAPI web application for scoring and managing video and image files 
 #### Option 2: Direct Python Execution
 ```bash
 # NEVER CANCEL: Application startup takes ~5 seconds
-python app.py --dir ./media --port 7862 --host 127.0.0.1 --pattern "*.mp4|*.png|*.jpg"
+python run.py --dir ./media --port 7862 --host 127.0.0.1 --pattern "*.mp4|*.png|*.jpg"
 ```
 
 #### Option 3: Docker (Build: 45 seconds, NEVER CANCEL)
@@ -121,7 +121,7 @@ docker run --rm -p 7862:7862 -v /path/to/media:/media media-scorer
 
 ### Key Files
 ```
-├── app.py                     # Main FastAPI application
+├── run.py                     # Main entry point
 ├── config.yml                 # Default configuration
 ├── requirements.txt            # Python dependencies
 ├── read_config.py             # Configuration utility
@@ -163,7 +163,7 @@ thumbnail_height: 64            # Thumbnail height in pixels
 ### Command Line Overrides
 All config.yml settings can be overridden via command line arguments:
 ```bash
-python app.py --dir /path/to/media --port 8000 --pattern "*.mp4"
+python run.py --dir /path/to/media --port 8000 --pattern "*.mp4"
 ```
 
 ## Known Issues and Workarounds
