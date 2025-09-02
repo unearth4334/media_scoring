@@ -39,8 +39,6 @@ FILE_PATTERN: str = "*.mp4"
 STYLE_FILE: str = "style_default.css"
 GENERATE_THUMBNAILS: bool = False
 THUMBNAIL_HEIGHT: int = 64
-TOGGLE_EXTENSIONS: List[str] = ["jpg", "png", "mp4"]
-DIRECTORY_SORT_DESC: bool = True
 
 # Thumbnail generation progress tracking
 THUMBNAIL_PROGRESS = {
@@ -393,8 +391,7 @@ def api_videos():
         "pattern": FILE_PATTERN, 
         "videos": items,
         "thumbnails_enabled": GENERATE_THUMBNAILS,
-        "thumbnail_height": THUMBNAIL_HEIGHT,
-        "toggle_extensions": TOGGLE_EXTENSIONS
+        "thumbnail_height": THUMBNAIL_HEIGHT
     }
 
 @APP.post("/api/scan")
@@ -545,67 +542,6 @@ async def api_key(req: Request):
     LOGGER.info(f"KEY key={key} file={fname}")
     return {"ok": True}
 
-@APP.get("/api/directories")
-async def api_directories(path: str = ""):
-    """List directories in the given path, excluding dot folders"""
-    try:
-        if not path:
-            target_path = VIDEO_DIR
-        else:
-            target_path = Path(path).expanduser().resolve()
-        
-        # Security check: ensure we're not accessing forbidden paths
-        if not target_path.exists() or not target_path.is_dir():
-            raise HTTPException(404, "Directory not found")
-        
-        directories = []
-        for item in target_path.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
-                directories.append({
-                    "name": item.name,
-                    "path": str(item)
-                })
-        
-        # Sort directories alphabetically
-        directories.sort(key=lambda x: x["name"].lower(), reverse=DIRECTORY_SORT_DESC)
-        
-        return {"directories": directories, "current_path": str(target_path)}
-    except Exception as e:
-        raise HTTPException(500, f"Failed to list directories: {str(e)}")
-
-@APP.get("/api/sibling-directories")
-async def api_sibling_directories(path: str = ""):
-    """List sibling directories (directories at the same level), excluding dot folders"""
-    try:
-        if not path:
-            target_path = VIDEO_DIR
-        else:
-            target_path = Path(path).expanduser().resolve()
-        
-        # Security check: ensure we're not accessing forbidden paths
-        if not target_path.exists() or not target_path.is_dir():
-            raise HTTPException(404, "Directory not found")
-        
-        # Get parent directory
-        parent_path = target_path.parent
-        if not parent_path.exists() or not parent_path.is_dir():
-            return {"directories": [], "current_path": str(target_path), "parent_path": str(parent_path)}
-        
-        directories = []
-        for item in parent_path.iterdir():
-            if item.is_dir() and not item.name.startswith('.') and item != target_path:
-                directories.append({
-                    "name": item.name,
-                    "path": str(item)
-                })
-        
-        # Sort directories alphabetically
-        directories.sort(key=lambda x: x["name"].lower(), reverse=DIRECTORY_SORT_DESC)
-        
-        return {"directories": directories, "current_path": str(target_path), "parent_path": str(parent_path)}
-    except Exception as e:
-        raise HTTPException(500, f"Failed to list sibling directories: {str(e)}")
-
 @APP.post("/api/extract")
 async def api_extract(req: Request):
     """Extract ComfyUI workflow JSON for one or more files.
@@ -698,270 +634,53 @@ CLIENT_HTML = r"""
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
-    
-    /* Toggle button styles */
-    .toggle-container {
-      display: flex;
-      gap: 4px;
-      align-items: center;
-    }
-    
-    .toggle-btn {
-      padding: 4px 8px;
-      border: 1px solid #666;
-      background: #333;
-      color: #fff;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 11px;
-      text-transform: uppercase;
-      min-width: 35px;
-      text-align: center;
-      transition: all 0.2s ease;
-    }
-    
-    .toggle-btn.active {
-      background: #4CAF50;
-      border-color: #45a049;
-      color: white;
-    }
-    
-    .toggle-btn.inactive {
-      background: #555;
-      border-color: #444;
-      color: #999;
-      opacity: 0.6;
-    }
-    
-    .toggle-btn:hover {
-      opacity: 0.8;
-    }
-    
-    .refresh-btn {
-      padding: 6px 8px;
-      border: 1px solid #666;
-      background: #333;
-      color: #fff;
-      border-radius: 4px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .refresh-btn:hover {
-      background: #444;
-    }
-    
-    /* Collapsible toolbar styles */
-    .toolbar-toggle {
-      position: fixed;
-      top: 8px;
-      right: 8px;
-      z-index: 1000;
-      background: #333;
-      color: #fff;
-      border: 1px solid #666;
-      border-radius: 4px;
-      padding: 6px 8px;
-      cursor: pointer;
-      font-size: 12px;
-      transition: all 0.2s ease;
-    }
-    
-    .toolbar-toggle:hover {
-      background: #444;
-    }
-    
-    .toolbar-container {
-      transition: all 0.3s ease;
-      overflow: visible;
-    }
-    
-    .toolbar-container.collapsed {
-      max-height: 0;
-      opacity: 0;
-      margin: 0;
-      padding: 0;
-    }
-    
-    .toolbar-container.collapsed header {
-      margin: 0;
-      padding: 0;
-    }
-    
-    .toolbar-container.collapsed .toolbar-rows {
-      display: none;
-    }
-    
-    /* Adjust body spacing when toolbar is collapsed */
-    body.toolbar-collapsed main {
-      padding-top: 8px;
-      transition: padding-top 0.3s ease;
-    }
-
-    /* Directory navigation buttons */
-    .nav-btn {
-      background: #2f2f2f;
-      color: #eee;
-      border: 1px solid #666;
-      padding: 8px;
-      border-radius: 6px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 32px;
-      height: 32px;
-    }
-    .nav-btn:hover {
-      background: #3a3a3a;
-    }
-
-    /* Directory dropdown */
-    .dir-dropdown-container {
-      position: relative;
-    }
-    .dropdown-menu {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      background: #2f2f2f;
-      border: 1px solid #666;
-      border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-      z-index: 1000;
-      min-width: 200px;
-      max-height: 300px;
-      overflow-y: auto;
-      margin-top: 2px;
-    }
-    .dropdown-item {
-      padding: 8px 12px;
-      cursor: pointer;
-      color: #eee;
-      border-bottom: 1px solid #444;
-    }
-    .dropdown-item:hover {
-      background: #3a3a3a;
-    }
-    .dropdown-item:last-child {
-      border-bottom: none;
-    }
-    .dropdown-empty {
-      padding: 8px 12px;
-      color: #999;
-      font-style: italic;
-    }
-    
-    /* Directory input with triangle dropdown */
-    .dir-input-container {
-      position: relative;
-    }
-    .dir-triangle-btn {
-      position: absolute;
-      right: 4px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      padding: 4px 6px;
-      border-radius: 3px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.7;
-      transition: all 0.2s ease;
-    }
-    .dir-triangle-btn:hover {
-      background: #3a3a3a;
-      opacity: 1;
-    }
-    .dir-triangle-btn svg {
-      pointer-events: none;
-    }
   </style>
 </head>
 <body>
-  <button class="toolbar-toggle" id="toolbar-toggle" title="Toggle Toolbar">⌄</button>
-  <div class="toolbar-container" id="toolbar-container">
-    <header>
-      <h1>🎬 Video/Image Scorer (FastAPI)</h1>
-      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear • Esc exit maximized</div>
-    </header>
-    <div class="toolbar-rows">
-      <div class="row">
-        <button id="dir_up" class="nav-btn" title="Go up one directory">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 15l-6-6-6 6"/>
+  <header>
+    <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
+  </header>
+  <main class="layout">
+    <div class="row">
+      <input id="dir" type="text" class="grow" placeholder="/path/to/folder"/>
+      <input id="pattern" type="text" style="min-width:240px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+      <button id="pat_help" class="helpbtn">?</button>
+      <button id="load">Load</button>
+      <div id="dir_display" class="filename"></div>
+    </div>
+    <div class="row">
+      <label for="min_filter">Minimum rating:</label>
+      <select id="min_filter">
+        <option value="none" selected>No filter</option>
+        <option value="unrated">Unrated</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+      <div id="filter_info" class="filename"></div>
+      <div class="controls">
+        <button id="prev">Prev</button>
+        <button id="next">Next</button>
+        <button id="reject">Reject</button>
+        <button id="clear">Clear</button>
+        <button data-star="1">★1</button>
+        <button data-star="2">★2</button>
+        <button data-star="3">★3</button>
+        <button data-star="4">★4</button>
+        <button data-star="5">★5</button>
+        <button id="extract_one">Extract workflow (current)</button>
+        <button id="extract_filtered">Extract workflows (filtered)</button>
+        <button id="download_btn" title="Download current">
+          <!-- Download icon SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
         </button>
-        <div class="dir-dropdown-container">
-          <button id="dir_browse" class="nav-btn" title="Browse directories">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-            </svg>
-          </button>
-          <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
-        </div>
-        <div class="dir-input-container" style="position: relative;">
-          <input id="dir" type="text" style="min-width:200px; max-width:400px; width:400px; padding-right:30px;" placeholder="/path/to/folder"/>
-          <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
-            <svg width="12" height="8" viewBox="0 0 12 8" fill="white">
-              <path d="M6 8L0 0h12z"/>
-            </svg>
-          </button>
-          <div id="dir_siblings_dropdown" class="dropdown-menu" style="display: none;"></div>
-        </div>
-        <div id="toggle_buttons" class="toggle-container"></div>
-        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-        <button id="pat_help" class="helpbtn">?</button>
-        <button id="load" class="refresh-btn" title="Load/Refresh">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-            <path d="M21 3v5h-5"/>
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-            <path d="M3 21v-5h5"/>
-          </svg>
-        </button>
-        <div id="dir_display" class="filename"></div>
-      </div>
-      <div class="row">
-        <label for="min_filter">Rating ≥</label>
-        <select id="min_filter">
-          <option value="none" selected>No filter</option>
-          <option value="unrated">Unrated</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <div id="filter_info" class="filename"></div>
-        <div class="controls">
-          <button id="prev">Prev</button>
-          <button id="next">Next</button>
-          <button id="reject">Reject</button>
-          <button id="clear">Clear</button>
-          <button data-star="1">★1</button>
-          <button data-star="2">★2</button>
-          <button data-star="3">★3</button>
-          <button data-star="4">★4</button>
-          <button data-star="5">★5</button>
-          <button id="extract_one">Extract workflow (current)</button>
-          <button id="extract_filtered">Extract workflows (filtered)</button>
-          <button id="download_btn" title="Download current">
-            <!-- Download icon SVG -->
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-          </button>
-        </div>
       </div>
     </div>
-  </div>
-  <main class="layout">
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
@@ -1004,37 +723,6 @@ CLIENT_HTML = r"""
     </section>
   </main>
 <script>
-// Toolbar collapse functionality
-let toolbarCollapsed = false;
-
-function toggleToolbar() {
-  const container = document.getElementById('toolbar-container');
-  const toggleBtn = document.getElementById('toolbar-toggle');
-  const body = document.body;
-  
-  toolbarCollapsed = !toolbarCollapsed;
-  
-  if (toolbarCollapsed) {
-    container.classList.add('collapsed');
-    body.classList.add('toolbar-collapsed');
-    toggleBtn.textContent = '⌃';
-    toggleBtn.title = 'Show Toolbar';
-  } else {
-    container.classList.remove('collapsed');
-    body.classList.remove('toolbar-collapsed');
-    toggleBtn.textContent = '⌄';
-    toggleBtn.title = 'Hide Toolbar';
-  }
-}
-
-// Add toolbar toggle event listener
-document.addEventListener('DOMContentLoaded', function() {
-  const toggleBtn = document.getElementById('toolbar-toggle');
-  if (toggleBtn) {
-    toggleBtn.addEventListener('click', toggleToolbar);
-  }
-});
-
 let videos = [];
 let filtered = [];
 let idx = 0;
@@ -1043,9 +731,7 @@ let currentPattern = "*.mp4";
 let minFilter = null; // null means no filter; otherwise 1..5
 let thumbnailsEnabled = false;
 let thumbnailHeight = 64;
-let isMaximized = false;
 let showThumbnails = true; // user preference for showing thumbnails
-let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -1065,92 +751,6 @@ function hideProgress() {
     statusElement.style.display = 'none';
     statusElement.innerHTML = '';
   }
-}
-
-// Toggle button functionality
-function initializeToggleButtons() {
-  const container = document.getElementById('toggle_buttons');
-  if (!container) return;
-  
-  container.innerHTML = '';
-  
-  toggleExtensions.forEach(ext => {
-    const btn = document.createElement('button');
-    btn.className = 'toggle-btn';
-    btn.textContent = ext.toUpperCase();
-    btn.dataset.extension = ext;
-    btn.onclick = () => toggleExtension(ext);
-    container.appendChild(btn);
-  });
-  
-  // Update button states based on current pattern
-  updateToggleButtonStates();
-  
-  // Add pattern input listener
-  const patternInput = document.getElementById('pattern');
-  if (patternInput) {
-    patternInput.addEventListener('input', updateToggleButtonStates);
-  }
-}
-
-function toggleExtension(extension) {
-  const patternInput = document.getElementById('pattern');
-  if (!patternInput) return;
-  
-  const currentPattern = patternInput.value.trim();
-  const extPattern = `*.${extension}`;
-  
-  let newPattern;
-  if (isExtensionInPattern(extension, currentPattern)) {
-    // Remove the extension
-    newPattern = removeExtensionFromPattern(extension, currentPattern);
-  } else {
-    // Add the extension
-    newPattern = addExtensionToPattern(extension, currentPattern);
-  }
-  
-  patternInput.value = newPattern;
-  updateToggleButtonStates();
-}
-
-function isExtensionInPattern(extension, pattern) {
-  const extPattern = `*.${extension}`;
-  return pattern.split('|').some(part => part.trim() === extPattern);
-}
-
-function removeExtensionFromPattern(extension, pattern) {
-  const extPattern = `*.${extension}`;
-  const parts = pattern.split('|').map(p => p.trim()).filter(p => p !== extPattern);
-  return parts.length > 0 ? parts.join('|') : '*.mp4';
-}
-
-function addExtensionToPattern(extension, pattern) {
-  const extPattern = `*.${extension}`;
-  if (!pattern.trim()) {
-    return extPattern;
-  }
-  
-  const parts = pattern.split('|').map(p => p.trim()).filter(p => p && p !== extPattern);
-  parts.push(extPattern);
-  return parts.join('|');
-}
-
-function updateToggleButtonStates() {
-  const patternInput = document.getElementById('pattern');
-  if (!patternInput) return;
-  
-  const currentPattern = patternInput.value.trim();
-  
-  toggleExtensions.forEach(ext => {
-    const btn = document.querySelector(`[data-extension="${ext}"]`);
-    if (btn) {
-      if (isExtensionInPattern(ext, currentPattern)) {
-        btn.className = 'toggle-btn active';
-      } else {
-        btn.className = 'toggle-btn inactive';
-      }
-    }
-  });
 }
 
 function updateThumbnailStatus() {
@@ -1226,115 +826,6 @@ document.addEventListener('click', (e)=>{
   }
 });
 
-function toggleMaximize(){
-  const videoWrap = document.querySelector('.video-wrap');
-  const player = document.getElementById('player');
-  const imgview = document.getElementById('imgview');
-  const maximizeBtn = document.getElementById('maximize-btn');
-  
-  if (!videoWrap || !maximizeBtn) return;
-  
-  isMaximized = !isMaximized;
-  
-  if (isMaximized) {
-    // Calculate available space
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Get current media dimensions
-    let mediaWidth, mediaHeight;
-    if (player && player.style.display !== 'none') {
-      mediaWidth = player.videoWidth || 960;
-      mediaHeight = player.videoHeight || 540;
-    } else if (imgview && imgview.style.display !== 'none') {
-      mediaWidth = imgview.naturalWidth || 960;
-      mediaHeight = imgview.naturalHeight || 540;
-    } else {
-      mediaWidth = 960;
-      mediaHeight = 540;
-    }
-    
-    // Calculate scale to fit screen while maintaining aspect ratio
-    const scaleX = (viewportWidth - 32) / mediaWidth; // 32px for padding
-    const scaleY = (viewportHeight - 120) / mediaHeight; // 120px for UI elements
-    const scale = Math.min(scaleX, scaleY, 3); // Cap at 3x zoom
-    
-    // Apply maximized styles
-    videoWrap.style.position = 'fixed';
-    videoWrap.style.top = '50%';
-    videoWrap.style.left = '50%';
-    videoWrap.style.transform = 'translate(-50%, -50%)';
-    videoWrap.style.zIndex = '1000';
-    videoWrap.style.background = '#000';
-    videoWrap.style.maxWidth = 'none';
-    videoWrap.style.maxHeight = 'none';
-    
-    if (player && player.style.display !== 'none') {
-      player.style.width = (mediaWidth * scale) + 'px';
-      player.style.height = (mediaHeight * scale) + 'px';
-      player.style.maxWidth = 'none';
-      player.style.maxHeight = 'none';
-    }
-    
-    if (imgview && imgview.style.display !== 'none') {
-      imgview.style.width = (mediaWidth * scale) + 'px';
-      imgview.style.height = (mediaHeight * scale) + 'px';
-      imgview.style.maxWidth = 'none';
-      imgview.style.maxHeight = 'none';
-    }
-    
-    // Update button icon and title
-    maximizeBtn.innerHTML = svgMinimize();
-    maximizeBtn.title = 'Return to actual size';
-    
-    // Add backdrop
-    const backdrop = document.createElement('div');
-    backdrop.id = 'maximize-backdrop';
-    backdrop.style.position = 'fixed';
-    backdrop.style.top = '0';
-    backdrop.style.left = '0';
-    backdrop.style.width = '100%';
-    backdrop.style.height = '100%';
-    backdrop.style.backgroundColor = 'rgba(0,0,0,0.8)';
-    backdrop.style.zIndex = '999';
-    backdrop.addEventListener('click', toggleMaximize);
-    document.body.appendChild(backdrop);
-    
-  } else {
-    // Reset to normal size
-    videoWrap.style.position = '';
-    videoWrap.style.top = '';
-    videoWrap.style.left = '';
-    videoWrap.style.transform = '';
-    videoWrap.style.zIndex = '';
-    videoWrap.style.background = '';
-    videoWrap.style.maxWidth = '';
-    videoWrap.style.maxHeight = '';
-    
-    if (player && player.style.display !== 'none') {
-      player.style.width = '960px';
-      player.style.height = '540px';
-      player.style.maxWidth = '';
-      player.style.maxHeight = '';
-    }
-    
-    if (imgview && imgview.style.display !== 'none') {
-      imgview.style.width = '';
-      imgview.style.height = '';
-      imgview.style.maxWidth = '960px';
-      imgview.style.maxHeight = '540px';
-    }
-    
-    // Update button icon and title
-    maximizeBtn.innerHTML = svgMaximize();
-    maximizeBtn.title = 'Maximize media';
-    
-    // Remove backdrop
-    const backdrop = document.getElementById('maximize-backdrop');
-    if (backdrop) backdrop.remove();
-  }
-}
-
 function updateDownloadButton(name){
   const db = document.getElementById('download_btn');
   if (!db) return;
@@ -1365,37 +856,14 @@ function svgStar(filled){
     fill="${fill}" stroke="var(--star-stroke-color)" stroke-width="2"/>
 </svg>`;
 }
-function svgMaximize(){
-  return `
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-}
-function svgMinimize(){
-  return `
-<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-  <path d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-</svg>`;
-}
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
-  let html = `<div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">`;
-  html += `<div style="display:flex; gap:8px; align-items:center;">`;
+  let html = `<div style="display:flex; gap:8px; align-items:center;">`;
   html += svgReject(score === -1);
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
   for (let i=0;i<5;i++) html += svgStar(i<stars);
   html += `</div>`;
-  html += `<button id="maximize-btn" class="maximize-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
-  html += isMaximized ? svgMinimize() : svgMaximize();
-  html += `</button>`;
-  html += `</div>`;
   bar.innerHTML = html;
-  
-  // Attach event listener to the new button
-  const maximizeBtn = document.getElementById('maximize-btn');
-  if (maximizeBtn) {
-    maximizeBtn.addEventListener('click', toggleMaximize);
-  }
 }
 function scoreBadge(s){
   if (s === -1) return 'R';
@@ -1504,65 +972,6 @@ function show(i){
   renderScoreBar(v.score || 0);
   renderSidebar();
 }
-// Function to estimate text width
-function estimateTextWidth(text, element) {
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
-  const computedStyle = window.getComputedStyle(element);
-  context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-  return context.measureText(text).width;
-}
-
-// Function to resize directory input based on dir_display width
-function resizeDirectoryInput() {
-  const dirDisplay = document.getElementById('dir_display');
-  const dirInput = document.getElementById('dir');
-  const refreshBtn = document.getElementById('load');
-  
-  if (dirDisplay && dirInput && refreshBtn && dirDisplay.textContent) {
-    const row = dirDisplay.closest('.row');
-    if (!row) return;
-    
-    const rowWidth = row.offsetWidth;
-    const displayWidth = dirDisplay.offsetWidth;
-    
-    // Calculate widths of other elements in the row
-    const otherElements = row.querySelectorAll('button, input, select, .toggle-container');
-    let otherElementsWidth = 0;
-    
-    otherElements.forEach(el => {
-      if (el !== dirInput && el !== dirDisplay) {
-        otherElementsWidth += el.offsetWidth;
-      }
-    });
-    
-    // Account for gaps (12px each) - count the number of direct children in the row
-    const childCount = row.children.length;
-    const gapWidth = (childCount - 1) * 12; // 12px gap between elements
-    
-    // Calculate available width for directory input
-    // Row width - other elements - gaps - dir_display width - some padding
-    const availableWidth = rowWidth - otherElementsWidth - gapWidth - displayWidth - 40; // 40px extra padding
-    
-    // Set reasonable bounds
-    const minWidth = 200;
-    const maxWidth = 600;
-    const finalWidth = Math.max(minWidth, Math.min(availableWidth, maxWidth));
-    
-    dirInput.style.width = `${finalWidth}px`;
-    dirInput.style.maxWidth = `${finalWidth}px`;
-    
-    console.log('Resize calculation:', {
-      rowWidth,
-      displayWidth,
-      otherElementsWidth,
-      gapWidth,
-      availableWidth,
-      finalWidth
-    });
-  }
-}
-
 async function loadVideos(){
   const res = await fetch("/api/videos");
   const data = await res.json();
@@ -1571,19 +980,12 @@ async function loadVideos(){
   currentPattern = data.pattern || currentPattern;
   thumbnailsEnabled = data.thumbnails_enabled || false;
   thumbnailHeight = data.thumbnail_height || 64;
-  toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
   
   document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
   const patInput = document.getElementById('pattern');
   if (patInput && !patInput.value) patInput.value = currentPattern;
-  
-  // Resize directory input after updating dir_display
-  resizeDirectoryInput();
-  
-  // Initialize toggle buttons
-  initializeToggleButtons();
   
   // Show/hide thumbnail controls
   const sidebarControls = document.getElementById('sidebar_controls');
@@ -1655,8 +1057,6 @@ document.getElementById("load").addEventListener("click", () => {
     }
     scanDir(path);
   }
-  // Resize directory input after refresh
-  setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
@@ -1682,167 +1082,6 @@ document.getElementById('pattern').addEventListener('keydown', (e) => {
     if (path) scanDir(path);
   }
 });
-
-// Directory navigation functions
-async function goUpDirectory() {
-  const dirInput = document.getElementById('dir');
-  const currentPath = dirInput.value.trim();
-  if (!currentPath) return;
-  
-  const path = new Path(currentPath);
-  const parentPath = path.parent;
-  if (parentPath && parentPath !== currentPath) {
-    dirInput.value = parentPath;
-    // Optionally trigger scan immediately
-    // scanDir(parentPath);
-  }
-}
-
-async function loadDirectories(basePath) {
-  try {
-    const response = await fetch(`/api/directories?path=${encodeURIComponent(basePath)}`);
-    if (!response.ok) {
-      throw new Error(`Failed to load directories: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.directories;
-  } catch (error) {
-    console.error('Error loading directories:', error);
-    return [];
-  }
-}
-
-function showDirectoryDropdown() {
-  const dirInput = document.getElementById('dir');
-  const dropdown = document.getElementById('dir_dropdown');
-  const currentPath = dirInput.value.trim() || './';
-  
-  // Clear existing dropdown content
-  dropdown.innerHTML = '<div class="dropdown-item" style="opacity: 0.6;">Loading...</div>';
-  dropdown.style.display = 'block';
-  
-  loadDirectories(currentPath).then(directories => {
-    dropdown.innerHTML = '';
-    
-    if (directories.length === 0) {
-      dropdown.innerHTML = '<div class="dropdown-empty">No directories found</div>';
-    } else {
-      directories.forEach(dir => {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = dir.name;
-        item.title = dir.path;
-        item.addEventListener('click', () => {
-          const currentValue = dirInput.value.trim();
-          let newPath;
-          if (currentValue.endsWith('/')) {
-            newPath = currentValue + dir.name;
-          } else {
-            newPath = currentValue + '/' + dir.name;
-          }
-          dirInput.value = newPath;
-          hideDirectoryDropdown();
-        });
-        dropdown.appendChild(item);
-      });
-    }
-  }).catch(error => {
-    dropdown.innerHTML = '<div class="dropdown-empty">Error loading directories</div>';
-  });
-}
-
-function hideDirectoryDropdown() {
-  const dropdown = document.getElementById('dir_dropdown');
-  dropdown.style.display = 'none';
-}
-
-// Sibling directory functions
-async function loadSiblingDirectories(currentPath) {
-  try {
-    const response = await fetch(`/api/sibling-directories?path=${encodeURIComponent(currentPath)}`);
-    if (!response.ok) {
-      throw new Error(`Failed to load sibling directories: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.directories;
-  } catch (error) {
-    console.error('Error loading sibling directories:', error);
-    return [];
-  }
-}
-
-function showSiblingDirectoryDropdown() {
-  const dirInput = document.getElementById('dir');
-  const dropdown = document.getElementById('dir_siblings_dropdown');
-  const currentPath = dirInput.value.trim() || './';
-  
-  // Clear existing dropdown content
-  dropdown.innerHTML = '<div class="dropdown-item" style="opacity: 0.6;">Loading...</div>';
-  dropdown.style.display = 'block';
-  
-  loadSiblingDirectories(currentPath).then(directories => {
-    dropdown.innerHTML = '';
-    
-    if (directories.length === 0) {
-      dropdown.innerHTML = '<div class="dropdown-empty">No sibling directories found</div>';
-    } else {
-      directories.forEach(dir => {
-        const item = document.createElement('div');
-        item.className = 'dropdown-item';
-        item.textContent = dir.name;
-        item.title = dir.path;
-        item.addEventListener('click', () => {
-          dirInput.value = dir.path;
-          hideSiblingDirectoryDropdown();
-        });
-        dropdown.appendChild(item);
-      });
-    }
-  }).catch(error => {
-    dropdown.innerHTML = '<div class="dropdown-empty">Error loading sibling directories</div>';
-  });
-}
-
-function hideSiblingDirectoryDropdown() {
-  const dropdown = document.getElementById('dir_siblings_dropdown');
-  dropdown.style.display = 'none';
-}
-
-// Simple Path utility for JavaScript (since we don't have Node.js path module)
-class Path {
-  constructor(pathStr) {
-    this.path = pathStr.replace(/\\/g, '/'); // Normalize to forward slashes
-  }
-  
-  get parent() {
-    const normalizedPath = this.path.replace(/\/+$/, ''); // Remove trailing slashes
-    const lastSlash = normalizedPath.lastIndexOf('/');
-    if (lastSlash <= 0) return '/';
-    return normalizedPath.substring(0, lastSlash);
-  }
-}
-
-// Add event listeners for directory navigation
-document.getElementById('dir_up').addEventListener('click', goUpDirectory);
-document.getElementById('dir_browse').addEventListener('click', showDirectoryDropdown);
-document.getElementById('dir_siblings').addEventListener('click', showSiblingDirectoryDropdown);
-
-// Hide dropdown when clicking outside
-document.addEventListener('click', (e) => {
-  const dropdownContainer = document.querySelector('.dir-dropdown-container');
-  const dropdown = document.getElementById('dir_dropdown');
-  const siblingContainer = document.querySelector('.dir-input-container');
-  const siblingDropdown = document.getElementById('dir_siblings_dropdown');
-  
-  if (!dropdownContainer.contains(e.target)) {
-    hideDirectoryDropdown();
-  }
-  
-  if (!siblingContainer.contains(e.target)) {
-    hideSiblingDirectoryDropdown();
-  }
-});
-
 document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
 document.getElementById('next').addEventListener('click', () => { show(idx+1); });
 document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
@@ -1857,7 +1096,6 @@ document.addEventListener("keydown", (e) => {
   if (["INPUT","TEXTAREA"].includes((e.target.tagName||"").toUpperCase())) return;
   const player = document.getElementById("player");
   function togglePlay(){ if (!player || player.style.display==='none') return; if (player.paused) { player.play(); } else { player.pause(); } }
-  if (e.key === "Escape" && isMaximized){ e.preventDefault(); postKey("Escape"); toggleMaximize(); return; }
   if (e.key === "ArrowLeft"){ e.preventDefault(); postKey("ArrowLeft"); show(idx-1); return; }
   if (e.key === "ArrowRight"){ e.preventDefault(); postKey("ArrowRight"); show(idx+1); return; }
   if (e.key === " "){ e.preventDefault(); postKey("Space"); togglePlay(); return; }
@@ -1956,50 +1194,16 @@ window.addEventListener("load", loadVideos);
 # CLI & Startup
 # ---------------------------
 def main():
-    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT, TOGGLE_EXTENSIONS, DIRECTORY_SORT_DESC
-
-    # Load config from file first
-    config_file = Path("config.yml")
-    if config_file.exists():
-        try:
-            import yaml
-            with open(config_file, 'r', encoding='utf-8') as f:
-                cfg = yaml.safe_load(f) or {}
-            # Apply config defaults to global variables
-            global_dir = cfg.get('dir', str(Path.cwd()))
-            global_pattern = cfg.get('pattern', '*.mp4')
-            global_style = cfg.get('style', 'style_default.css')
-            global_thumbnails = bool(cfg.get('generate_thumbnails', False))
-            global_thumb_height = int(cfg.get('thumbnail_height', 64))
-            global_toggle_ext = cfg.get('toggle_extensions', ['jpg', 'png', 'mp4'])
-            DIRECTORY_SORT_DESC = bool(cfg.get('directory_sort_desc', True))
-        except Exception as e:
-            print(f"Warning: Could not load config.yml: {e}", file=sys.stderr)
-            global_dir = str(Path.cwd())
-            global_pattern = '*.mp4'
-            global_style = 'style_default.css'
-            global_thumbnails = False
-            global_thumb_height = 64
-            global_toggle_ext = ['jpg', 'png', 'mp4']
-    else:
-        global_dir = str(Path.cwd())
-        global_pattern = '*.mp4'
-        global_style = 'style_default.css'
-        global_thumbnails = False
-        global_thumb_height = 64
-        global_toggle_ext = ['jpg', 'png', 'mp4']
+    global VIDEO_DIR, FILE_LIST, FILE_PATTERN, STYLE_FILE, GENERATE_THUMBNAILS, THUMBNAIL_HEIGHT
 
     ap = argparse.ArgumentParser(description="Video/Image Scorer (FastAPI)")
-    ap.add_argument("--dir", required=False, default=global_dir, help="Directory with media files")
+    ap.add_argument("--dir", required=False, default=str(Path.cwd()), help="Directory with media files")
     ap.add_argument("--port", type=int, default=7862, help="Port to serve")
     ap.add_argument("--host", default="127.0.0.1", help="Host to bind")
-    ap.add_argument("--pattern", default=global_pattern, help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
-    ap.add_argument("--style", default=global_style, help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
-    ap.add_argument("--generate-thumbnails", action="store_true", default=global_thumbnails, help="Generate thumbnail previews for media files")
-    ap.add_argument("--thumbnail-height", type=int, default=global_thumb_height, help="Height in pixels for thumbnail previews")
-    ap.add_argument("--toggle-extensions", nargs='*', default=global_toggle_ext, help="File extensions for toggle buttons")
-    ap.add_argument("--directory-sort-desc", action="store_true", help="Sort directory dropdown in descending order")
-    ap.add_argument("--directory-sort-asc", action="store_true", help="Sort directory dropdown in ascending order")
+    ap.add_argument("--pattern", default="*.mp4", help="Glob pattern, union with | (e.g., *.mp4|*.png|*.jpg)")
+    ap.add_argument("--style", default="style_default.css", help="CSS style file from themes folder (e.g., style_default.css, style_pastelcore.css, style_darkpastelcore.css, or style_darkcandy.css)")
+    ap.add_argument("--generate-thumbnails", action="store_true", help="Generate thumbnail previews for media files")
+    ap.add_argument("--thumbnail-height", type=int, default=64, help="Height in pixels for thumbnail previews")
     args = ap.parse_args()
 
     start_dir = Path(args.dir).expanduser().resolve()
@@ -2010,13 +1214,6 @@ def main():
     STYLE_FILE = args.style or "style_default.css"
     GENERATE_THUMBNAILS = args.generate_thumbnails
     THUMBNAIL_HEIGHT = args.thumbnail_height
-    TOGGLE_EXTENSIONS = args.toggle_extensions or ["jpg", "png", "mp4"]
-    # Handle directory sort direction - CLI args can override config default
-    if args.directory_sort_asc:
-        DIRECTORY_SORT_DESC = False
-    elif args.directory_sort_desc:
-        DIRECTORY_SORT_DESC = True
-    # If neither CLI arg is specified, DIRECTORY_SORT_DESC keeps its global default (set from config or True)
     switch_directory(start_dir, FILE_PATTERN)
     uvicorn.run(APP, host=args.host, port=args.port, log_level="info")
 
