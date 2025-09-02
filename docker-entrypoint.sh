@@ -86,7 +86,7 @@ echo "  STYLE: $STYLE"
 echo "  THUMBNAIL_ARGS: $THUMBNAIL_ARGS"
 
 # Start the application with the resolved configuration
-exec python app.py \
+exec python run.py \
     --dir "$DIR" \
     --port "$PORT" \
     --host "$HOST" \

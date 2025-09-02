@@ -72,12 +72,20 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 
 ```
 .
-├── app.py                     # Main FastAPI app
+├── app/                       # Modular application code
+│   ├── main.py               # Main application factory and CLI interface
+│   ├── settings.py           # Configuration handling
+│   ├── state.py              # Global state management
+│   ├── routers/              # FastAPI route handlers
+│   ├── services/             # Business logic and utilities
+│   ├── static/               # Static files (themes, JS)
+│   └── templates/            # HTML templates
+├── run.py                    # Application entry point
 ├── extract_comfyui_workflow.py # Extracts workflow JSON from MP4 metadata
-├── config.yml                  # Default config values (dir, host, port, pattern)
-├── requirements.txt            # Python dependencies
-├── LICENSE                     # Apache 2.0 license
-├── README.md                   # This documentation
+├── config.yml                # Default config values (dir, host, port, pattern)
+├── requirements.txt          # Python dependencies
+├── LICENSE                   # Apache 2.0 license
+├── README.md                 # This documentation
 ├── DOCKER.md                   # Docker deployment guide
 │
 ├── Dockerfile                  # Docker container configuration
@@ -174,7 +182,7 @@ run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 
 4. **Run**:
    ```bash
-   python app.py --dir /path/to/media --port 7862 --pattern "*.mp4|*.png|*.jpg"
+   python run.py --dir /path/to/media --port 7862 --pattern "*.mp4|*.png|*.jpg"
    ```
 
 5. Open in browser: [http://127.0.0.1:7862](http://127.0.0.1:7862)
