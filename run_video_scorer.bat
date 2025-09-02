@@ -18,6 +18,6 @@ if not "%~5"=="" set "STYLE=%~5"
 echo Starting Video Scorer: dir=%DIR%  port=%PORT%  host=%HOST%  pattern=%PATTERN%  style=%STYLE%  toggle_ext=%TOGGLE_EXTENSIONS%
 set "THUMBNAIL_ARGS="
 if /I "%GENERATE_THUMBNAILS%"=="true" set "THUMBNAIL_ARGS=--generate-thumbnails --thumbnail-height %THUMBNAIL_HEIGHT%"
-"%VENV_PY%" app.py --dir "%DIR%" --port %PORT% --host %HOST% --pattern "%PATTERN%" --style "%STYLE%" %THUMBNAIL_ARGS% --toggle-extensions %TOGGLE_EXTENSIONS%
+"%VENV_PY%" run.py --dir "%DIR%" --port %PORT% --host %HOST% --pattern "%PATTERN%" --style "%STYLE%" %THUMBNAIL_ARGS% --toggle-extensions %TOGGLE_EXTENSIONS%
 popd
 endlocal

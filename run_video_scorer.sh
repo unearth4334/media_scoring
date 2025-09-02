@@ -19,4 +19,4 @@ DIRECTORY_SORT_ARGS=""
 if [ "$DIRECTORY_SORT_DESC" = "false" ]; then
     DIRECTORY_SORT_ARGS="--directory-sort-asc"
 fi
-exec python app.py --dir "$DIR" --port "$PORT" --host "$HOST" --pattern "$PATTERN" --style "$STYLE" $THUMBNAIL_ARGS --toggle-extensions $TOGGLE_EXT_LIST $DIRECTORY_SORT_ARGS
+exec python run.py --dir "$DIR" --port "$PORT" --host "$HOST" --pattern "$PATTERN" --style "$STYLE" $THUMBNAIL_ARGS --toggle-extensions $TOGGLE_EXT_LIST $DIRECTORY_SORT_ARGS

@@ -132,65 +132,231 @@
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    /* Collapsible toolbar styles */
+    .toolbar-toggle {
+      position: fixed;
+      top: 8px;
+      right: 8px;
+      z-index: 1000;
+      background: #333;
+      color: #fff;
+      border: 1px solid #666;
+      border-radius: 4px;
+      padding: 6px 8px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .toolbar-toggle:hover {
+      background: #444;
+    }
+    
+    .toolbar-container {
+      transition: all 0.3s ease;
+      overflow: visible;
+    }
+    
+    .toolbar-container.collapsed {
+      max-height: 0;
+      opacity: 0;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .toolbar-container.collapsed header {
+      margin: 0;
+      padding: 0;
+    }
+    
+    .toolbar-container.collapsed .toolbar-rows {
+      display: none;
+    }
+    
+    /* Adjust body spacing when toolbar is collapsed */
+    body.toolbar-collapsed main {
+      padding-top: 8px;
+      transition: padding-top 0.3s ease;
+    }
+
+    /* Refresh button styles */
+    .refresh-btn {
+      padding: 6px 8px;
+      border: 1px solid #666;
+      background: #333;
+      color: #fff;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .refresh-btn:hover {
+      background: #444;
+    }
+
+    /* Directory navigation button styles */
+    .nav-btn {
+      background: #2f2f2f;
+      color: #eee;
+      border: 1px solid #666;
+      padding: 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 32px;
+      height: 32px;
+    }
+    .nav-btn:hover {
+      background: #3a3a3a;
+    }
+
+    /* Directory dropdown enhanced styles */
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background: #2f2f2f;
+      border: 1px solid #666;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 1000;
+      min-width: 200px;
+      max-height: 300px;
+      overflow-y: auto;
+      margin-top: 2px;
+    }
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      color: #eee;
+      border-bottom: 1px solid #444;
+    }
+    .dropdown-item:hover {
+      background: #3a3a3a;
+    }
+    .dropdown-item:last-child {
+      border-bottom: none;
+    }
+
+    /* Directory triangle button styles */
+    .dir-triangle-btn {
+      position: absolute;
+      right: 4px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 2px;
+      display: flex;
+      align-items: center;
+      z-index: 2;
+    }
+    .dir-triangle-btn svg {
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Video & Image Scorer</h1>
-    <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear</div>
-  </header>
-  <main class="layout">
-    <div class="row">
-      <input id="dir" type="text" class="grow" placeholder="/path/to/folder"/>
-      <input id="pattern" type="text" style="min-width:240px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-      <button id="pat_help" class="helpbtn">?</button>
-      <button id="load">Load</button>
-      <div id="dir_display" class="filename"></div>
-    </div>
-    <div class="row">
-      <label for="min_filter">Minimum rating:</label>
-      <select id="min_filter">
-        <option value="none" selected>No filter</option>
-        <option value="unrated">Unrated</option>
-        <option value="1">1</option>
-        <option value="2">2</option>
-        <option value="3">3</option>
-        <option value="4">4</option>
-        <option value="5">5</option>
-      </select>
-      <span id="filter_info" class="filename">No filter — showing 0/0</span>
-      <div class="grow"></div>
-      <span class="filename" style="margin-right: 8px;">Pattern:</span>
-      <div class="toggle-container" id="toggle_buttons">
-        <!-- Toggle buttons will be dynamically generated here -->
-      </div>
-    </div>
-
-    <!-- Directory navigation row -->
-    <div class="row">
-      <div class="dir-input-container">
-        <button id="dir_up" class="nav-btn" title="Go up one directory">↑</button>
+  <button class="toolbar-toggle" id="toolbar-toggle" title="Toggle Toolbar">⌄</button>
+  <div class="toolbar-container" id="toolbar-container">
+    <header>
+      <h1>🎬 Video/Image Scorer (FastAPI)</h1>
+      <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear • Esc exit maximized</div>
+    </header>
+    <div class="toolbar-rows">
+      <div class="row">
+        <button id="dir_up" class="nav-btn" title="Go up one directory">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 15l-6-6-6 6"/>
+          </svg>
+        </button>
         <div class="dir-dropdown-container">
-          <button id="dir_browse" class="nav-btn" title="Browse subdirectories">↓</button>
-          <div id="dir_dropdown" class="dir-dropdown"></div>
+          <button id="dir_browse" class="nav-btn" title="Browse directories">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </button>
+          <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
         </div>
-        <button id="dir_siblings" class="nav-btn" title="Browse sibling directories">→</button>
-        <div id="dir_siblings_dropdown" class="dir-dropdown"></div>
+        <div class="dir-input-container" style="position: relative;">
+          <input id="dir" type="text" style="min-width:200px; max-width:400px; width:400px; padding-right:30px;" placeholder="/path/to/folder"/>
+          <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
+            <svg width="12" height="8" viewBox="0 0 12 8" fill="white">
+              <path d="M6 8L0 0h12z"/>
+            </svg>
+          </button>
+          <div id="dir_siblings_dropdown" class="dropdown-menu" style="display: none;"></div>
+        </div>
+        <div id="toggle_buttons" class="toggle-container"></div>
+        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
+        <button id="pat_help" class="helpbtn">?</button>
+        <button id="load" class="refresh-btn" title="Load/Refresh">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
+            <path d="M21 3v5h-5"/>
+            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
+            <path d="M3 21v-5h5"/>
+          </svg>
+        </button>
+        <div id="dir_display" class="filename"></div>
       </div>
-      <div class="grow"></div>
-      <button id="extract_one" disabled>Extract Current</button>
-      <button id="extract_filtered" disabled>Extract Filtered (.mp4)</button>
-      <button id="export_filtered_btn">Export Filtered (zip)</button>
-      <button id="download_btn" disabled>Download Current</button>
+      <div class="row">
+        <label for="min_filter">Rating ≥</label>
+        <select id="min_filter">
+          <option value="none" selected>No filter</option>
+          <option value="unrated">Unrated</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <div id="filter_info" class="filename"></div>
+        <div class="controls">
+          <button id="prev">Prev</button>
+          <button id="next">Next</button>
+          <button id="reject">Reject</button>
+          <button id="clear">Clear</button>
+          <button data-star="1">★1</button>
+          <button data-star="2">★2</button>
+          <button data-star="3">★3</button>
+          <button data-star="4">★4</button>
+          <button data-star="5">★5</button>
+          <button id="extract_one">Extract workflow (current)</button>
+          <button id="extract_filtered">Extract workflows (filtered)</button>
+          <button id="download_btn" title="Download current">
+            <!-- Download icon SVG -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3v12m0 0l-5-5m5 5l5-5M5 19h14" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+      </div>
     </div>
-
-    <aside id="left">
-      <div class="file-info">
-        <div class="row" style="display: flex; align-items: center; justify-content: space-between;">
-          <div style="font-weight: bold;">Files</div>
-          <div id="sidebar_controls" style="display: none;">
-            <button id="toggle_thumbnails" style="padding: 2px 6px; font-size: 11px; margin-left: 8px;">👁</button>
-          </div>
+  </div>
+  <main class="layout">
+    <aside id="sidebar">
+      <div id="sidebar_controls" style="display:none;">
+        <div class="button-row">
+          <button id="toggle_thumbnails" class="pill">Toggle Thumbnails</button>
+          <button id="export_filtered_btn" class="pill" title="Export all filtered files as ZIP">
+            <!-- ZIP folder icon SVG -->
+            <svg width="16" height="12" viewBox="0 0 24 24" fill="none" style="margin-right: 2px;">
+              <path d="M16 22H8C6.9 22 6 21.1 6 20V4C6 2.9 6.9 2 8 2H14L18 6V20C18 21.1 17.1 22 16 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 2V6H18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 12H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 16H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Export Filtered
+          </button>
+        </div>
+        <div style="margin-top: 4px;">
           <span id="progress_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
         </div>
       </div>
@@ -211,22 +377,7 @@
           </div>
           <video id="player" width="960" height="540" controls preload="metadata" style="display:none"></video>
           <img id="imgview" style="max-width:960px; max-height:540px; display:none" />
-        </div>
-      </div>
-      <div class="row">
-        <button id="prev">◀ Prev</button>
-        <button id="next">▶ Next</button>
-        <div class="grow"></div>
-        <button id="clear" data-clear>Clear</button>
-        <button id="reject" data-reject>Reject</button>
-        <button data-star="1">1★</button>
-        <button data-star="2">2★</button>
-        <button data-star="3">3★</button>
-        <button data-star="4">4★</button>
-        <button data-star="5">5★</button>
-        <div class="grow"></div>
-        <div class="score-controls">
-          <div class="scorebar" id="scorebar"></div>
+          <div id="scorebar" class="scorebar"></div>
         </div>
       </div>
     </section>
