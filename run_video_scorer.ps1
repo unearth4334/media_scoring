@@ -20,4 +20,4 @@ if ($cfg.generate_thumbnails) {
 }
 $ToggleExtArgs = "--toggle-extensions"
 foreach ($ext in $ToggleExtensions) { $ToggleExtArgs += " $ext" }
-Invoke-Expression "& `"$VenvPython`" app.py --dir `"$Dir`" --port $Port --host `"$Host`" --pattern `"$Pattern`" --style `"$Style`" $ThumbnailArgs $ToggleExtArgs"
+Invoke-Expression "& `"$VenvPython`" run.py --dir `"$Dir`" --port $Port --host `"$Host`" --pattern `"$Pattern`" --style `"$Style`" $ThumbnailArgs $ToggleExtArgs"
