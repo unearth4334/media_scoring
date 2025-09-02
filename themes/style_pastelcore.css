@@ -54,7 +54,7 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
   background: #e8d8e8; 
   opacity: 1;
 }
-.pill { background:#e8d5e3; padding:4px 8px; border-radius:999px; border:1px solid #d4b8c9; color:#7d5a78; }
+.pill { background:#e8d5e3; padding:4px 8px; border-radius:6px; border:1px solid #d4b8c9; color:#7d5a78; }
 input[type=text] { background:#faf8fa; color:#5a4a5a; border:1px solid #d0c0d0; padding:8px 10px; border-radius:8px; min-width:280px; }
 /* Directory input field should be more constrained to prevent overlapping */
 #dir { min-width: 180px; max-width: 320px; }
