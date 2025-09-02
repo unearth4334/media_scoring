@@ -12,7 +12,7 @@ services:
       - workflows_data:/app/workflows
     environment:
       - PUID=${PUID}
-      - PGID=${GUID}
+      - PGID=${PGID}
       - MEDIA_PATH=${MEDIA_PATH}
       - HOST_PORT=${HOST_PORT}
       - MEDIA_PATTERN=${MEDIA_PATTERN}
