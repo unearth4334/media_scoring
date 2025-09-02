@@ -216,6 +216,7 @@ document.addEventListener('click', (e)=>{
   }
   if (e.target && e.target.id === 'toggle_thumbnails'){ 
     showThumbnails = !showThumbnails;
+    updateThumbnailToggleButton();
     renderSidebar();
   }
 });
@@ -370,6 +371,37 @@ function svgMinimize(){
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
   <path d="M4 14h6m0 0v6m0-6l-7 7m17-11h-6m0 0V4m0 6l7-7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>`;
+}
+function svgShowThumbnails(){
+  return `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+</svg>`;
+}
+function svgHideThumbnails(){
+  return `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <line x1="2" y1="22" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+}
+function updateThumbnailToggleButton(){
+  const button = document.getElementById('toggle_thumbnails');
+  if (!button) return;
+  
+  if (showThumbnails) {
+    button.innerHTML = svgHideThumbnails();
+    button.title = 'Hide thumbnails';
+  } else {
+    button.innerHTML = svgShowThumbnails();
+    button.title = 'Show thumbnails';
+  }
 }
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
@@ -584,6 +616,9 @@ async function loadVideos(){
   if (sidebarControls) {
     sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
   }
+  
+  // Initialize thumbnail toggle button icon
+  updateThumbnailToggleButton();
   
   // Start monitoring thumbnail progress if thumbnails are enabled
   if (thumbnailsEnabled) {
