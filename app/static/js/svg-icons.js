@@ -158,3 +158,15 @@ function svgRefresh() {
   <path d="M3 21v-5h5"/>
 </svg>`;
 }
+
+/**
+ * Settings/gear icon
+ * @returns {string} SVG markup
+ */
+function svgSettings() {
+  return `
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+  <circle cx="12" cy="12" r="3"/>
+  <path d="M12 1v6m0 6v6m11-3h-6m-6 0H1m15.5-7.5l-3-3m-6 6l-3-3m12 6l-3-3m-6 6l-3-3"/>
+</svg>`;
+}

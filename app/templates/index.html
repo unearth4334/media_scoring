@@ -315,7 +315,7 @@
           <button data-star="5">★5</button>
           <button id="extract_one">Extract workflow (current)</button>
           <button id="extract_filtered">Extract workflows (filtered)</button>
-          <button id="download_btn" title="Download current">
+          <button id="settings_btn" class="nav-btn" title="Settings">
           </button>
         </div>
       </div>
@@ -374,9 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
   const loadBtn = document.getElementById('load');
   if (loadBtn) loadBtn.innerHTML = svgRefresh();
   
-  // Download button
-  const downloadBtn = document.getElementById('download_btn');
-  if (downloadBtn) downloadBtn.innerHTML = svgDownload();
+  // Settings button
+  const settingsBtn = document.getElementById('settings_btn');
+  if (settingsBtn) {
+    settingsBtn.innerHTML = svgSettings();
+    settingsBtn.addEventListener('click', function() {
+      alert('Settings functionality coming soon!');
+    });
+  }
   
   // Export button - prepend icon to existing text
   const exportBtn = document.getElementById('export_filtered_btn');

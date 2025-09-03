@@ -38,7 +38,7 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
 #pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #c0a8c0; background:#f0e8f0; color:#6a5a6a; padding:6px 10px; border-radius:8px; cursor:pointer; }
 #pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
 .scorebar { margin-top:8px; }
-.maximize-btn { 
+.mediapane-btn { 
   background: transparent; 
   border: 1px solid #a8c2e8; 
   border-radius: 4px; 
@@ -50,7 +50,7 @@ main { padding:16px; max-width:1300px; margin:0 auto; }
   justify-content: center;
   opacity: 0.8;
 }
-.maximize-btn:hover { 
+.mediapane-btn:hover { 
   background: #e8d8e8; 
   opacity: 1;
 }

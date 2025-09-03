@@ -362,16 +362,28 @@ function renderScoreBar(score){
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
   for (let i=0;i<5;i++) html += svgStar(i<stars);
   html += `</div>`;
-  html += `<button id="maximize-btn" class="maximize-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
+  html += `<div style="display:flex; gap:4px; align-items:center;">`;
+  html += `<button id="download_btn" class="mediapane-btn" title="Download current">`;
+  html += svgDownload();
+  html += `</button>`;
+  html += `<button id="maximize-btn" class="mediapane-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
   html += isMaximized ? svgMinimize() : svgMaximize();
   html += `</button>`;
   html += `</div>`;
+  html += `</div>`;
   bar.innerHTML = html;
   
-  // Attach event listener to the new button
+  // Attach event listeners to the buttons
   const maximizeBtn = document.getElementById('maximize-btn');
   if (maximizeBtn) {
     maximizeBtn.addEventListener('click', toggleMaximize);
+  }
+  
+  const downloadBtn = document.getElementById('download_btn');
+  if (downloadBtn) {
+    // Re-setup download button functionality
+    const currentItem = filtered[idx];
+    updateDownloadButton(currentItem ? currentItem.name : null);
   }
 }
 function scoreBadge(s){
