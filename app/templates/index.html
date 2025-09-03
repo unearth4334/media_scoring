@@ -383,6 +383,14 @@ document.addEventListener('DOMContentLoaded', function() {
   if (exportBtn) {
     exportBtn.innerHTML = svgExport() + exportBtn.textContent;
   }
+  
+  // Thumbnail toggle button - set initial state
+  const toggleThumbnailsBtn = document.getElementById('toggle_thumbnails');
+  if (toggleThumbnailsBtn) {
+    // Set initial icon based on default showThumbnails state (true)
+    toggleThumbnailsBtn.innerHTML = svgHideThumbnails();
+    toggleThumbnailsBtn.title = 'Hide thumbnails';
+  }
 });
 </script>
 </body>
