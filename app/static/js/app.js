@@ -214,7 +214,7 @@ document.addEventListener('click', (e)=>{
       navigator.clipboard.writeText(text).catch(()=>{});
     }
   }
-  if (e.target && e.target.id === 'toggle_thumbnails'){ 
+  if (e.target && e.target.closest('#toggle_thumbnails')){ 
     showThumbnails = !showThumbnails;
     updateThumbnailToggleButton();
     renderSidebar();
