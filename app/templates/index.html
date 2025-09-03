@@ -215,6 +215,37 @@
       background: #3a3a3a;
     }
 
+    /* Thumbnail toggle styles */
+    .thumbnail-toggle {
+      display: flex;
+      align-items: center;
+      border: 1px solid #666;
+      border-radius: 6px;
+      background: transparent;
+      padding: 6px;
+      min-width: 32px;
+      height: 32px;
+      cursor: pointer;
+    }
+    
+    .thumbnail-toggle:hover {
+      border-color: #777;
+    }
+    
+    .thumbnail-toggle input[type="checkbox"] {
+      margin: 0 4px 0 0;
+      cursor: pointer;
+      transform: scale(1.2);
+    }
+    
+    .thumbnail-toggle .thumbnail-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #eee;
+      cursor: pointer;
+    }
+
     /* Directory dropdown enhanced styles */
     .dropdown-menu {
       position: absolute;
@@ -325,7 +356,10 @@
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
-          <button id="toggle_thumbnails" class="nav-btn"></button>
+          <div id="thumbnail_toggle" class="thumbnail-toggle">
+            <input type="checkbox" id="toggle_thumbnails" />
+            <label for="toggle_thumbnails" class="thumbnail-icon"></label>
+          </div>
           <button id="export_filtered_btn" class="nav-btn" title="Export all filtered files as ZIP">
             Export Filtered
           </button>

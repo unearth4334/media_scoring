@@ -59,31 +59,16 @@ function svgMinimize() {
 }
 
 /**
- * Show thumbnails icon - grid layout
+ * Thumbnail icon - grid layout (single icon for checkbox toggle)
  * @returns {string} SVG markup
  */
-function svgShowThumbnails() {
+function svgThumbnail() {
   return `
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
   <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
   <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
   <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
   <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-</svg>`;
-}
-
-/**
- * Hide thumbnails icon - grid layout with strike-through
- * @returns {string} SVG markup
- */
-function svgHideThumbnails() {
-  return `
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <line x1="2" y1="22" x2="22" y2="2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg>`;
 }
 
