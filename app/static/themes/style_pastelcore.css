@@ -1,5 +1,31 @@
+/* =========================================================
+   THEME TOKENS — Pastelcore (Light)
+   --------------------------------------------------------- */
 :root {
-  /* SVG icon colors for light theme */
+  /* Button system (top pane + sidebar + controls) */
+  --btn-h: 28px;               /* Shared height */
+  --btn-radius: 8px;           /* Shared corner radius */
+  --btn-font-size: 12px;       /* Base font size */
+  --btn-xpad: 10px;            /* Horizontal padding */
+
+  --btn-bg: #d4e5f7;           /* Normal background */
+  --btn-bg-hover: #c2d7f0;     /* Hover background */
+  --btn-border: #a8c2e8;       /* Border color */
+  --btn-border-hover: #8aa8d8; /* Hover border color */
+  --btn-text: #4a5a7a;         /* Label/icon color */
+
+  /* Dropdown */
+  --dropdown-bg: #f0e8f0;
+  --dropdown-border: #d4b8c9;
+  --dropdown-text: #5a4a5a;
+  --dropdown-hover: #e8d8e8;
+  --dropdown-text-muted: #9b7b9b;
+
+  /* Spinner */
+  --spinner-border: #a8c2e8;
+  --spinner-border-active: #4a5a7a;
+
+  /* Legacy icon colors (used by svg-icons.js) */
   --reject-stroke-color: black;
   --reject-fill-unselected: white;
   --reject-fill-selected: black;
@@ -10,77 +36,242 @@
   --star-fill-selected: black;
 }
 
-body { background:#e3e6a0; color:#5a4a4a; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
-header { padding:12px 50px; background:#e8d5e3; border-bottom:1px solid #d4b8c9; }
-h1 { font-size:18px; margin:0 0 8px 0; color:#7d5a78; }
-main { padding:16px; max-width:1300px; margin:0 auto; }
-.layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
-.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
-#right { display:flex; flex-direction:column; align-items:center; }
+/* =========================================================
+   BASE LAYOUT & TYPOGRAPHY
+   --------------------------------------------------------- */
+html, body {
+  background: #e3e6a0;                 /* soft lemon pastel */
+  color: #5a4a5a;                      /* muted plum text */
+  font-family: system-ui, Segoe UI, Roboto, sans-serif;
+  margin: 0;
+}
+
+header {
+  padding: 12px 50px;
+  background: #e8d5e3;                 /* rose pastel */
+  border-bottom: 1px solid #d4b8c9;
+}
+
+h1 { font-size: 18px; margin: 0 0 8px; color: #7d5a78; }
+
+main { padding: 16px; max-width: 1300px; margin: 0 auto; }
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; grid-column: 1 / -1; }
+#right { display: flex; flex-direction: column; align-items: center; }
 .toolbar-rows { padding: 12px 50px; }
-.filename { font-family:monospace; opacity:0.8; color:#6b5b6b; }
-#dir_display { 
-  font-family:monospace; 
-  opacity:0.8; 
-  color:#6b5b6b;
-  margin-left: auto; 
-  text-align: right; 
-  white-space: nowrap; 
-}
-.controls { display:flex; gap:8px; margin-left:auto; }
-.controls button { background:#d4e5f7; color:#4a5a7a; border:1px solid #a8c2e8; padding:4px 6px; border-radius:6px; cursor:pointer; }
-.controls button:hover { background:#c2d7f0; }
-.video-wrap { background:#f5f0f5; padding:8px; border-radius:12px; position:relative; border:1px solid #e0d0e0; }
-.overlay-top-left { position:absolute; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
-.overlay-btn { width:32px; height:32px; border-radius:50%; background:#f0e8f0; color:#6a5a6a; border:1px solid #d0c0d0; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0.9; }
-.overlay-btn:hover { background:#e8d8e8; }
-#pnginfo_panel { position:absolute; inset:8px; background:rgba(240,235,240,0.95); color:#5a4a5a; padding:12px; border-radius:10px; overflow:auto; z-index:4; display:none; border:1px solid #d0c0d0; }
-#pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #c0a8c0; background:#f0e8f0; color:#6a5a6a; padding:6px 10px; border-radius:8px; cursor:pointer; }
-#pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
-.scorebar { margin-top:8px; }
-.maximize-btn { 
-  background: transparent; 
-  border: 1px solid #a8c2e8; 
-  border-radius: 4px; 
-  color: #4a5a7a; 
-  cursor: pointer; 
-  padding: 4px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
+.toolbar-rows .row + .row { margin-top: 10px; }  /* space between the two rows */
+
+.filename { font-family: monospace; opacity: 0.8; color: #6b5b6b; }
+#dir_display {
+  font-family: monospace;
   opacity: 0.8;
+  color: #6b5b6b;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
 }
-.maximize-btn:hover { 
-  background: #e8d8e8; 
-  opacity: 1;
+
+.pill {
+  background: #e8d5e3;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #d4b8c9;
+  color: #7d5a78;
 }
-.pill { background:#e8d5e3; padding:4px 8px; border-radius:999px; border:1px solid #d4b8c9; color:#7d5a78; }
-input[type=text] { background:#faf8fa; color:#5a4a5a; border:1px solid #d0c0d0; padding:8px 10px; border-radius:8px; min-width:280px; }
-/* Directory input field should be more constrained to prevent overlapping */
+
+/* =========================================================
+   INPUTS & SELECTS (Top pane)
+   --------------------------------------------------------- */
+input[type="text"] {
+  background: #faf8fa;
+  color: #5a4a5a;
+  border: 1px solid #d0c0d0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-width: 280px;
+}
 #dir { min-width: 180px; max-width: 320px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
-/* Sidebar */
-aside#sidebar { max-height: 66vh; overflow: hidden; background:#f0e8f0; border:1px solid #d4b8c9; border-radius:10px; padding:8px; display: flex; flex-direction: column; }
-#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #d4b8c9; margin-bottom:8px; flex-shrink: 0; }
-#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
-.item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
-.item:hover { background:#e8d8e8; }
-.item.current { background:#d4e5f7; border:1px solid #a8c2e8; }
-.item .thumbnail { flex-shrink:0; border-radius:4px; overflow:hidden; background:#fff; border:1px solid #d0c0d0; }
-.item .thumbnail img { display:block; border-radius:4px; }
-.item .content { flex:1; display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; min-width:0; }
-.item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items:start; }
-.item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#6b5b6b; }
-.item .score { font-size:12px; opacity:0.8; color:#7d5a78; flex-shrink:0; }
-.item.disabled { opacity:0.4; cursor:default; }
-.helpbtn { background:#e8d5e3; border:1px solid #d4b8c9; padding:6px 8px; border-radius:8px; cursor:pointer; color:#7d5a78; }
-/* Download icon button */
-#download_btn svg { vertical-align: middle; }
-#download_btn svg path { stroke: #6a5a6a; }
-/* Thumbnail status message */
-#thumbnail_status { color: #9b7b9b; font-size: 12px; opacity: 0.8; margin-left: 8px; }
 
-/* Collapsible toolbar styles */
+.dir-input-container { position: relative; display: inline-block; }
+.dir-dropdown-container { position: relative; display: inline-block; }
+
+/* Triangle button over directory input */
+.dir-triangle-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  z-index: 2;
+}
+.dir-triangle-btn svg { pointer-events: none; }
+
+/* =========================================================
+   DROPDOWNS
+   --------------------------------------------------------- */
+.dir-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--dropdown-border);
+  color: var(--dropdown-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover { background: var(--dropdown-hover); }
+.dropdown-empty { padding: 8px 12px; color: var(--dropdown-text-muted); font-style: italic; }
+
+/* =========================================================
+   BUTTON SYSTEM (Shared for top pane, sidebar, controls)
+   EXCLUDES: .toolbar-toggle, .overlay-btn, .maximize-btn, .toggle-btn
+   --------------------------------------------------------- */
+.button-base,
+.nav-btn,
+.refresh-btn,
+.helpbtn,
+.thumbnail-toggle,
+.controls button,
+#export_filtered_btn,
+#download_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--btn-h);
+  min-width: 32px;
+  padding: 0 var(--btn-xpad);
+  box-sizing: border-box;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-size: var(--btn-font-size);
+  line-height: 1;                   /* avoids unexpected taller buttons */
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+}
+
+.nav-btn:hover,
+.refresh-btn:hover,
+.helpbtn:hover,
+.thumbnail-toggle:hover,
+.controls button:hover,
+#export_filtered_btn:hover,
+#download_btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+.nav-btn:disabled,
+.refresh-btn:disabled,
+.helpbtn:disabled,
+.controls button:disabled,
+#export_filtered_btn:disabled,
+#download_btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Icon sizing for base buttons */
+.nav-btn svg,
+.refresh-btn svg,
+.helpbtn svg,
+#export_filtered_btn svg,
+#download_btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* Help/Refresh keep base footprint */
+.helpbtn {}
+.refresh-btn {}
+
+/* Thumbnail toggle: checkbox + icon inside base frame */
+.thumbnail-toggle {
+  background: transparent;            /* outline feel */
+}
+.thumbnail-toggle input[type="checkbox"] {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;                           /* remove vertical overhang */
+  cursor: pointer;
+}
+.thumbnail-toggle .thumbnail-icon {
+  display: flex;
+  align-items: center;
+  line-height: 0;
+  color: var(--btn-text);
+  cursor: pointer;
+}
+.thumbnail-toggle .thumbnail-icon svg { display: block; }
+
+/* Button rows */
+.button-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+/* =========================================================
+   EXTENSION TOGGLE CHIPS (left as-is per requirement)
+   --------------------------------------------------------- */
+.toggle-container { display: flex; gap: 4px; align-items: center; }
+.toggle-btn {
+  padding: 4px 8px;
+  border: 1px solid #a8c2e8;
+  background: #d4e5f7;
+  color: #4a5a7a;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  min-width: 35px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.toggle-btn.active { background: #4CAF50; border-color: #45a049; color: white; }
+.toggle-btn.inactive { background: #e8d8e8; border-color: #d4b8c9; color: #9b7b9b; }
+.toggle-btn:hover { opacity: 0.8; }
+
+/* =========================================================
+   TOOLBAR TOGGLE (excluded from base)
+   --------------------------------------------------------- */
 .toolbar-toggle {
   position: fixed;
   top: 8px;
@@ -95,34 +286,106 @@ aside#sidebar { max-height: 66vh; overflow: hidden; background:#f0e8f0; border:1
   font-size: 12px;
   transition: all 0.2s ease;
 }
+.toolbar-toggle:hover { background: #c2d7f0; }
 
-.toolbar-toggle:hover {
-  background: #c2d7f0;
-}
+.toolbar-container { transition: all 0.3s ease; overflow: visible; }
+.toolbar-container.collapsed { max-height: 0; opacity: 0; margin: 0; padding: 0; }
+.toolbar-container.collapsed header { margin: 0; padding: 0; }
+.toolbar-container.collapsed .toolbar-rows { display: none; }
 
-.toolbar-container {
-  transition: all 0.3s ease;
+/* =========================================================
+   SIDEBAR LIST
+   --------------------------------------------------------- */
+aside#sidebar {
+  max-height: 66vh;
   overflow: hidden;
+  background: #f0e8f0;
+  border: 1px solid #d4b8c9;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
 }
 
-.toolbar-container.collapsed {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
+#sidebar_controls {
+  padding: 4px 8px 8px 8px;
+  border-bottom: 1px solid #d4b8c9;
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
-.toolbar-container.collapsed header {
-  margin: 0;
-  padding: 0;
-}
+#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
 
-.toolbar-container.collapsed .toolbar-rows {
-  display: none;
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
 }
+.item:hover { background: #e8d8e8; }
+.item.current { background: #d4e5f7; border: 1px solid #a8c2e8; }
 
-/* Adjust body spacing when toolbar is collapsed */
-body.toolbar-collapsed main {
-  padding-top: 8px;
-  transition: padding-top 0.3s ease;
+.item .thumbnail { flex-shrink: 0; border-radius: 4px; overflow: hidden; background: #fff; border: 1px solid #d0c0d0; }
+.item .thumbnail img { display: block; border-radius: 4px; }
+.item .content { flex: 1; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-width: 0; }
+.item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items: start; }
+.item .name { font-family: monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b5b6b; }
+.item .score { font-size: 12px; opacity: 0.8; color: #7d5a78; flex-shrink: 0; }
+.item.disabled { opacity: 0.4; cursor: default; }
+
+/* =========================================================
+   MEDIA PANE (leave functional buttons as-is except structure)
+   --------------------------------------------------------- */
+.video-wrap { background: #f5f0f5; padding: 8px; border-radius: 12px; position: relative; border: 1px solid #e0d0e0; }
+.overlay-top-left { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
+
+/* EXCLUDED: overlay button kept as-is */
+.overlay-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #f0e8f0; color: #6a5a6a; border: 1px solid #d0c0d0;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0.9;
 }
+.overlay-btn:hover { background: #e8d8e8; }
+
+/* PNG info panel */
+#pnginfo_panel { position: absolute; inset: 8px; background: rgba(240,235,240,0.95); color: #5a4a5a; padding: 12px; border-radius: 10px; overflow: auto; z-index: 4; display: none; border: 1px solid #d0c0d0; }
+#pnginfo_copy { position: absolute; top: 16px; right: 16px; border: 1px solid #c0a8c0; background: #f0e8f0; color: #6a5a6a; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+#pnginfo_text { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; line-height: 1.4; }
+
+.scorebar { margin-top: 8px; }
+
+/* EXCLUDED: maximize button kept as-is */
+.maximize-btn {
+  background: transparent;
+  border: 1px solid #a8c2e8;
+  border-radius: 4px;
+  color: #4a5a7a;
+  cursor: pointer;
+  padding: 4px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.8;
+}
+.maximize-btn:hover { background: #e8d8e8; opacity: 1; }
+
+/* Controls row inherits base button style */
+.controls { display: flex; gap: 8px; margin-left: auto; }
+/* .controls button styles are unified via the button system above */
+
+/* =========================================================
+   UTILITIES
+   --------------------------------------------------------- */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  border: 2px solid var(--spinner-border);
+  border-top: 2px solid var(--spinner-border-active);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-left: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
