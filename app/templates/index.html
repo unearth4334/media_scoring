@@ -215,36 +215,49 @@
       background: #3a3a3a;
     }
 
-    /* Thumbnail toggle styles */
+    /* Thumbnail toggle styles — match .nav-btn footprint */
     .thumbnail-toggle {
-      display: flex;
+      display: inline-flex;                 /* inline-flex so it sits like a button */
       align-items: center;
+      justify-content: center;
+      gap: 6px;                             /* replaces some padding space */
+      height: 32px;                         /* same as .nav-btn */
+      min-width: 32px;
+      padding: 0 8px;                       /* horizontal padding only (like buttons) */
       border: 1px solid #666;
       border-radius: 6px;
-      background: transparent;
-      padding: 6px;
-      min-width: 32px;
-      height: 32px;
+      background: #2f2f2f;                  /* same background as .nav-btn */
+      color: #eee;                          /* ensure currentColor resolves */
+      box-sizing: border-box;               /* key: include border/padding in height */
       cursor: pointer;
     }
-    
+
     .thumbnail-toggle:hover {
+      background: #3a3a3a;                  /* same hover as .nav-btn */
       border-color: #777;
     }
-    
+
+    /* Make the checkbox a fixed size instead of scaling it */
     .thumbnail-toggle input[type="checkbox"] {
-      margin: 0 4px 0 0;
+      appearance: auto;                     /* keep native checkbox */
+      width: 16px;
+      height: 16px;
+      margin: 0;                            /* remove extra vertical space */
       cursor: pointer;
-      transform: scale(1.2);
     }
-    
+
+    /* Label holds the SVG as a flex item, remove baseline line-height */
     .thumbnail-toggle .thumbnail-icon {
       display: flex;
       align-items: center;
-      justify-content: center;
-      color: #eee;
-      cursor: pointer;
+      line-height: 0;                       /* remove extra inline height */
     }
+
+    /* Prevent inline SVG from adding extra descent/ascent space */
+    .thumbnail-toggle .thumbnail-icon svg {
+      display: block;
+    }
+
 
     /* Directory dropdown enhanced styles */
     .dropdown-menu {
