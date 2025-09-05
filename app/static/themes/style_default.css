@@ -1,5 +1,31 @@
+/* =========================================================
+   THEME TOKENS
+   --------------------------------------------------------- */
 :root {
-  /* SVG icon colors for dark theme */
+  /* Button system (top pane + sidebar + controls) */
+  --btn-h: 28px;             /* Shared height for most buttons */
+  --btn-radius: 8px;         /* Shared corner radius */
+  --btn-font-size: 12px;     /* Base font size */
+
+  --btn-bg: #2f2f2f;         /* Normal background */
+  --btn-bg-hover: #3a3a3a;   /* Hover background */
+  --btn-border: #666;        /* Border color */
+  --btn-border-hover: #777;  /* Hover border color */
+  --btn-text: #eee;          /* Label/icon color */
+  --btn-xpad: 10px;          /* Horizontal padding */
+
+  /* Dropdown */
+  --dropdown-bg: #2a2a2a;
+  --dropdown-border: #555;
+  --dropdown-text: #fff;
+  --dropdown-hover: #404040;
+  --dropdown-text-muted: #888;
+
+  /* Spinner */
+  --spinner-border: #ccc;
+  --spinner-border-active: #333;
+
+  /* Legacy icon colors (used by svg-icons.js) */
   --reject-stroke-color: white;
   --reject-fill-unselected: black;
   --reject-fill-selected: white;
@@ -10,93 +36,252 @@
   --star-fill-selected: white;
 }
 
-body { background:#181818; color:#eee; font-family:system-ui, Segoe UI, Roboto, sans-serif; margin:0; }
-header { padding:12px 50px; background:#242424; border-bottom:1px solid #333; }
-h1 { font-size:18px; margin:0 0 8px 0; }
-main { padding:16px; max-width:1300px; margin:0 auto; }
-.layout { display:grid; grid-template-columns: 320px 1fr; gap:16px; }
-.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; grid-column: 1 / -1; }
-#right { display:flex; flex-direction:column; align-items:center; }
+/* =========================================================
+   BASE LAYOUT & TYPOGRAPHY
+   --------------------------------------------------------- */
+html, body {
+  background: #181818;
+  color: #eee;
+  font-family: system-ui, Segoe UI, Roboto, sans-serif;
+  margin: 0;
+}
+
+header {
+  padding: 12px 50px;
+  background: #242424;
+  border-bottom: 1px solid #333;
+}
+
+h1 { font-size: 18px; margin: 0 0 8px; }
+
+main { padding: 16px; max-width: 1300px; margin: 0 auto; }
+.layout { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; grid-column: 1 / -1; }
+#right { display: flex; flex-direction: column; align-items: center; }
 .toolbar-rows { padding: 12px 50px; }
-.filename { font-family:monospace; opacity:0.9; }
-#dir_display { 
-  font-family:monospace; 
-  opacity:0.9; 
-  margin-left: auto; 
-  text-align: right; 
-  white-space: nowrap; 
+.toolbar-rows .row + .row { margin-top: 10px; }        /* the second row gets top margin */
+
+
+.filename { font-family: monospace; opacity: 0.9; }
+#dir_display {
+  font-family: monospace;
+  opacity: 0.9;
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
 }
-.controls { display:flex; gap:8px; margin-left:auto; }
-.controls button { background:#2f2f2f; color:#eee; border:1px solid #666; padding:4px 6px; border-radius:6px; cursor:pointer; }
-.controls button:hover { background:#3a3a3a; }
-.video-wrap { background:#000; padding:8px; border-radius:12px; position:relative; }
-.overlay-top-left { position:absolute; top:12px; left:12px; display:flex; gap:8px; z-index:5; }
-.overlay-btn { width:32px; height:32px; border-radius:50%; background:#1e1e1e; color:#fff; border:1px solid #777; display:flex; align-items:center; justify-content:center; cursor:pointer; opacity:0.9; }
-.overlay-btn:hover { background:#2a2a2a; }
-#pnginfo_panel { position:absolute; inset:8px; background:rgba(0,0,0,0.85); color:#fff; padding:12px; border-radius:10px; overflow:auto; z-index:4; display:none; }
-#pnginfo_copy { position:absolute; top:16px; right:16px; border:1px solid #999; background:#222; color:#fff; padding:6px 10px; border-radius:8px; cursor:pointer; }
-#pnginfo_text { white-space:pre-wrap; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:12px; line-height:1.4; }
-.scorebar { margin-top:8px; }
-.maximize-btn { 
-  background: transparent; 
-  border: 1px solid #777; 
-  border-radius: 4px; 
-  color: #eee; 
-  cursor: pointer; 
-  padding: 4px; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center;
-  opacity: 0.8;
+
+.pill {
+  background: #2d2d2d;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid #555;
+  color: #eee;
 }
-.maximize-btn:hover { 
-  background: #2a2a2a; 
-  opacity: 1;
+
+/* =========================================================
+   INPUTS & SELECTS (Top pane)
+   --------------------------------------------------------- */
+input[type="text"] {
+  background: #111;
+  color: #eee;
+  border: 1px solid #444;
+  padding: 8px 10px;
+  border-radius: 8px;
+  min-width: 280px;
 }
-.pill { background:#2d2d2d; padding:4px 8px; border-radius:999px; border:1px solid #555; color:#eee; }
-input[type=text] { background:#111; color:#eee; border:1px solid #444; padding:8px 10px; border-radius:8px; min-width:280px; }
-/* Directory input field should be more constrained to prevent overlapping */
 #dir { min-width: 180px; max-width: 320px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
-/* Sidebar */
-aside#sidebar { max-height: 66vh; overflow: hidden; background:#202020; border:1px solid #333; border-radius:10px; padding:8px; display: flex; flex-direction: column; }
-#sidebar_controls { padding:4px 8px 8px 8px; border-bottom:1px solid #333; margin-bottom:8px; flex-shrink: 0; }
-#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
-.item { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; cursor:pointer; }
-.item:hover { background:#2a2a2a; }
-.item.current { background:#343434; border:1px solid #555; }
-.item .thumbnail { flex-shrink:0; border-radius:4px; overflow:hidden; background:#000; }
-.item .thumbnail img { display:block; border-radius:4px; }
-.item .content { flex:1; display:grid; grid-template-columns: 1fr auto; align-items:center; gap:8px; min-width:0; }
-.item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items:start; }
-.item .name { font-family:monospace; font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.item .score { font-size:12px; opacity:0.9; flex-shrink:0; }
-.item.disabled { opacity:0.4; cursor:default; }
-.helpbtn { background:#3a3a3a; border:1px solid #777; padding:6px 8px; border-radius:8px; cursor:pointer; color:#eee; }
-/* Download icon button */
-#download_btn svg { vertical-align: middle; }
-/* Thumbnail status message */
-#thumbnail_status { color: #ccc; font-size: 12px; opacity: 0.8; margin-left: 8px; }
-/* Export button */
-#export_filtered_btn { color: #eee; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-#export_filtered_btn:hover { background: #3a3a3a; }
-#export_filtered_btn svg { vertical-align: middle; }
 
-/* Button row layout */
-.button-row {
+.dir-input-container { position: relative; display: inline-block; }
+.dir-dropdown-container { position: relative; display: inline-block; }
+
+/* Triangle button over directory input */
+.dir-triangle-btn {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  align-items: center;
+  z-index: 2;
+}
+.dir-triangle-btn svg { pointer-events: none; }
+
+/* =========================================================
+   DROPDOWNS
+   --------------------------------------------------------- */
+.dir-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  display: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
 }
 
-/* Collapsible toolbar styles */
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  background: #2f2f2f;
+  border: 1px solid #666;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 200px;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 2px;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--dropdown-border);
+  color: var(--dropdown-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dropdown-item:last-child { border-bottom: none; }
+.dropdown-item:hover { background: var(--dropdown-hover); }
+.dropdown-empty { padding: 8px 12px; color: var(--dropdown-text-muted); font-style: italic; }
+
+/* =========================================================
+   BUTTON SYSTEM (Shared for top pane, sidebar, controls)
+   EXCLUDES: .toolbar-toggle, .overlay-btn, .maximize-btn, .toggle-btn
+   --------------------------------------------------------- */
+/* Base style */
+.button-base,
+.nav-btn,
+.refresh-btn,
+.helpbtn,
+.thumbnail-toggle,
+.controls button,
+#export_filtered_btn,
+#download_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--btn-h);
+  min-width: 32px;
+  padding: 0 var(--btn-xpad);
+  box-sizing: border-box;
+  border-radius: var(--btn-radius);
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  font-size: var(--btn-font-size);
+  line-height: 1;         /* avoid baseline expanding height */
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+}
+
+.nav-btn:hover,
+.refresh-btn:hover,
+.helpbtn:hover,
+.thumbnail-toggle:hover,
+.controls button:hover,
+#export_filtered_btn:hover,
+#download_btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+.nav-btn:disabled,
+.refresh-btn:disabled,
+.helpbtn:disabled,
+.controls button:disabled,
+#export_filtered_btn:disabled,
+#download_btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Icon sizing */
+.nav-btn svg,
+.refresh-btn svg,
+.helpbtn svg,
+#export_filtered_btn svg,
+#download_btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+/* Help button keeps same footprint but can look like a pill if desired */
+.helpbtn { /* inherits base */ }
+
+/* Refresh is often icon-only; base padding is fine */
+.refresh-btn { /* inherits base */ }
+
+/* Thumbnail toggle: checkbox + icon inside base frame */
+.thumbnail-toggle {
+  background: transparent; /* outline vibe; remove if you want filled look */
+}
+.thumbnail-toggle input[type="checkbox"] {
+  appearance: auto;
+  width: 16px;
+  height: 16px;
+  margin: 0;               /* eliminate vertical overhang */
+  cursor: pointer;
+}
+.thumbnail-toggle .thumbnail-icon {
+  display: flex;
+  align-items: center;
+  line-height: 0;          /* prevents inline svg extra space */
+  color: var(--btn-text);
+  cursor: pointer;
+}
+.thumbnail-toggle .thumbnail-icon svg { display: block; }
+
+/* Button rows */
+.button-row { display: flex; gap: 8px; margin-bottom: 8px; }
+
+/* =========================================================
+   EXTENSION TOGGLE CHIPS (left as-is per requirement)
+   --------------------------------------------------------- */
+.toggle-container { display: flex; gap: 4px; align-items: center; }
+.toggle-btn {
+  padding: 4px 8px;
+  border: 1px solid #666;
+  background: #333;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  min-width: 35px;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+.toggle-btn.active { background: #4CAF50; border-color: #45a049; color: white; }
+.toggle-btn.inactive { background: #555; border-color: #666; color: #ccc; }
+.toggle-btn:hover { opacity: 0.8; }
+
+/* =========================================================
+   TOOLBAR TOGGLE (excluded from base)
+   --------------------------------------------------------- */
 .toolbar-toggle {
   position: fixed;
   top: 8px;
   right: 8px;
   z-index: 1000;
-  background: #2f2f2f;
-  color: #eee;
+  background: #333;
+  color: #fff;
   border: 1px solid #666;
   border-radius: 4px;
   padding: 6px 8px;
@@ -104,34 +289,104 @@ aside#sidebar { max-height: 66vh; overflow: hidden; background:#202020; border:1
   font-size: 12px;
   transition: all 0.2s ease;
 }
+.toolbar-toggle:hover { background: #444; }
 
-.toolbar-toggle:hover {
-  background: #3a3a3a;
-}
+.toolbar-container { transition: all 0.3s ease; overflow: visible; }
+.toolbar-container.collapsed { max-height: 0; opacity: 0; margin: 0; padding: 0; }
+.toolbar-container.collapsed header { margin: 0; padding: 0; }
+.toolbar-container.collapsed .toolbar-rows { display: none; }
 
-.toolbar-container {
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.toolbar-container.collapsed {
-  max-height: 0;
-  opacity: 0;
-  margin: 0;
-  padding: 0;
-}
-
-.toolbar-container.collapsed header {
-  margin: 0;
-  padding: 0;
-}
-
-.toolbar-container.collapsed .toolbar-rows {
-  display: none;
-}
-
-/* Adjust body spacing when toolbar is collapsed */
 body.toolbar-collapsed main {
   padding-top: 8px;
   transition: padding-top 0.3s ease;
 }
+
+/* =========================================================
+   SIDEBAR LIST
+   --------------------------------------------------------- */
+aside#sidebar {
+  max-height: 66vh;
+  overflow: hidden;
+  background: #202020;
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+#sidebar_controls {
+  padding: 4px 8px 8px 8px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+#sidebar_list { flex: 1; overflow-y: auto; min-height: 0; }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.item:hover { background: #2a2a2a; }
+.item.current { background: #343434; border: 1px solid #555; }
+.item .thumbnail { flex-shrink: 0; border-radius: 4px; overflow: hidden; background: #000; }
+.item .thumbnail img { display: block; border-radius: 4px; }
+.item .content { flex: 1; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-width: 0; }
+.item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items: start; }
+.item .name { font-family: monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.item .score { font-size: 12px; opacity: 0.9; flex-shrink: 0; }
+.item.disabled { opacity: 0.4; cursor: default; }
+
+/* =========================================================
+   MEDIA PANE (leave functional buttons as-is except structure)
+   --------------------------------------------------------- */
+.video-wrap { background: #000; padding: 8px; border-radius: 12px; position: relative; }
+.overlay-top-left { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
+
+/* EXCLUDED: overlay button kept as-is */
+.overlay-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #1e1e1e; color: #fff; border: 1px solid #777;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0.9;
+}
+.overlay-btn:hover { background: #2a2a2a; }
+
+/* PNG info panel */
+#pnginfo_panel { position: absolute; inset: 8px; background: rgba(0,0,0,0.85); color: #fff; padding: 12px; border-radius: 10px; overflow: auto; z-index: 4; display: none; }
+#pnginfo_copy { position: absolute; top: 16px; right: 16px; border: 1px solid #999; background: #222; color: #fff; padding: 6px 10px; border-radius: 8px; cursor: pointer; }
+#pnginfo_text { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size: 12px; line-height: 1.4; }
+
+.scorebar { margin-top: 8px; }
+
+/* EXCLUDED: maximize button kept as-is */
+.maximize-btn {
+  background: transparent; border: 1px solid #777; border-radius: 4px; color: #eee; cursor: pointer; padding: 4px;
+  display: flex; align-items: center; justify-content: center; opacity: 0.8;
+}
+.maximize-btn:hover { background: #2a2a2a; opacity: 1; }
+
+/* Controls row now inherits base button style */
+.controls { display: flex; gap: 8px; margin-left: auto; }
+/* .controls button styles are unified via the button system above */
+
+/* =========================================================
+   UTILITIES
+   --------------------------------------------------------- */
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  border: 2px solid var(--spinner-border);
+  border-top: 2px solid var(--spinner-border-active);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin-left: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }

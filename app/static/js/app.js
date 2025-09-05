@@ -215,8 +215,7 @@ document.addEventListener('click', (e)=>{
     }
   }
   if (e.target && e.target.id === 'toggle_thumbnails'){ 
-    showThumbnails = !showThumbnails;
-    updateThumbnailToggleButton();
+    showThumbnails = e.target.checked;
     renderSidebar();
   }
 });
@@ -343,16 +342,13 @@ function updateDownloadButton(name){
 
 
 function updateThumbnailToggleButton(){
-  const button = document.getElementById('toggle_thumbnails');
-  if (!button) return;
+  const checkbox = document.getElementById('toggle_thumbnails');
+  const icon = document.querySelector('.thumbnail-icon');
+  if (!checkbox || !icon) return;
   
-  if (showThumbnails) {
-    button.innerHTML = svgHideThumbnails();
-    button.title = 'Hide thumbnails';
-  } else {
-    button.innerHTML = svgShowThumbnails();
-    button.title = 'Show thumbnails';
-  }
+  checkbox.checked = showThumbnails;
+  icon.innerHTML = svgThumbnail();
+  icon.title = showThumbnails ? 'Hide thumbnails' : 'Show thumbnails';
 }
 function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
