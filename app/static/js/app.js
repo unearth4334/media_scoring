@@ -449,8 +449,12 @@ function showMedia(url, name){
   if (b1 && b2){ const enable = isVideoName(name); b1.disabled = !enable; b2.disabled = !enable; }
 }
 function show(i){
+  const filenameTextEl = document.getElementById('filename-text');
+  const clipboardBtn = document.getElementById('filename-clipboard');
+  
   if (filtered.length === 0){
-    document.getElementById('filename').textContent = '(no items match filter)';
+    filenameTextEl.textContent = '(no items match filter)';
+    clipboardBtn.style.display = 'none';
     const player = document.getElementById('player');
     player.removeAttribute('src'); player.load();
     renderScoreBar(0);
@@ -463,12 +467,42 @@ function show(i){
   idx = Math.max(0, Math.min(i, filtered.length-1));
   const v = filtered[idx];
   showMedia(v.url, v.name);
-  document.getElementById('filename').textContent = `${idx+1}/${filtered.length}  •  ${v.name}`;
+  
+  // Find the file extension to position clipboard icon correctly
+  const extensionMatch = v.name.match(/\.([\w]+)$/i);
+  const extension = extensionMatch ? extensionMatch[0] : '';
+  const nameWithoutExt = extension ? v.name.slice(0, -extension.length) : v.name;
+  
+  let displayText = `${idx+1}/${filtered.length}  •  ../${nameWithoutExt}`;
+  if (extension) {
+    displayText += extension;
+  }
+  
+  filenameTextEl.textContent = displayText;
+  
+  // Set up clipboard functionality
+  clipboardBtn.innerHTML = svgClipboard();
+  clipboardBtn.style.display = 'inline-block';
+  clipboardBtn.onclick = () => {
+    const fullPath = currentDir + '/' + v.name;
+    if (!navigator.clipboard) {
+      const ta = document.createElement('textarea');
+      ta.value = fullPath;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    } else {
+      navigator.clipboard.writeText(fullPath).catch(() => {});
+    }
+  };
+  
   fetch('/api/meta/' + encodeURIComponent(v.name))
     .then(r => r.ok ? r.json() : null)
     .then(meta => {
       if (meta && meta.width && meta.height) {
-        document.getElementById('filename').textContent += ` [${meta.width}x${meta.height}]`;
+        // Insert resolution before clipboard icon
+        filenameTextEl.textContent += ` [${meta.width}x${meta.height}]`;
       }
       setupPngInfo(meta, v.name);
     }).catch(()=>{ setupPngInfo(null, v.name); });
