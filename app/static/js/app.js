@@ -340,6 +340,17 @@ function updateDownloadButton(name){
   };
 }
 
+function updateMediaDownloadButton(name){
+  const db = document.getElementById('media-download-btn');
+  if (!db) return;
+  if (!name){ db.disabled = true; return; }
+  db.disabled = false;
+  db.onclick = () => {
+    try { window.location.href = '/download/' + encodeURIComponent(name); }
+    catch(e){ alert('Download failed to start: ' + e); }
+  };
+}
+
 
 function updateThumbnailToggleButton(){
   const checkbox = document.getElementById('toggle_thumbnails');
@@ -358,13 +369,18 @@ function renderScoreBar(score){
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
   for (let i=0;i<5;i++) html += svgStar(i<stars);
   html += `</div>`;
+  html += `<div style="display:flex; gap:8px; align-items:center;">`;
+  html += `<button id="media-download-btn" class="maximize-btn" title="Download current media" disabled>`;
+  html += svgDownload();
+  html += `</button>`;
   html += `<button id="maximize-btn" class="maximize-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
   html += isMaximized ? svgMinimize() : svgMaximize();
   html += `</button>`;
   html += `</div>`;
+  html += `</div>`;
   bar.innerHTML = html;
   
-  // Attach event listener to the new button
+  // Attach event listener to the new buttons
   const maximizeBtn = document.getElementById('maximize-btn');
   if (maximizeBtn) {
     maximizeBtn.addEventListener('click', toggleMaximize);
@@ -459,6 +475,7 @@ function show(i){
     player.removeAttribute('src'); player.load();
     renderScoreBar(0);
     updateDownloadButton(null);
+    updateMediaDownloadButton(null);
     const controls = document.getElementById('pnginfo_controls'); if (controls) controls.style.display='none';
     const panel = document.getElementById('pnginfo_panel'); if (panel) panel.style.display='none';
     renderSidebar();
@@ -509,6 +526,7 @@ function show(i){
 
   updateDownloadButton(v.name);
   renderScoreBar(v.score || 0);
+  updateMediaDownloadButton(v.name);
   renderSidebar();
 }
 // Function to estimate text width
