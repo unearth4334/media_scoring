@@ -1039,6 +1039,18 @@ async function loadDirectoryTree() {
   }
 }
 
+// Reload directory tree (clears cache and reloads)
+function reloadDirectoryTree() {
+  const treeContainer = document.getElementById('directory_tree');
+  treeContainer.removeAttribute('data-loaded');
+  expandedNodes.clear(); // Clear expanded state since we're changing directories
+  
+  // If Folders tab is currently active, reload immediately
+  if (document.getElementById('tab-folders').classList.contains('active')) {
+    loadDirectoryTree();
+  }
+}
+
 // Render directory tree recursively
 function renderDirectoryTree(treeData, container) {
   container.innerHTML = '';
@@ -1050,6 +1062,24 @@ function renderDirectoryTree(treeData, container) {
   
   const treeNode = createTreeNode(treeData, 0);
   container.appendChild(treeNode);
+  
+  // Highlight current directory
+  highlightCurrentDirectory();
+}
+
+// Highlight the current directory in the tree
+function highlightCurrentDirectory() {
+  const currentDir = document.getElementById('dir').value.trim();
+  
+  document.querySelectorAll('.tree-item').forEach(item => {
+    item.classList.remove('current');
+  });
+  
+  document.querySelectorAll('.tree-label').forEach(label => {
+    if (label.title === currentDir) {
+      label.closest('.tree-item').classList.add('current');
+    }
+  });
 }
 
 // Create a tree node element
@@ -1152,9 +1182,18 @@ function navigateToDirectory(dirPath) {
     }
   });
   
-  // Optionally trigger directory scan
-  // scanDir(dirPath);
+  // Trigger directory scan
+  scanDir(dirPath);
 }
+
+// Hook into existing scanDir function to reload tree when directory changes
+const originalScanDir = window.scanDir;
+window.scanDir = async function(path) {
+  const result = await originalScanDir(path);
+  // Reload tree after directory scan
+  reloadDirectoryTree();
+  return result;
+};
 
 // Initialize tabs when DOM loads
 document.addEventListener('DOMContentLoaded', initializeTabs);
