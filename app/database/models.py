@@ -1,0 +1,149 @@
+"""Database models for media scoring application."""
+
+import datetime as dt
+from typing import Optional, List
+from pathlib import Path
+
+from sqlalchemy import (
+    Column, Integer, String, DateTime, Text, Float, Boolean,
+    ForeignKey, Index, UniqueConstraint
+)
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import relationship, Session
+
+Base = declarative_base()
+
+
+class MediaFile(Base):
+    """Model for media files."""
+    __tablename__ = "media_files"
+    
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(512), nullable=False)
+    directory = Column(String(1024), nullable=False)
+    file_path = Column(String(1536), nullable=False, unique=True)
+    file_size = Column(Integer)
+    file_type = Column(String(50))  # 'video', 'image'
+    extension = Column(String(10))
+    score = Column(Integer, default=0)  # -1 to 5
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+    last_accessed = Column(DateTime)
+    
+    # Relationships
+    media_metadata = relationship("MediaMetadata", back_populates="media_file", cascade="all, delete-orphan")
+    keywords = relationship("MediaKeyword", back_populates="media_file", cascade="all, delete-orphan")
+    thumbnails = relationship("MediaThumbnail", back_populates="media_file", cascade="all, delete-orphan")
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_media_file_path', 'file_path'),
+        Index('idx_media_directory', 'directory'),
+        Index('idx_media_score', 'score'),
+        Index('idx_media_type', 'file_type'),
+        Index('idx_media_updated', 'updated_at'),
+    )
+    
+    def __repr__(self):
+        return f"<MediaFile(id={self.id}, filename='{self.filename}', score={self.score})>"
+
+
+class MediaMetadata(Base):
+    """Model for media file metadata."""
+    __tablename__ = "media_metadata"
+    
+    id = Column(Integer, primary_key=True)
+    media_file_id = Column(Integer, ForeignKey('media_files.id'), nullable=False)
+    
+    # Video/Image dimensions
+    width = Column(Integer)
+    height = Column(Integer)
+    duration = Column(Float)  # Video duration in seconds
+    frame_rate = Column(Float)  # Video frame rate
+    
+    # Image-specific metadata
+    color_mode = Column(String(50))  # RGB, RGBA, etc.
+    has_alpha = Column(Boolean, default=False)
+    
+    # PNG text parameters (for AI-generated images)
+    png_text = Column(Text)  # JSON string of PNG text chunks
+    
+    # ComfyUI/AI workflow data
+    workflow_data = Column(Text)  # JSON string of workflow
+    prompt = Column(Text)
+    negative_prompt = Column(Text)
+    model_name = Column(String(256))
+    sampler = Column(String(100))
+    steps = Column(Integer)
+    cfg_scale = Column(Float)
+    seed = Column(String(50))
+    
+    # File modification tracking
+    file_modified_at = Column(DateTime)  # When the actual file was last modified
+    metadata_extracted_at = Column(DateTime, default=dt.datetime.utcnow)
+    
+    # Relationship
+    media_file = relationship("MediaFile", back_populates="media_metadata")
+    
+    # Indexes
+    __table_args__ = (
+        Index('idx_metadata_media_file', 'media_file_id'),
+        Index('idx_metadata_dimensions', 'width', 'height'),
+        Index('idx_metadata_model', 'model_name'),
+    )
+    
+    def __repr__(self):
+        return f"<MediaMetadata(id={self.id}, media_file_id={self.media_file_id}, dimensions={self.width}x{self.height})>"
+
+
+class MediaKeyword(Base):
+    """Model for searchable keywords/tags associated with media files."""
+    __tablename__ = "media_keywords"
+    
+    id = Column(Integer, primary_key=True)
+    media_file_id = Column(Integer, ForeignKey('media_files.id'), nullable=False)
+    keyword = Column(String(256), nullable=False)
+    keyword_type = Column(String(50), default='user')  # 'user', 'prompt', 'auto', 'workflow'
+    confidence = Column(Float, default=1.0)  # Confidence score for auto-generated keywords
+    source = Column(String(100))  # Where this keyword came from
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    
+    # Relationship
+    media_file = relationship("MediaFile", back_populates="keywords")
+    
+    # Indexes and constraints
+    __table_args__ = (
+        Index('idx_keyword_media_file', 'media_file_id'),
+        Index('idx_keyword_search', 'keyword'),
+        Index('idx_keyword_type', 'keyword_type'),
+        UniqueConstraint('media_file_id', 'keyword', 'keyword_type', name='uq_media_keyword'),
+    )
+    
+    def __repr__(self):
+        return f"<MediaKeyword(id={self.id}, keyword='{self.keyword}', type='{self.keyword_type}')>"
+
+
+class MediaThumbnail(Base):
+    """Model for thumbnail data storage."""
+    __tablename__ = "media_thumbnails"
+    
+    id = Column(Integer, primary_key=True)
+    media_file_id = Column(Integer, ForeignKey('media_files.id'), nullable=False)
+    thumbnail_size = Column(String(20), nullable=False)  # e.g., '64x64', '128x128'
+    thumbnail_data = Column(Text)  # Base64 encoded thumbnail data
+    mime_type = Column(String(50), default='image/jpeg')
+    file_path = Column(String(1024))  # Path to thumbnail file (alternative to storing data)
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    
+    # Relationship
+    media_file = relationship("MediaFile", back_populates="thumbnails")
+    
+    # Indexes and constraints
+    __table_args__ = (
+        Index('idx_thumbnail_media_file', 'media_file_id'),
+        Index('idx_thumbnail_size', 'thumbnail_size'),
+        UniqueConstraint('media_file_id', 'thumbnail_size', name='uq_media_thumbnail_size'),
+    )
+    
+    def __repr__(self):
+        return f"<MediaThumbnail(id={self.id}, media_file_id={self.media_file_id}, size='{self.thumbnail_size}')>"

@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from .settings import Settings
+from .database import DatabaseService
+from .database.engine import init_database
 
 
 class ApplicationState:
@@ -16,6 +18,17 @@ class ApplicationState:
         self.file_list: List[Path] = []
         self.file_pattern: str = settings.pattern
         self.logger: logging.Logger = logging.getLogger("video_scorer_fastapi")
+        
+        # Initialize database if enabled
+        self.database_enabled = settings.enable_database
+        if self.database_enabled:
+            try:
+                db_path = settings.get_database_path()
+                init_database(db_path)
+                self.logger.info(f"Database initialized at {db_path}")
+            except Exception as e:
+                self.logger.error(f"Failed to initialize database: {e}")
+                self.database_enabled = False
         
         # Thumbnail generation progress tracking
         self.thumbnail_progress = {
@@ -38,6 +51,16 @@ class ApplicationState:
     def get_thumbnails_dir(self) -> Path:
         """Get the thumbnails directory for current video directory."""
         return self.video_dir / ".thumbnails"
+    
+    def get_database_service(self) -> Optional[DatabaseService]:
+        """Get a database service instance if database is enabled."""
+        if not self.database_enabled:
+            return None
+        try:
+            return DatabaseService()
+        except Exception as e:
+            self.logger.error(f"Failed to create database service: {e}")
+            return None
 
 
 # Global state instance - will be initialized in main.py

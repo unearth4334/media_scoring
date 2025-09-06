@@ -38,7 +38,8 @@ def read_score(video_path: Path) -> Optional[int]:
 
 
 def write_score(video_path: Path, score: int) -> None:
-    """Write score to sidecar file."""
+    """Write score to sidecar file and database."""
+    # Write to sidecar file (existing functionality)
     scp = get_sidecar_path_for(video_path)
     payload = {
         "file": video_path.name,
@@ -46,6 +47,15 @@ def write_score(video_path: Path, score: int) -> None:
         "updated": dt.datetime.now().isoformat(timespec="seconds"),
     }
     scp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    
+    # Write to database if enabled
+    state = get_state()
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                db.update_media_file_score(video_path, score)
+        except Exception as e:
+            state.logger.error(f"Failed to update score in database: {e}")
 
 
 def match_union_pattern(directory: Path, pattern: str) -> List[Path]:
@@ -106,5 +116,24 @@ def switch_directory(new_dir: Path, pattern: Optional[str] = None) -> List[Path]
     state.file_list = file_list
     
     state.logger.info(f"SCAN dir={new_dir} pattern={state.file_pattern} files={len(file_list)}")
+    
+    # Extract and store metadata for discovered files if database is enabled
+    if state.database_enabled:
+        from .metadata import extract_and_store_metadata
+        
+        try:
+            with state.get_database_service() as db:
+                for file_path in file_list:
+                    # Get or create media file record  
+                    media_file = db.get_or_create_media_file(file_path)
+                    
+                    # Read score from sidecar if exists and update database
+                    sidecar_score = read_score(file_path)
+                    if sidecar_score is not None and media_file.score != sidecar_score:
+                        media_file.score = sidecar_score
+                
+                state.logger.info(f"Synced {len(file_list)} files to database")
+        except Exception as e:
+            state.logger.error(f"Failed to sync files to database: {e}")
     
     return file_list
