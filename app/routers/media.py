@@ -84,6 +84,41 @@ def get_media_metadata(name: str):
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "File not found")
 
+    # First check if we have metadata in database
+    metadata = {}
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                db_metadata = db.get_media_metadata(target)
+                if db_metadata:
+                    # Convert database metadata to response format
+                    metadata = {
+                        "width": db_metadata.width,
+                        "height": db_metadata.height,
+                        "duration": db_metadata.duration,
+                        "frame_rate": db_metadata.frame_rate,
+                        "color_mode": db_metadata.color_mode,
+                        "has_alpha": db_metadata.has_alpha,
+                    }
+                    
+                    # Add PNG text if available
+                    if db_metadata.png_text:
+                        try:
+                            metadata["png_text"] = json.loads(db_metadata.png_text)
+                        except json.JSONDecodeError:
+                            pass
+                    
+                    # Add AI parameters if available
+                    for field in ["prompt", "negative_prompt", "model_name", "sampler", "steps", "cfg_scale", "seed"]:
+                        value = getattr(db_metadata, field, None)
+                        if value:
+                            metadata[field] = value
+                    
+                    return metadata
+        except Exception as e:
+            state.logger.error(f"Failed to get metadata from database: {e}")
+
+    # Fallback to on-demand extraction (original behavior)
     ext = target.suffix.lower()
     if ext == ".mp4":
         # Use ffprobe to retrieve width/height
@@ -101,24 +136,32 @@ def get_media_metadata(name: str):
                 w = st.get("width")
                 h = st.get("height")
                 if w and h:
-                    return {"width": int(w), "height": int(h)}
+                    metadata = {"width": int(w), "height": int(h)}
         except Exception as e:
             return {"error": str(e)}
     elif ext in {".png", ".jpg", ".jpeg"}:
         try:
             if Image is None:
-                meta = {"error": "Pillow not installed"}
+                metadata = {"error": "Pillow not installed"}
             else:
                 with Image.open(target) as im:
-                    meta = {"width": int(im.width), "height": int(im.height)}
+                    metadata = {"width": int(im.width), "height": int(im.height)}
             if ext == ".png":
                 txt = read_png_parameters_text(target)
                 if txt:
-                    meta["png_text"] = txt
-            return meta
+                    metadata["png_text"] = txt
         except Exception as e:
             return {"error": str(e)}
-    return {}
+    
+    # Store extracted metadata in database for future use
+    if metadata and state.database_enabled:
+        try:
+            from ..services.metadata import extract_and_store_metadata
+            extract_and_store_metadata(target)
+        except Exception as e:
+            state.logger.error(f"Failed to store metadata in database: {e}")
+    
+    return metadata
 
 
 @router.post("/score")
