@@ -134,10 +134,15 @@ docker run --rm -p 7862:7862 -v /path/to/media:/media media-scorer
 ├── docker-compose.yml         # Docker Compose setup
 ├── docker-entrypoint.sh       # Docker entry script
 │
-├── themes/                    # CSS themes
-│   ├── style_default.css      # Default dark theme
-│   ├── style_pastelcore.css   # Pastel theme
-│   └── style_darkcandy.css    # Dark candy theme
+├── app/                       # Main application directory  
+│   ├── static/
+│   │   ├── themes/            # CSS themes
+│   │   │   ├── style_default.css      # Default dark theme
+│   │   │   ├── style_pastelcore.css   # Pastel theme
+│   │   │   └── style_darkcandy.css    # Dark candy theme
+│   │   └── js/                # JavaScript files
+│   ├── templates/             # HTML templates
+│   └── ...                    # Other app modules
 │
 └── media/                     # Sample media files (development)
 ```
@@ -186,7 +191,7 @@ python run.py --dir /path/to/media --port 8000 --pattern "*.mp4"
 The application does not auto-reload on code changes. Always restart after modifications.
 
 ### Themes
-Available CSS themes in `themes/` directory:
+Available CSS themes in `app/static/themes/` directory:
 - `style_default.css` - Dark theme (default)
 - `style_pastelcore.css` - Light pastel theme
 - `style_darkcandy.css` - Dark colorful theme
