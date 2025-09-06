@@ -214,3 +214,53 @@ async def list_sibling_directories(path: str = ""):
         return {"directories": directories, "current_path": str(target_path), "parent_path": str(parent_path)}
     except Exception as e:
         raise HTTPException(500, f"Failed to list sibling directories: {str(e)}")
+
+
+@router.get("/directory-tree")
+async def get_directory_tree(path: str = "", max_depth: int = 3):
+    """Get directory tree structure starting from the given path."""
+    state = get_state()
+    
+    try:
+        if not path:
+            target_path = state.video_dir
+        else:
+            target_path = Path(path).expanduser().resolve()
+        
+        # Security check: ensure we're not accessing forbidden paths
+        if not target_path.exists() or not target_path.is_dir():
+            raise HTTPException(404, "Directory not found")
+        
+        def build_tree(dir_path: Path, current_depth: int = 0) -> dict:
+            """Recursively build directory tree."""
+            tree_node = {
+                "name": dir_path.name if dir_path.name else str(dir_path),
+                "path": str(dir_path),
+                "type": "directory",
+                "children": []
+            }
+            
+            if current_depth < max_depth:
+                try:
+                    subdirs = []
+                    for item in dir_path.iterdir():
+                        if item.is_dir() and not item.name.startswith('.'):
+                            subdirs.append(item)
+                    
+                    # Sort subdirectories
+                    subdirs.sort(key=lambda x: x.name.lower(), reverse=state.settings.directory_sort_desc)
+                    
+                    for subdir in subdirs:
+                        tree_node["children"].append(build_tree(subdir, current_depth + 1))
+                        
+                except PermissionError:
+                    # Skip directories we can't access
+                    pass
+            
+            return tree_node
+        
+        tree = build_tree(target_path)
+        return {"tree": tree, "current_path": str(target_path)}
+        
+    except Exception as e:
+        raise HTTPException(500, f"Failed to build directory tree: {str(e)}")
