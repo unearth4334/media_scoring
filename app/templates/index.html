@@ -70,21 +70,37 @@
   </div>
   <main class="layout">
     <aside id="sidebar">
-      <div id="sidebar_controls" style="display:none;">
-        <div class="button-row">
-          <div id="thumbnail_toggle" class="thumbnail-toggle">
-            <input type="checkbox" id="toggle_thumbnails" />
-            <label for="toggle_thumbnails" class="thumbnail-icon"></label>
+      <!-- Tab Headers -->
+      <div class="sidebar-tabs">
+        <button class="tab-button active" data-tab="files">Files</button>
+        <button class="tab-button" data-tab="folders">Folders</button>
+      </div>
+      
+      <!-- Files Tab Content -->
+      <div class="tab-content active" id="tab-files">
+        <div id="sidebar_controls" style="display:none;">
+          <div class="button-row">
+            <div id="thumbnail_toggle" class="thumbnail-toggle">
+              <input type="checkbox" id="toggle_thumbnails" />
+              <label for="toggle_thumbnails" class="thumbnail-icon"></label>
+            </div>
+            <button id="export_filtered_btn" class="nav-btn" title="Export all filtered files as ZIP">
+              Export Filtered
+            </button>
           </div>
-          <button id="export_filtered_btn" class="nav-btn" title="Export all filtered files as ZIP">
-            Export Filtered
-          </button>
+          <div style="margin-top: 4px;">
+            <span id="progress_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
+          </div>
         </div>
-        <div style="margin-top: 4px;">
-          <span id="progress_status" style="font-size: 12px; opacity: 0.8; display: none;"></span>
+        <div id="sidebar_list"></div>
+      </div>
+      
+      <!-- Folders Tab Content -->
+      <div class="tab-content" id="tab-folders">
+        <div class="directory-tree" id="directory_tree">
+          <div class="tree-loading">Loading directory tree...</div>
         </div>
       </div>
-      <div id="sidebar_list"></div>
     </aside>
     <section id="right">
       <div class="row">
