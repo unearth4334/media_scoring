@@ -77,6 +77,13 @@ fi
 # For Docker, we always bind to 0.0.0.0 to accept external connections
 HOST="0.0.0.0"
 
+# Build database arguments if DATABASE_URL is provided
+DATABASE_ARGS=""
+if [ -n "$DATABASE_URL" ]; then
+    DATABASE_ARGS="--database-url $DATABASE_URL"
+    echo "Using external database: $DATABASE_URL"
+fi
+
 echo "Starting Media Scorer with:"
 echo "  DIR: $DIR"
 echo "  PORT: $PORT" 
@@ -84,6 +91,7 @@ echo "  HOST: $HOST"
 echo "  PATTERN: $PATTERN"
 echo "  STYLE: $STYLE"
 echo "  THUMBNAIL_ARGS: $THUMBNAIL_ARGS"
+echo "  DATABASE_ARGS: $DATABASE_ARGS"
 
 # Start the application with the resolved configuration
 exec python run.py \
@@ -92,4 +100,5 @@ exec python run.py \
     --host "$HOST" \
     --pattern "$PATTERN" \
     --style "$STYLE" \
-    $THUMBNAIL_ARGS
+    $THUMBNAIL_ARGS \
+    $DATABASE_ARGS
