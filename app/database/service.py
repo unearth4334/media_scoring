@@ -74,6 +74,14 @@ class DatabaseService:
         media_file.updated_at = datetime.utcnow()
         return True
     
+    def get_media_file_score(self, file_path: Path) -> Optional[int]:
+        """Get the score for a media file."""
+        file_path_str = str(file_path.resolve())
+        media_file = self.session.query(MediaFile).filter(
+            MediaFile.file_path == file_path_str
+        ).first()
+        return media_file.score if media_file else None
+    
     def get_media_files_by_directory(self, directory: Path) -> List[MediaFile]:
         """Get all media files in a directory."""
         return self.session.query(MediaFile).filter(
