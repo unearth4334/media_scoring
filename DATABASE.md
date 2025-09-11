@@ -360,6 +360,117 @@ SELECT * FROM media_keywords LIMIT 10;
 - `GET /api/search/stats` - Database statistics
 - Check application logs for database errors
 
+## External Database Access
+
+When using Docker Compose, the application uses PostgreSQL as an external database service that can be accessed from outside the container for debugging and data inspection.
+
+### Connection Information
+
+**Default Database Connection:**
+- **Host**: `localhost` (when accessing from host machine)
+- **Port**: `5432` (configurable via `POSTGRES_PORT` in .env)
+- **Database**: `media_scoring` (configurable via `POSTGRES_DB` in .env)
+- **Username**: `media_user` (configurable via `POSTGRES_USER` in .env)  
+- **Password**: `media_password` (configurable via `POSTGRES_PASSWORD` in .env)
+
+### Connecting with Database Tools
+
+**Using psql (Command Line):**
+```bash
+# Connect from host machine
+psql -h localhost -p 5432 -U media_user -d media_scoring
+
+# Connect from within Docker network
+docker exec -it media-scorer-db psql -U media_user -d media_scoring
+```
+
+**Using pgAdmin:**
+1. Install pgAdmin or use web version
+2. Create new server connection with:
+   - Host: `localhost`
+   - Port: `5432`
+   - Database: `media_scoring`
+   - Username: `media_user`
+   - Password: `media_password`
+
+**Using DBeaver:**
+1. Create new PostgreSQL connection
+2. Configure with the connection details above
+3. Test connection and browse database schema
+
+**Using DataGrip (JetBrains):**
+1. Add new Data Source → PostgreSQL
+2. Enter connection details
+3. Download drivers if prompted
+4. Test connection
+
+### Useful SQL Queries for Debugging
+
+**Check media files:**
+```sql
+SELECT filename, score, created_at FROM media_files ORDER BY created_at DESC LIMIT 10;
+```
+
+**Check metadata extraction:**
+```sql
+SELECT mf.filename, mm.width, mm.height, mm.prompt 
+FROM media_files mf 
+LEFT JOIN media_metadata mm ON mf.id = mm.media_file_id 
+WHERE mm.id IS NOT NULL;
+```
+
+**Check keywords:**
+```sql
+SELECT mf.filename, mk.keyword, mk.keyword_type 
+FROM media_files mf 
+JOIN media_keywords mk ON mf.id = mk.media_file_id 
+ORDER BY mf.filename, mk.keyword;
+```
+
+**Database statistics:**
+```sql
+SELECT 'media_files' as table_name, COUNT(*) as count FROM media_files
+UNION ALL
+SELECT 'media_metadata' as table_name, COUNT(*) as count FROM media_metadata
+UNION ALL  
+SELECT 'media_keywords' as table_name, COUNT(*) as count FROM media_keywords
+UNION ALL
+SELECT 'media_thumbnails' as table_name, COUNT(*) as count FROM media_thumbnails;
+```
+
+### Volume Persistence
+
+The PostgreSQL data is stored in a Docker volume named `postgres_data`, ensuring data persistence across container restarts:
+
+```bash
+# View Docker volumes
+docker volume ls
+
+# Inspect the postgres data volume
+docker volume inspect media_scoring_postgres_data
+
+# Backup database
+docker exec media-scorer-db pg_dump -U media_user media_scoring > backup.sql
+
+# Restore database
+docker exec -i media-scorer-db psql -U media_user media_scoring < backup.sql
+```
+
+### Development vs Production
+
+**Development (Local SQLite):**
+- Uses file-based SQLite database in `.scores/media.db`
+- No external dependencies
+- Data stored alongside media files
+
+**Production (Docker with PostgreSQL):**
+- Uses PostgreSQL service in Docker
+- Accessible via external tools
+- Data persisted in Docker volume
+- Better performance for concurrent access
+
+To switch between modes, set or unset the `DATABASE_URL` environment variable.
+
 ## Future Extensions
 
 ### Planned Features

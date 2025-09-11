@@ -1,5 +1,6 @@
 """Application settings using Pydantic for configuration management."""
 
+import os
 from pathlib import Path
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -33,6 +34,7 @@ class Settings(BaseModel):
     # Database settings
     enable_database: bool = Field(default=True, description="Enable database storage for metadata and search")
     database_path: Optional[Path] = Field(default=None, description="Path to SQLite database file")
+    database_url: Optional[str] = Field(default=None, description="Database URL for external database (overrides database_path)")
     
     @field_validator('dir', mode='before')
     @classmethod
@@ -81,6 +83,10 @@ class Settings(BaseModel):
             except Exception as e:
                 print(f"Warning: Could not load {config_file}: {e}")
         
+        # Override with environment variables
+        if os.getenv('DATABASE_URL'):
+            config_data['database_url'] = os.getenv('DATABASE_URL')
+        
         return cls(**config_data)
     
     def get_database_path(self) -> Path:
@@ -89,3 +95,11 @@ class Settings(BaseModel):
             return self.database_path
         else:
             return self.dir / ".scores" / "media.db"
+    
+    def get_database_url(self) -> str:
+        """Get the database URL, defaulting to SQLite file if no URL specified."""
+        if self.database_url:
+            return self.database_url
+        else:
+            db_path = self.get_database_path()
+            return f"sqlite:///{db_path}"

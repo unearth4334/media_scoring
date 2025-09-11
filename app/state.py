@@ -23,9 +23,9 @@ class ApplicationState:
         self.database_enabled = settings.enable_database
         if self.database_enabled:
             try:
-                db_path = settings.get_database_path()
-                init_database(db_path)
-                self.logger.info(f"Database initialized at {db_path}")
+                db_url = settings.get_database_url()
+                init_database(db_url)
+                self.logger.info(f"Database initialized with URL: {db_url}")
             except Exception as e:
                 self.logger.error(f"Failed to initialize database: {e}")
                 self.database_enabled = False
