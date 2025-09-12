@@ -42,6 +42,8 @@ class DataMiner:
             'scores_imported': 0,
             'errors': 0
         }
+        # Store collected data during dry run for console output
+        self.collected_data = []
     
     def mine_directory(self, directory: Path, pattern: str = "*.mp4|*.png|*.jpg") -> Dict:
         """Mine data from a single directory."""
@@ -79,6 +81,8 @@ class DataMiner:
             self._process_files_with_database(files)
         else:
             self._process_files_without_database(files)
+            # Print collected data for dry run mode
+            self._print_collected_data()
         
         # Report final statistics
         self._report_final_stats()
@@ -158,21 +162,91 @@ class DataMiner:
                 if i % 10 == 0 or i == len(files):
                     self.logger.info(f"Processing file {i}/{len(files)}: {file_path.name}")
                 
-                # Just extract metadata to verify it works
-                metadata = extract_metadata(file_path)
-                if metadata:
-                    self.stats['metadata_extracted'] += 1
+                # Collect file data for console output
+                file_data = {
+                    'file_path': str(file_path),
+                    'file_name': file_path.name,
+                    'file_size': file_path.stat().st_size if file_path.exists() else 0,
+                    'metadata': None,
+                    'keywords': [],
+                    'sidecar_score': None,
+                    'errors': []
+                }
+                
+                # Extract metadata
+                try:
+                    metadata = extract_metadata(file_path)
+                    if metadata:
+                        file_data['metadata'] = metadata
+                        self.stats['metadata_extracted'] += 1
+                        
+                        # Extract keywords from metadata
+                        keywords = extract_keywords_from_metadata(metadata)
+                        if keywords:
+                            file_data['keywords'] = keywords
+                            # Note: in dry run we don't add to database, so we track them separately
+                            self.stats['keywords_added'] += len(keywords)
+                except Exception as e:
+                    file_data['errors'].append(f"Metadata extraction failed: {e}")
                 
                 # Check for existing sidecar scores
-                sidecar_score = read_score(file_path)
-                if sidecar_score is not None:
-                    self.stats['scores_imported'] += 1
+                try:
+                    sidecar_score = read_score(file_path)
+                    if sidecar_score is not None:
+                        file_data['sidecar_score'] = sidecar_score
+                        self.stats['scores_imported'] += 1
+                except Exception as e:
+                    file_data['errors'].append(f"Sidecar score reading failed: {e}")
                 
+                # Add to collected data
+                self.collected_data.append(file_data)
                 self.stats['processed_files'] += 1
                 
             except Exception as e:
                 self.logger.error(f"Error processing {file_path.name}: {e}")
                 self.stats['errors'] += 1
+    
+    def _print_collected_data(self) -> None:
+        """Print all collected data to console in dry run mode."""
+        if not self.collected_data:
+            self.logger.info("No data collected during dry run.")
+            return
+            
+        self.logger.info("=" * 60)
+        self.logger.info("COLLECTED DATA (DRY RUN)")
+        self.logger.info("=" * 60)
+        
+        for i, file_data in enumerate(self.collected_data, 1):
+            self.logger.info(f"\nFile {i}: {file_data['file_name']}")
+            self.logger.info(f"  Path: {file_data['file_path']}")
+            self.logger.info(f"  Size: {file_data['file_size']:,} bytes")
+            
+            # Print sidecar score if found
+            if file_data['sidecar_score'] is not None:
+                self.logger.info(f"  Sidecar Score: {file_data['sidecar_score']}")
+            
+            # Print metadata
+            if file_data['metadata']:
+                self.logger.info("  Metadata:")
+                for key, value in file_data['metadata'].items():
+                    if isinstance(value, dict):
+                        self.logger.info(f"    {key}:")
+                        for subkey, subvalue in value.items():
+                            self.logger.info(f"      {subkey}: {subvalue}")
+                    else:
+                        self.logger.info(f"    {key}: {value}")
+            
+            # Print keywords
+            if file_data['keywords']:
+                self.logger.info(f"  Keywords: {', '.join(file_data['keywords'])}")
+            
+            # Print any errors
+            if file_data['errors']:
+                self.logger.info("  Errors:")
+                for error in file_data['errors']:
+                    self.logger.info(f"    - {error}")
+        
+        self.logger.info("\n" + "=" * 60)
     
     def _report_final_stats(self) -> None:
         """Report final processing statistics."""

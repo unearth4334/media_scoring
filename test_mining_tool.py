@@ -183,6 +183,44 @@ def test_sidecar_import():
     print("✓ Sidecar import test passed")
 
 
+def test_dry_run_data_output():
+    """Test that dry run mode outputs collected data to console."""
+    print("Testing dry run data output...")
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Create test file and sidecar
+        test_file = temp_path / "test.jpg"
+        test_file.touch()
+        
+        # Create scores directory and sidecar file
+        scores_dir = temp_path / ".scores"
+        scores_dir.mkdir()
+        sidecar = scores_dir / "test.jpg.json"
+        
+        sidecar_data = {
+            "file": "test.jpg",
+            "score": 3,
+            "updated": "2025-01-01T12:00:00"
+        }
+        sidecar.write_text(json.dumps(sidecar_data))
+        
+        # Run dry run
+        result = run_command(f"python mine_data.py {temp_dir} --dry-run")
+        assert result.returncode == 0
+        
+        # Verify collected data is printed
+        output = result.stdout
+        assert "COLLECTED DATA (DRY RUN)" in output
+        assert "File 1: test.jpg" in output
+        assert f"Path: {temp_dir}/test.jpg" in output
+        assert "Sidecar Score: 3" in output
+        assert "Size:" in output
+        
+    print("✓ Dry run data output test passed")
+
+
 def main():
     """Run all tests."""
     print("Running Data Mining Tool Tests")
@@ -200,6 +238,7 @@ def main():
         test_database_integration()
         test_wrapper_script()
         test_sidecar_import()
+        test_dry_run_data_output()  # Add new test
         
         print("\n" + "=" * 40)
         print("✓ All tests passed!")
