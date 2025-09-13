@@ -183,6 +183,56 @@ def test_sidecar_import():
     print("✓ Sidecar import test passed")
 
 
+def test_html_export():
+    """Test HTML export functionality for dry run mode."""
+    print("Testing HTML export functionality...")
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        temp_path = Path(temp_dir)
+        
+        # Create test files
+        test_image = temp_path / "test.jpg"
+        import shutil
+        shutil.copy("./media/image1.jpg", test_image)
+        
+        # Create output directory
+        output_dir = temp_path / "output"
+        
+        # Run mining with HTML export
+        result = run_command(f"python mine_data.py {temp_dir} --dry-run --test-output-dir {output_dir}")
+        assert result.returncode == 0
+        assert "Test results exported to" in result.stdout
+        
+        # Check HTML file was created
+        html_file = output_dir / "mining_test_results.html"
+        assert html_file.exists()
+        
+        # Check HTML content
+        html_content = html_file.read_text()
+        assert "Data Mining Test Results" in html_content
+        assert "test.jpg" in html_content
+        assert "Database Structure Preview" in html_content
+        assert "media_files" in html_content
+        assert "Next Steps" in html_content
+        
+    print("✓ HTML export test passed")
+
+
+def test_html_export_error_handling():
+    """Test error handling for HTML export with database mode."""
+    print("Testing HTML export error handling...")
+    
+    with tempfile.TemporaryDirectory() as temp_dir:
+        output_dir = Path(temp_dir) / "output"
+        
+        # Should fail when trying to use export with database mode
+        result = run_command(f"python mine_data.py {temp_dir} --enable-database --test-output-dir {output_dir}", check=False)
+        assert result.returncode != 0
+        assert "--test-output-dir can only be used in dry-run mode" in result.stdout
+        
+    print("✓ HTML export error handling test passed")
+
+
 def main():
     """Run all tests."""
     print("Running Data Mining Tool Tests")
@@ -200,6 +250,8 @@ def main():
         test_database_integration()
         test_wrapper_script()
         test_sidecar_import()
+        test_html_export()
+        test_html_export_error_handling()
         
         print("\n" + "=" * 40)
         print("✓ All tests passed!")
