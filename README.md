@@ -18,6 +18,14 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
   - Control which files are shown (`*.mp4`, `*.png|*.jpg`, etc.)
   - Help button `?` shows quick syntax guide
 
+### Data Mining
+- **Archive Processing**: Extract metadata from existing media archives
+- **Standalone CLI Tool**: `mine_data.py` for batch processing without web server
+- **Database Integration**: Store extracted metadata, keywords, and scores
+- **Flexible Patterns**: Process specific file types with glob patterns
+- **Progress Reporting**: Detailed statistics and progress tracking
+- **Score Import**: Import existing scores from sidecar files
+
 ### Scoring
 - **1–5 stars**: press number keys or buttons
 - **Reject (R)**: reject a file
@@ -73,11 +81,14 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 ```
 .
 ├── run.py                     # Main entry point
+├── mine_data.py               # ✨ NEW: Data mining CLI tool
+├── mine_archive.sh            # ✨ NEW: Convenient wrapper script
 ├── extract_comfyui_workflow.py # Extracts workflow JSON from MP4 metadata
 ├── config.yml                  # Default config values (dir, host, port, pattern)
 ├── requirements.txt            # Python dependencies
 ├── LICENSE                     # Apache 2.0 license
 ├── README.md                   # This documentation
+├── MINING_TOOL.md              # ✨ NEW: Mining tool documentation
 ├── DOCKER.md                   # Docker deployment guide
 │
 ├── Dockerfile                  # Docker container configuration
@@ -92,6 +103,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 │
 ├── .scores/                    # Auto-created: stores sidecar score files + logs
 │   ├── file1.mp4.json
+│   ├── media.db               # ✨ NEW: SQLite database (when enabled)
 │   └── .log/video_scorer.log
 │
 └── workflows/                  # Auto-created: workflow JSON outputs
@@ -142,6 +154,60 @@ chmod +x run_video_scorer.sh
 run_video_scorer.bat                   REM use config.yml defaults
 run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 ```
+
+---
+
+## 🗂️ Data Mining Tool *(NEW)*
+
+Extract metadata from existing media archives and populate the database without running the web server.
+
+### Quick Start
+```bash
+# Test archive scanning (dry run)
+python mine_data.py /path/to/archive
+
+# Mine data and store in database
+python mine_data.py /path/to/archive --enable-database
+
+# Use convenient wrapper script
+./mine_archive.sh quick /path/to/archive
+./mine_archive.sh images /path/to/photos
+./mine_archive.sh videos /path/to/videos
+```
+
+### Key Features
+- **Standalone CLI tool** - runs independently of web server
+- **Batch processing** - handle large archives efficiently  
+- **Database integration** - stores metadata, keywords, scores
+- **Score import** - imports existing `.scores/*.json` files
+- **Flexible patterns** - `*.mp4|*.png|*.jpg` or custom patterns
+- **Progress tracking** - detailed statistics and logging
+- **Dry run mode** - test without database writes
+
+### Example Output
+```
+$ ./mine_archive.sh images /media/photos
+[INFO] Mining images from: /media/photos
+[INFO] Database initialized with URL: sqlite:///media/photos/.scores/media.db
+[INFO] Found 156 files matching pattern
+[INFO] Processing files with database storage enabled
+[INFO] Processing file 50/156: portrait_050.png
+[INFO] Processing file 100/156: landscape_100.jpg
+[INFO] Processing file 156/156: anime_156.jpeg
+[INFO] ==================================================
+[INFO] DATA MINING COMPLETED
+[INFO] ==================================================
+[INFO] Total files found: 156
+[INFO] Files processed: 156
+[INFO] Metadata extracted: 156
+[INFO] Keywords added: 312
+[INFO] Scores imported: 23
+[INFO] Errors encountered: 0
+[INFO] Processing completed successfully!
+[SUCCESS] Mining completed successfully!
+```
+
+See **[MINING_TOOL.md](MINING_TOOL.md)** for complete documentation.
 
 ---
 
