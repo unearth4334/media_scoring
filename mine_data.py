@@ -208,6 +208,21 @@ class DataMiner:
             'error': metadata.get('error') if metadata else None
         }
     
+    def _make_json_serializable(self, obj):
+        """Convert objects to JSON-serializable format."""
+        from app.utils.prompt_parser import Keyword, LoRA
+        
+        if isinstance(obj, Keyword):
+            return {"text": obj.text, "weight": obj.weight}
+        elif isinstance(obj, LoRA):
+            return {"name": obj.name, "weight": obj.weight}
+        elif isinstance(obj, list):
+            return [self._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, dict):
+            return {key: self._make_json_serializable(value) for key, value in obj.items()}
+        else:
+            return obj
+
     def _export_test_results(self) -> None:
         """Export collected data as HTML file."""
         try:
@@ -433,7 +448,9 @@ class DataMiner:
                             except:
                                 pass
                         elif isinstance(value, dict):
-                            value = json.dumps(value, indent=2)[:200] + "..." if len(str(value)) > 200 else json.dumps(value, indent=2)
+                            # Make sure nested objects are JSON serializable for display
+                            json_safe_value = self._make_json_serializable(value)
+                            value = json.dumps(json_safe_value, indent=2)[:200] + "..." if len(str(value)) > 200 else json.dumps(json_safe_value, indent=2)
                         
                         metadata_html += f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(value)}</td></tr>"
                 metadata_html += "</tbody></table>"
