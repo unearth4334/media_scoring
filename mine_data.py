@@ -31,10 +31,9 @@ from app.services.metadata import extract_metadata, extract_keywords_from_metada
 class DataMiner:
     """Main class for mining data from media archives."""
     
-    def __init__(self, settings: Settings, logger: logging.Logger, test_output_dir: Optional[Path] = None):
+    def __init__(self, settings: Settings, logger: logging.Logger):
         self.settings = settings
         self.logger = logger
-        self.test_output_dir = test_output_dir
         self.stats = {
             'total_files': 0,
             'processed_files': 0,
@@ -43,8 +42,6 @@ class DataMiner:
             'scores_imported': 0,
             'errors': 0
         }
-        # Store detailed data for export when in test mode
-        self.collected_data = [] if test_output_dir else None
     
     def mine_directory(self, directory: Path, pattern: str = "*.mp4|*.png|*.jpg") -> Dict:
         """Mine data from a single directory."""
@@ -85,11 +82,6 @@ class DataMiner:
         
         # Report final statistics
         self._report_final_stats()
-        
-        # Export test results if requested
-        if self.test_output_dir and self.collected_data:
-            self._export_test_results()
-        
         return self.stats
     
     def _get_database_url(self, directory: Path) -> str:
@@ -166,7 +158,7 @@ class DataMiner:
                 if i % 10 == 0 or i == len(files):
                     self.logger.info(f"Processing file {i}/{len(files)}: {file_path.name}")
                 
-                # Extract metadata to verify it works
+                # Just extract metadata to verify it works
                 metadata = extract_metadata(file_path)
                 if metadata:
                     self.stats['metadata_extracted'] += 1
@@ -176,377 +168,12 @@ class DataMiner:
                 if sidecar_score is not None:
                     self.stats['scores_imported'] += 1
                 
-                # If test output is requested, collect detailed data
-                if self.collected_data is not None:
-                    file_data = self._collect_file_data(file_path, metadata, sidecar_score)
-                    self.collected_data.append(file_data)
-                
                 self.stats['processed_files'] += 1
                 
             except Exception as e:
                 self.logger.error(f"Error processing {file_path.name}: {e}")
                 self.stats['errors'] += 1
     
-    def _collect_file_data(self, file_path: Path, metadata: Dict, sidecar_score: Optional[int]) -> Dict:
-        """Collect detailed file data for export."""
-        # Extract keywords from metadata if available
-        keywords = []
-        if metadata:
-            keywords = extract_keywords_from_metadata(metadata)
-            if keywords:
-                self.stats['keywords_added'] += len(keywords)
-        
-        return {
-            'file_path': str(file_path),
-            'filename': file_path.name,
-            'file_size': metadata.get('file_size', 0) if metadata else 0,
-            'file_type': 'video' if file_path.suffix.lower() == '.mp4' else 'image',
-            'extension': file_path.suffix.lower(),
-            'score': sidecar_score,
-            'metadata': metadata or {},
-            'keywords': keywords,
-            'error': metadata.get('error') if metadata else None
-        }
-    
-    def _export_test_results(self) -> None:
-        """Export collected data as HTML file."""
-        try:
-            # Ensure output directory exists
-            self.test_output_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Generate HTML content
-            html_content = self._generate_html_report()
-            
-            # Write to file
-            output_file = self.test_output_dir / "mining_test_results.html"
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            
-            self.logger.info(f"Test results exported to: {output_file}")
-            
-        except Exception as e:
-            self.logger.error(f"Failed to export test results: {e}")
-    
-    def _generate_html_report(self) -> str:
-        """Generate HTML report showing collected data and database structure."""
-        import datetime
-        import json
-        
-        # Count totals by type
-        total_files = len(self.collected_data)
-        image_files = [f for f in self.collected_data if f['file_type'] == 'image']
-        video_files = [f for f in self.collected_data if f['file_type'] == 'video']
-        files_with_scores = [f for f in self.collected_data if f['score'] is not None]
-        files_with_keywords = [f for f in self.collected_data if f['keywords']]
-        
-        total_keywords = sum(len(f['keywords']) for f in self.collected_data)
-        
-        html = f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Mining Test Results</title>
-    <style>
-        body {{
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #f8f9fa;
-        }}
-        .header {{
-            background: #343a40;
-            color: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }}
-        .stats-grid {{
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 30px;
-        }}
-        .stat-card {{
-            background: white;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            text-align: center;
-        }}
-        .stat-number {{
-            font-size: 2em;
-            font-weight: bold;
-            color: #007bff;
-        }}
-        .section {{
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }}
-        .section h2 {{
-            margin-top: 0;
-            color: #343a40;
-            border-bottom: 2px solid #007bff;
-            padding-bottom: 10px;
-        }}
-        .file-list {{
-            display: grid;
-            gap: 15px;
-        }}
-        .file-item {{
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            background: #f8f9fa;
-        }}
-        .file-header {{
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }}
-        .filename {{
-            font-weight: bold;
-            color: #495057;
-        }}
-        .file-type {{
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.8em;
-            font-weight: bold;
-        }}
-        .file-type.image {{ background: #d1ecf1; color: #0c5460; }}
-        .file-type.video {{ background: #d4edda; color: #155724; }}
-        .score {{
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }}
-        .score.positive {{ background: #d1ecf1; color: #0c5460; }}
-        .score.none {{ background: #f8d7da; color: #721c24; }}
-        .metadata-table {{
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }}
-        .metadata-table th, .metadata-table td {{
-            text-align: left;
-            padding: 8px;
-            border-bottom: 1px solid #dee2e6;
-        }}
-        .metadata-table th {{
-            background: #e9ecef;
-            font-weight: bold;
-        }}
-        .keywords {{
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            margin-top: 10px;
-        }}
-        .keyword {{
-            background: #e7f3ff;
-            color: #004085;
-            padding: 2px 6px;
-            border-radius: 12px;
-            font-size: 0.8em;
-        }}
-        .database-structure {{
-            background: #f1f3f4;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 0.9em;
-            overflow-x: auto;
-        }}
-        .highlight {{ background: #fff3cd; padding: 2px 4px; border-radius: 3px; }}
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>🔍 Data Mining Test Results</h1>
-        <p>Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
-        <p>Source Directory: <code>{self.settings.dir}</code></p>
-        <p>File Pattern: <code>{self.settings.pattern}</code></p>
-    </div>
-
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-number">{total_files}</div>
-            <div>Total Files</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{len(image_files)}</div>
-            <div>Image Files</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{len(video_files)}</div>
-            <div>Video Files</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{len(files_with_scores)}</div>
-            <div>Files with Scores</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{total_keywords}</div>
-            <div>Keywords Generated</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-number">{len(files_with_keywords)}</div>
-            <div>Files with Keywords</div>
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>📂 File Details</h2>
-        <div class="file-list">
-"""
-        
-        for file_data in self.collected_data:
-            # Format file size
-            size_mb = file_data['file_size'] / (1024 * 1024) if file_data['file_size'] else 0
-            
-            # Score display
-            score_html = ""
-            if file_data['score'] is not None:
-                score_html = f'<span class="score positive">Score: {file_data["score"]}</span>'
-            else:
-                score_html = '<span class="score none">No Score</span>'
-            
-            # Metadata table
-            metadata_html = ""
-            if file_data['metadata']:
-                metadata_html = "<table class='metadata-table'><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>"
-                for key, value in file_data['metadata'].items():
-                    if key not in ['extracted_keywords', 'error'] and value is not None:
-                        # Format certain values nicely
-                        if key == 'file_size':
-                            value = f"{size_mb:.2f} MB"
-                        elif key == 'file_modified_at':
-                            try:
-                                value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
-                            except:
-                                pass
-                        elif isinstance(value, dict):
-                            value = json.dumps(value, indent=2)[:200] + "..." if len(str(value)) > 200 else json.dumps(value, indent=2)
-                        
-                        metadata_html += f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(value)}</td></tr>"
-                metadata_html += "</tbody></table>"
-            
-            # Keywords
-            keywords_html = ""
-            if file_data['keywords']:
-                keywords_html = '<div class="keywords">'
-                for keyword in file_data['keywords']:
-                    keywords_html += f'<span class="keyword">{keyword}</span>'
-                keywords_html += '</div>'
-            
-            html += f"""
-            <div class="file-item">
-                <div class="file-header">
-                    <span class="filename">{file_data['filename']}</span>
-                    <div>
-                        <span class="file-type {file_data['file_type']}">{file_data['file_type'].upper()}</span>
-                        {score_html}
-                    </div>
-                </div>
-                {f'<div style="color: red; font-weight: bold;">Error: {file_data["error"]}</div>' if file_data['error'] else ''}
-                {metadata_html}
-                {keywords_html}
-            </div>
-"""
-        
-        html += f"""
-        </div>
-    </div>
-
-    <div class="section">
-        <h2>🗃️ Database Structure Preview</h2>
-        <p>This shows how the extracted data would be organized in the database tables:</p>
-        
-        <div class="database-structure">
-<strong>media_files</strong> table would contain:
-┌─────────────────────────────────────────────────────────────────┐
-│ id │ filename │ directory │ file_path │ score │ file_type │ ... │
-├─────────────────────────────────────────────────────────────────┤"""
-        
-        for i, file_data in enumerate(self.collected_data[:5], 1):
-            html += f"""
-│ {i:2d} │ {file_data['filename'][:12]:<12} │ {str(self.settings.dir)[-12:]:<9} │ {file_data['file_path'][-20:]:<20} │ {str(file_data['score'] or 'NULL'):<5} │ {file_data['file_type']:<9} │ ... │"""
-        
-        if len(self.collected_data) > 5:
-            html += f"""
-│ .. │ ... ({len(self.collected_data) - 5} more rows) ... │"""
-        
-        html += """
-└─────────────────────────────────────────────────────────────────┘
-
-<strong>media_metadata</strong> table would contain technical metadata:
-┌─────────────────────────────────────────────────────────────────┐
-│ media_file_id │ width │ height │ duration │ model_name │ ... │
-├─────────────────────────────────────────────────────────────────┤"""
-        
-        for i, file_data in enumerate(self.collected_data[:5], 1):
-            metadata = file_data.get('metadata', {})
-            width = metadata.get('width', 'NULL')
-            height = metadata.get('height', 'NULL')
-            duration = metadata.get('duration', 'NULL')
-            model = str(metadata.get('model_name', 'NULL'))[:10] if metadata.get('model_name') else 'NULL'
-            
-            html += f"""
-│ {i:13d} │ {str(width):<5} │ {str(height):<6} │ {str(duration):<8} │ {model:<10} │ ... │"""
-        
-        if len(self.collected_data) > 5:
-            html += f"""
-│ ... ({len(self.collected_data) - 5} more rows) ... │"""
-        
-        html += f"""
-└─────────────────────────────────────────────────────────────────┘
-
-<strong>media_keywords</strong> table would contain {total_keywords} keyword entries:
-┌─────────────────────────────────────────────────────────────────┐
-│ media_file_id │ keyword │ keyword_type │ confidence │ source │
-├─────────────────────────────────────────────────────────────────┤"""
-        
-        keyword_count = 0
-        for i, file_data in enumerate(self.collected_data, 1):
-            for keyword in file_data.get('keywords', [])[:2]:  # Show first 2 keywords per file
-                keyword_count += 1
-                if keyword_count <= 5:
-                    html += f"""
-│ {i:13d} │ {keyword[:10]:<10} │ auto         │ 1.0        │ metadata │"""
-        
-        if total_keywords > 5:
-            html += f"""
-│ ... ({total_keywords - 5} more keyword entries) ... │"""
-        
-        html += """
-└─────────────────────────────────────────────────────────────────┘
-        </div>
-        
-        <p><span class="highlight">💡 Tip:</span> Run with <code>--enable-database</code> to actually store this data in the database for searching and management via the web interface.</p>
-    </div>
-
-    <div class="section">
-        <h2>🚀 Next Steps</h2>
-        <ol>
-            <li><strong>Review the extracted data above</strong> to ensure it meets your expectations</li>
-            <li><strong>Run with database enabled:</strong> <code>python mine_data.py {self.settings.dir} --enable-database</code></li>
-            <li><strong>Start the web interface:</strong> <code>python run.py --dir {self.settings.dir} --enable-database</code></li>
-            <li><strong>Search and manage your media</strong> via the web interface at <code>http://localhost:7862</code></li>
-        </ol>
-    </div>
-
-</body>
-</html>"""
-        
-        return html
-
     def _report_final_stats(self) -> None:
         """Report final processing statistics."""
         self.logger.info("=" * 50)
@@ -601,7 +228,6 @@ Examples:
   python mine_data.py /media/archive1 --enable-database
   python mine_data.py /media/archive1 --database-path /custom/path/media.db
   python mine_data.py /media/archive1 --verbose --dry-run
-  python mine_data.py /media/archive1 --dry-run --test-output-dir /tmp/results
         """
     )
     
@@ -648,12 +274,6 @@ Examples:
         help="Dry run mode - don't store data in database (same as not using --enable-database)"
     )
     
-    parser.add_argument(
-        "--test-output-dir",
-        type=Path,
-        help="Export collected data as HTML file to this directory (for dry run mode)"
-    )
-    
     args = parser.parse_args()
     
     # Setup logging
@@ -666,11 +286,6 @@ Examples:
     
     if not args.directory.is_dir():
         logger.error(f"Path is not a directory: {args.directory}")
-        sys.exit(1)
-    
-    # Validate test output directory if specified
-    if args.test_output_dir and not args.dry_run and args.enable_database:
-        logger.error("--test-output-dir can only be used in dry-run mode (without --enable-database)")
         sys.exit(1)
     
     # Create settings
@@ -706,13 +321,11 @@ Examples:
             logger.info(f"Database path: {db_path}")
     else:
         logger.info("Running in dry-run mode (no database storage)")
-        if args.test_output_dir:
-            logger.info(f"Test results will be exported to: {args.test_output_dir}")
     
     # Run the data mining
     try:
         start_time = time.time()
-        miner = DataMiner(settings, logger, args.test_output_dir)
+        miner = DataMiner(settings, logger)
         stats = miner.mine_directory(args.directory, args.pattern)
         elapsed_time = time.time() - start_time
         

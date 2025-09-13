@@ -22,9 +22,6 @@ This tool allows you to extract metadata, scores, and keywords from existing arc
 # Dry run mode (no database writes) - good for testing
 python mine_data.py /path/to/archive
 
-# Dry run with HTML export showing what would be stored in database
-python mine_data.py /path/to/archive --test-output-dir ./test_results
-
 # With database storage enabled
 python mine_data.py /path/to/archive --enable-database
 
@@ -57,7 +54,6 @@ python mine_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-dat
 - `--database-url` - Database URL for external database (overrides `--database-path`)
 - `--verbose, -v` - Enable verbose logging
 - `--dry-run` - Dry run mode - don't store data in database
-- `--test-output-dir` - Export collected data as HTML file to this directory (for dry run mode)
 
 ## What the Tool Does
 
@@ -193,29 +189,6 @@ python mine_data.py /archive/mixed --enable-database
 ```bash
 # Always test first with dry run
 python mine_data.py /large/archive --verbose --dry-run
-# Export results to see what would be collected
-python mine_data.py /large/archive --dry-run --test-output-dir ./test_results
 # Then run for real
 python mine_data.py /large/archive --enable-database
-```
-
-## HTML Export Feature
-
-The `--test-output-dir` option allows you to export a detailed HTML report showing:
-
-- **Summary statistics** - Total files, types, scores, keywords found
-- **File details** - Complete metadata for each file with extracted keywords 
-- **Database preview** - Visual representation of how data would be stored
-- **Next steps** - Instructions for running with database enabled
-
-This is particularly useful for:
-- **Testing patterns** - Verify your file pattern captures the right files
-- **Reviewing metadata** - See what information can be extracted from your files
-- **Planning database setup** - Understand the structure before committing to storage
-- **Troubleshooting** - Debug extraction issues on a subset of files
-
-Example output structure:
-```
-test_results/
-└── mining_test_results.html  # Complete interactive report
 ```
