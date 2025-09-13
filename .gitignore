@@ -67,3 +67,5 @@ workflows/
 
 # Docker
 docker-compose.override.yml.bak
+
+results/
