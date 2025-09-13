@@ -201,11 +201,11 @@ def parse_ai_parameters(png_text: str) -> Dict[str, Any]:
         if parsed_prompt.raw_negative:
             ai_params["negative_prompt"] = parsed_prompt.raw_negative
         
-        # Store the parsed prompt data for the database
+        # Store the parsed prompt data for the database (convert to JSON-serializable format)
         ai_params["parsed_prompt_data"] = {
-            "positive_keywords": parsed_prompt.positive_keywords,
-            "negative_keywords": parsed_prompt.negative_keywords,
-            "loras": parsed_prompt.loras
+            "positive_keywords": [{"text": kw.text, "weight": kw.weight} for kw in parsed_prompt.positive_keywords],
+            "negative_keywords": [{"text": kw.text, "weight": kw.weight} for kw in parsed_prompt.negative_keywords], 
+            "loras": [{"name": lora.name, "weight": lora.weight} for lora in parsed_prompt.loras]
         }
         
         # Also try to parse structured parameters (e.g., from Auto1111)
