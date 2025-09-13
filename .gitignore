@@ -58,6 +58,8 @@ Thumbs.db
 
 # Test directories and files
 test_media/
+media/test_*.png
+media/test_*.jpg
 
 
 # Ignore self-generated files

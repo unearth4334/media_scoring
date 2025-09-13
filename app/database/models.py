@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlalchemy import (
     Column, Integer, String, DateTime, Text, Float, Boolean,
-    ForeignKey, Index, UniqueConstraint
+    ForeignKey, Index, UniqueConstraint, JSON
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
@@ -77,6 +77,11 @@ class MediaMetadata(Base):
     steps = Column(Integer)
     cfg_scale = Column(Float)
     seed = Column(String(50))
+    
+    # Parsed prompt data with attention weights
+    positive_prompt_keywords = Column(JSON)  # Array of {text: str, weight: float} objects
+    negative_prompt_keywords = Column(JSON)  # Array of {text: str, weight: float} objects
+    loras = Column(JSON)  # Array of {name: str, weight: float} objects
     
     # File modification tracking
     file_modified_at = Column(DateTime)  # When the actual file was last modified

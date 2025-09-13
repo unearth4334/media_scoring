@@ -121,7 +121,7 @@ class DatabaseService:
         
         # Update fields from metadata dict
         for key, value in metadata.items():
-            if hasattr(metadata_obj, key):
+            if hasattr(metadata_obj, key) and key not in ['png_text', 'workflow_data', 'parsed_prompt_data']:
                 setattr(metadata_obj, key, value)
         
         # Store PNG text as JSON if present
@@ -131,6 +131,29 @@ class DatabaseService:
         # Store workflow data as JSON if present  
         if 'workflow_data' in metadata and metadata['workflow_data']:
             metadata_obj.workflow_data = json.dumps(metadata['workflow_data'])
+        
+        # Store parsed prompt data if present
+        if 'parsed_prompt_data' in metadata:
+            prompt_data = metadata['parsed_prompt_data']
+            
+            # Convert keyword objects to JSON-serializable format
+            if 'positive_keywords' in prompt_data:
+                metadata_obj.positive_prompt_keywords = [
+                    {'text': kw.text, 'weight': kw.weight} 
+                    for kw in prompt_data['positive_keywords']
+                ]
+            
+            if 'negative_keywords' in prompt_data:
+                metadata_obj.negative_prompt_keywords = [
+                    {'text': kw.text, 'weight': kw.weight} 
+                    for kw in prompt_data['negative_keywords']
+                ]
+            
+            if 'loras' in prompt_data:
+                metadata_obj.loras = [
+                    {'name': lora.name, 'weight': lora.weight} 
+                    for lora in prompt_data['loras']
+                ]
             
         metadata_obj.metadata_extracted_at = datetime.utcnow()
         
