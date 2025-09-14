@@ -251,7 +251,7 @@ class DataMiner:
                     
                 pill_boxes_html += f'''
                     <span class="pill-box pill-green">
-                        <span class="pill-box-left">{weight}</span><span class="pill-box-right">{html.escape(text)}</span>
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">{html.escape(text)}</span>
                     </span>'''
         
         # Process negative keywords (red pills)
@@ -269,7 +269,7 @@ class DataMiner:
                     
                 pill_boxes_html += f'''
                     <span class="pill-box pill-red">
-                        <span class="pill-box-left">{weight}</span><span class="pill-box-right">{html.escape(text)}</span>
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">{html.escape(text)}</span>
                     </span>'''
         
         # Process LoRAs (could add another color variant if needed)
@@ -287,7 +287,7 @@ class DataMiner:
                     
                 pill_boxes_html += f'''
                     <span class="pill-box">
-                        <span class="pill-box-left">{weight}</span><span class="pill-box-right">LoRA: {html.escape(name)}</span>
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">LoRA: {html.escape(name)}</span>
                     </span>'''
         
         pill_boxes_html += '</div>'
