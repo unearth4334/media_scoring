@@ -11,6 +11,7 @@ from sqlalchemy import func, or_, and_, desc, asc
 
 from .engine import get_session
 from .models import MediaFile, MediaMetadata, MediaKeyword, MediaThumbnail
+from ..utils.hashing import compute_media_file_id, compute_perceptual_hash
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,9 @@ class DatabaseService:
         if media_file:
             # Update last accessed
             media_file.last_accessed = datetime.utcnow()
+            # Update hashes if they're missing
+            if not media_file.media_file_id or not media_file.phash:
+                self._update_media_file_hashes(media_file, file_path)
             return media_file
         
         # Create new file record
@@ -60,6 +64,9 @@ class DatabaseService:
             extension=file_path.suffix.lower(),
             last_accessed=datetime.utcnow()
         )
+        
+        # Compute and store hashes
+        self._update_media_file_hashes(media_file, file_path)
         
         self.session.add(media_file)
         self.session.flush()  # Get the ID
@@ -301,6 +308,70 @@ class DatabaseService:
             return 'image'
         else:
             return 'unknown'
+    
+    def _update_media_file_hashes(self, media_file: MediaFile, file_path: Path) -> None:
+        """Compute and update hashes for a media file."""
+        try:
+            # Compute content hash (SHA256 of pixel data)
+            if not media_file.media_file_id:
+                content_hash = compute_media_file_id(file_path)
+                if content_hash:
+                    media_file.media_file_id = content_hash
+                    logger.debug(f"Computed content hash for {file_path.name}: {content_hash[:16]}...")
+            
+            # Compute perceptual hash
+            if not media_file.phash:
+                perceptual_hash = compute_perceptual_hash(file_path)
+                if perceptual_hash:
+                    media_file.phash = perceptual_hash
+                    logger.debug(f"Computed perceptual hash for {file_path.name}: {perceptual_hash}")
+                    
+        except Exception as e:
+            logger.error(f"Failed to update hashes for {file_path}: {e}")
+    
+    def update_media_file_hashes(self, file_path: Path) -> bool:
+        """Public method to update hashes for an existing media file."""
+        try:
+            media_file = self.get_or_create_media_file(file_path)
+            # Force recomputation by clearing existing hashes
+            media_file.media_file_id = None
+            media_file.phash = None
+            self._update_media_file_hashes(media_file, file_path)
+            media_file.updated_at = datetime.utcnow()
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update hashes for {file_path}: {e}")
+            return False
+    
+    def find_similar_files_by_hash(self, target_hash: str, threshold: int = 5) -> List[MediaFile]:
+        """Find files with similar perceptual hashes."""
+        try:
+            import imagehash
+            from PIL import Image as PILImage
+            
+            # Get all files with perceptual hashes
+            files_with_hashes = self.session.query(MediaFile).filter(
+                MediaFile.phash.isnot(None)
+            ).all()
+            
+            similar_files = []
+            target_hash_obj = imagehash.hex_to_hash(target_hash)
+            
+            for media_file in files_with_hashes:
+                try:
+                    file_hash_obj = imagehash.hex_to_hash(media_file.phash)
+                    # Calculate Hamming distance
+                    distance = target_hash_obj - file_hash_obj
+                    if distance <= threshold:
+                        similar_files.append(media_file)
+                except Exception as e:
+                    logger.debug(f"Error comparing hash for {media_file.filename}: {e}")
+                    continue
+            
+            return similar_files
+        except Exception as e:
+            logger.error(f"Error finding similar files: {e}")
+            return []
     
     def get_stats(self) -> Dict:
         """Get database statistics."""

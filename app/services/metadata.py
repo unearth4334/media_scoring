@@ -1,5 +1,6 @@
 """Metadata extraction and storage service."""
 
+import hashlib
 import json
 import logging
 import subprocess
@@ -14,6 +15,11 @@ try:
     from PIL import Image
 except ImportError:
     Image = None
+
+try:
+    import imagehash
+except ImportError:
+    imagehash = None
 
 logger = logging.getLogger(__name__)
 
