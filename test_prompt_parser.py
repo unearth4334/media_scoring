@@ -64,27 +64,27 @@ Steps: 30, Sampler: DPM++ 3M SDE, Schedule type: Karras, CFG scale: 5, Seed: 248
     # Test (((light pink))) should be 1.1^3 = 1.331
     light_pink_kw = next((kw for kw in result.positive_keywords if "light pink" in kw.text), None)
     if light_pink_kw:
-        print(f"(((light pink))) -> {light_pink_kw.text}: {light_pink_kw.weight:.3f} (expected ~1.331)")
+        print(f"(((light pink))) -> {light_pink_kw.text}: {light_pink_kw.weight:.2f} (expected ~1.33)")
     
     # Test [swirling light] should be 0.907
     swirling_kw = next((kw for kw in result.positive_keywords if "swirling light" in kw.text), None)
     if swirling_kw:
-        print(f"[swirling light] -> {swirling_kw.text}: {swirling_kw.weight:.3f} (expected ~0.907)")
+        print(f"[swirling light] -> {swirling_kw.text}: {swirling_kw.weight:.2f} (expected ~0.91)")
     
     # Test (mad-wsps:0.6) should be exactly 0.6
     mad_wsps_kw = next((kw for kw in result.positive_keywords if "mad-wsps" in kw.text), None)
     if mad_wsps_kw:
-        print(f"(mad-wsps:0.6) -> {mad_wsps_kw.text}: {mad_wsps_kw.weight:.3f} (expected 0.6)")
+        print(f"(mad-wsps:0.6) -> {mad_wsps_kw.text}: {mad_wsps_kw.weight:.2f} (expected 0.60)")
     
     # Test (light traces:1.2) should be exactly 1.2  
     light_traces_kw = next((kw for kw in result.positive_keywords if "light traces" in kw.text), None)
     if light_traces_kw:
-        print(f"(light traces:1.2) -> {light_traces_kw.text}: {light_traces_kw.weight:.3f} (expected 1.2)")
+        print(f"(light traces:1.2) -> {light_traces_kw.text}: {light_traces_kw.weight:.2f} (expected 1.20)")
     
     # Test ((transparent)) should be 1.1^2 = 1.21
     transparent_kw = next((kw for kw in result.positive_keywords if "transparent" in kw.text), None)
     if transparent_kw:
-        print(f"((transparent)) -> {transparent_kw.text}: {transparent_kw.weight:.3f} (expected ~1.21)")
+        print(f"((transparent)) -> {transparent_kw.text}: {transparent_kw.weight:.2f} (expected ~1.21)")
     
     print()
     print("Test completed!")
@@ -119,7 +119,7 @@ def test_edge_cases():
         else:
             keyword = parser._parse_single_keyword(text)
             if keyword:
-                print(f"'{text}' -> {keyword.text}: {keyword.weight:.3f} (expected {expected_weight:.3f})")
+                print(f"'{text}' -> {keyword.text}: {keyword.weight:.2f} (expected {expected_weight:.2f})")
             else:
                 print(f"'{text}' -> None (unexpected)")
     

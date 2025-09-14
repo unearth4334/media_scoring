@@ -56,14 +56,14 @@ def test_parse_ai_parameters():
         
         print(f"Positive keywords: {len(prompt_data['positive_keywords'])}")
         for i, kw in enumerate(prompt_data['positive_keywords'][:5]):
-            print(f"  {i+1}. {kw.text}: {kw.weight:.3f}")
+            print(f"  {i+1}. {kw.text}: {kw.weight:.2f}")
         if len(prompt_data['positive_keywords']) > 5:
             print(f"  ... and {len(prompt_data['positive_keywords']) - 5} more")
         print()
         
         print(f"Negative keywords: {len(prompt_data['negative_keywords'])}")
         for i, kw in enumerate(prompt_data['negative_keywords'][:5]):
-            print(f"  {i+1}. {kw.text}: {kw.weight:.3f}")
+            print(f"  {i+1}. {kw.text}: {kw.weight:.2f}")
         if len(prompt_data['negative_keywords']) > 5:
             print(f"  ... and {len(prompt_data['negative_keywords']) - 5} more")
         print()
@@ -77,19 +77,19 @@ def test_parse_ai_parameters():
         print("Verifying attention weight calculations:")
         light_pink = next((kw for kw in prompt_data['positive_keywords'] if 'light pink' in kw.text), None)
         if light_pink:
-            print(f"  (((light pink))) -> {light_pink.weight:.3f} (expected ~1.331)")
+            print(f"  (((light pink))) -> {light_pink.weight:.2f} (expected ~1.33)")
         
         transparent = next((kw for kw in prompt_data['positive_keywords'] if 'transparent' in kw.text), None)  
         if transparent:
-            print(f"  ((transparent)) -> {transparent.weight:.3f} (expected ~1.21)")
+            print(f"  ((transparent)) -> {transparent.weight:.2f} (expected ~1.21)")
         
         swirling = next((kw for kw in prompt_data['positive_keywords'] if 'swirling light' in kw.text), None)
         if swirling:
-            print(f"  [swirling light] -> {swirling.weight:.3f} (expected ~0.907)")
+            print(f"  [swirling light] -> {swirling.weight:.2f} (expected ~0.91)")
         
         mad_wsps = next((kw for kw in prompt_data['positive_keywords'] if 'mad-wsps' in kw.text), None)
         if mad_wsps:
-            print(f"  (mad-wsps:0.6) -> {mad_wsps.weight:.3f} (expected 0.600)")
+            print(f"  (mad-wsps:0.6) -> {mad_wsps.weight:.2f} (expected 0.60)")
         
         print("✅ parse_ai_parameters test completed!")
     else:
@@ -131,7 +131,7 @@ def test_database_storage():
             if metadata_obj.positive_prompt_keywords:
                 print(f"Positive keywords stored: {len(metadata_obj.positive_prompt_keywords)} entries")
                 for i, kw_dict in enumerate(metadata_obj.positive_prompt_keywords[:3]):
-                    print(f"  {i+1}. {kw_dict['text']}: {kw_dict['weight']:.3f}")
+                    print(f"  {i+1}. {kw_dict['text']}: {kw_dict['weight']:.2f}")
                 if len(metadata_obj.positive_prompt_keywords) > 3:
                     print(f"  ... and {len(metadata_obj.positive_prompt_keywords) - 3} more")
             
