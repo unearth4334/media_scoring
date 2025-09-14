@@ -237,6 +237,76 @@ class DataMiner:
         else:
             return obj
 
+    def _format_parsed_prompt_data(self, parsed_prompt_data, file_index):
+        """Format parsed prompt data with pill boxes and raw data button."""
+        import html
+        import json
+        
+        # Create the raw JSON for display
+        raw_json = json.dumps(self._make_json_serializable(parsed_prompt_data), indent=2)
+        escaped_raw_json = html.escape(raw_json)
+        
+        # Build pill boxes
+        pill_boxes_html = f'<button class="raw-data-button" onclick="showRawData(`{escaped_raw_json}`)">{{...}}</button>'
+        pill_boxes_html += '<div class="parsed-prompt-container">'
+        
+        # Process positive keywords (green pills)
+        if 'positive_keywords' in parsed_prompt_data:
+            for keyword in parsed_prompt_data['positive_keywords']:
+                # Handle both Keyword objects and dict representations
+                if hasattr(keyword, 'text') and hasattr(keyword, 'weight'):
+                    weight = keyword.weight
+                    text = keyword.text
+                elif isinstance(keyword, dict) and 'text' in keyword and 'weight' in keyword:
+                    weight = keyword['weight']
+                    text = keyword['text']
+                else:
+                    continue
+                    
+                pill_boxes_html += f'''
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">{html.escape(text)}</span>
+                    </span>'''
+        
+        # Process negative keywords (red pills)
+        if 'negative_keywords' in parsed_prompt_data:
+            for keyword in parsed_prompt_data['negative_keywords']:
+                # Handle both Keyword objects and dict representations
+                if hasattr(keyword, 'text') and hasattr(keyword, 'weight'):
+                    weight = keyword.weight
+                    text = keyword.text
+                elif isinstance(keyword, dict) and 'text' in keyword and 'weight' in keyword:
+                    weight = keyword['weight']
+                    text = keyword['text']
+                else:
+                    continue
+                    
+                pill_boxes_html += f'''
+                    <span class="pill-box pill-red">
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">{html.escape(text)}</span>
+                    </span>'''
+        
+        # Process LoRAs (could add another color variant if needed)
+        if 'loras' in parsed_prompt_data:
+            for lora in parsed_prompt_data['loras']:
+                # Handle both LoRA objects and dict representations
+                if hasattr(lora, 'name') and hasattr(lora, 'weight'):
+                    weight = lora.weight
+                    name = lora.name
+                elif isinstance(lora, dict) and 'name' in lora and 'weight' in lora:
+                    weight = lora['weight']
+                    name = lora['name']
+                else:
+                    continue
+                    
+                pill_boxes_html += f'''
+                    <span class="pill-box">
+                        <span class="pill-box-left">{weight:.2f}</span><span class="pill-box-right">LoRA: {html.escape(name)}</span>
+                    </span>'''
+        
+        pill_boxes_html += '</div>'
+        return pill_boxes_html
+
     def _export_test_results(self) -> None:
         """Export collected data as HTML file."""
         try:
@@ -394,6 +464,110 @@ class DataMiner:
             overflow-x: auto;
         }}
         .highlight {{ background: #fff3cd; padding: 2px 4px; border-radius: 3px; }}
+        /* pill box styles for parsed prompt data */
+        .pill-box {{
+            line-height: 25px;
+        }}
+        .pill-box-left,
+        .pill-box-right {{
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            color: #666;
+            padding: 2px;
+        }}
+        .pill-box-left {{
+            background-color: #e6e6e6;
+            border-bottom-right-radius:0;
+            border-top-right-radius:0;
+            padding-left: 6px;
+            text-align: center;
+        }}
+        .pill-box-right {{
+            background-color: #fff;
+            border-bottom-left-radius:0;
+            border-top-left-radius:0;
+            border-left: 0;
+            padding-left: 4px;
+            padding-right: 6px;
+        }}
+        /* red */
+        .pill-red .pill-box-left,
+        .pill-red .pill-box-right {{
+            border-color: #ff704d;
+        }}
+        .pill-red .pill-box-left {{
+            background-color: #ff704d;
+            color: #991f00;
+        }}
+        /* green */
+        .pill-green .pill-box-left,
+        .pill-green .pill-box-right {{
+            border-color: #70db70;
+        }}
+        .pill-green .pill-box-left {{
+            background-color: #70db70;
+            color: #ebfaeb;
+        }}
+        /* parsed prompt data display */
+        .parsed-prompt-container {{
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }}
+        .raw-data-button {{
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }}
+        .raw-data-button:hover {{
+            background: #5a6268;
+        }}
+        /* overlay styles */
+        .overlay {{
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }}
+        .overlay-content {{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+        }}
+        .overlay-close {{
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }}
+        .raw-json-display {{
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow: auto;
+        }}
     </style>
 </head>
 <body>
@@ -451,33 +625,49 @@ class DataMiner:
             metadata_html = ""
             if file_data['metadata'] or file_data.get('media_file_id') or file_data.get('phash'):
                 metadata_html = "<table class='metadata-table'><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>"
-                
-                # Add hash information first (most important for the issue)
+
+                # 1) Hash information first (added in the id-hashes branch)
                 if file_data.get('media_file_id'):
-                    metadata_html += f"<tr><td>Media File ID</td><td><code>{file_data['media_file_id']}</code></td></tr>"
+                    metadata_html += (
+                        f"<tr><td>Media File ID</td><td><code>{file_data['media_file_id']}</code></td></tr>"
+                    )
                 if file_data.get('phash'):
-                    metadata_html += f"<tr><td>Perceptual Hash</td><td><code>{file_data['phash']}</code></td></tr>"
-                
-                # Add existing metadata
+                    metadata_html += (
+                        f"<tr><td>Perceptual Hash</td><td><code>{file_data['phash']}</code></td></tr>"
+                    )
+
+                # 2) Existing metadata (keep pillbox rendering from pillbox-tags branch)
                 if file_data['metadata']:
                     for key, value in file_data['metadata'].items():
-                        if key not in ['extracted_keywords', 'error'] and value is not None:
-                            # Format certain values nicely
-                            if key == 'file_size':
-                                value = f"{size_mb:.2f} MB"
-                            elif key == 'file_modified_at':
-                                try:
-                                    value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
-                                except:
-                                    pass
-                            elif isinstance(value, dict):
-                                # Make sure nested objects are JSON serializable for display
-                                json_safe_value = self._make_json_serializable(value)
-                                value = json.dumps(json_safe_value, indent=2)[:200] + "..." if len(str(value)) > 200 else json.dumps(json_safe_value, indent=2)
-                            
-                            metadata_html += f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(value)}</td></tr>"
-                
+                        if key in ['extracted_keywords', 'error'] or value is None:
+                            continue
+
+                        # Friendly formatting
+                        display_value = value
+                        if key == 'file_size':
+                            display_value = f"{size_mb:.2f} MB"
+                        elif key == 'file_modified_at':
+                            try:
+                                import datetime as _dt
+                                display_value = _dt.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+                            except Exception:
+                                display_value = value
+                        elif key == 'parsed_prompt_data' and isinstance(value, dict):
+                            # Special: show pill boxes using helper, not JSON
+                            file_index = self.collected_data.index(file_data)
+                            display_value = self._format_parsed_prompt_data(value, file_index)
+                        elif isinstance(value, dict):
+                            # Make nested objects JSON-serializable and pretty
+                            import json as _json
+                            json_safe_value = self._make_json_serializable(value)
+                            display_value = _json.dumps(json_safe_value, indent=2)
+
+                        metadata_html += (
+                            f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(display_value)}</td></tr>"
+                        )
+
                 metadata_html += "</tbody></table>"
+
             
             # Keywords
             keywords_html = ""
@@ -586,6 +776,40 @@ class DataMiner:
             <li><strong>Search and manage your media</strong> via the web interface at <code>http://localhost:7862</code></li>
         </ol>
     </div>
+
+    <!-- Overlay for raw data display -->
+    <div id="rawDataOverlay" class="overlay">
+        <div class="overlay-content">
+            <button class="overlay-close" onclick="closeRawDataOverlay()">&times;</button>
+            <h3>Raw Parsed Prompt Data</h3>
+            <div id="rawJsonDisplay" class="raw-json-display"></div>
+        </div>
+    </div>
+
+    <script>
+        function showRawData(rawData) {
+            document.getElementById('rawJsonDisplay').textContent = rawData;
+            document.getElementById('rawDataOverlay').style.display = 'block';
+        }
+        
+        function closeRawDataOverlay() {
+            document.getElementById('rawDataOverlay').style.display = 'none';
+        }
+        
+        // Close overlay when clicking outside of it
+        document.getElementById('rawDataOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRawDataOverlay();
+            }
+        });
+        
+        // Close overlay with escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeRawDataOverlay();
+            }
+        });
+    </script>
 
 </body>
 </html>"""

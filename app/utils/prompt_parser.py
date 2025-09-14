@@ -12,7 +12,7 @@ class Keyword:
     weight: float
 
     def __str__(self):
-        return f"{self.text}:{self.weight:.3f}"
+        return f"{self.text}:{self.weight:.2f}"
 
 
 @dataclass
