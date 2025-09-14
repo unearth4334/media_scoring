@@ -189,12 +189,24 @@ class DataMiner:
     
     def _collect_file_data(self, file_path: Path, metadata: Dict, sidecar_score: Optional[int]) -> Dict:
         """Collect detailed file data for export."""
+        # Import hashing functions
+        from app.utils.hashing import compute_media_file_id, compute_perceptual_hash
+        
         # Extract keywords from metadata if available
         keywords = []
         if metadata:
             keywords = extract_keywords_from_metadata(metadata)
             if keywords:
                 self.stats['keywords_added'] += len(keywords)
+        
+        # Compute media file ID and perceptual hash
+        media_file_id = None
+        phash = None
+        try:
+            media_file_id = compute_media_file_id(file_path)
+            phash = compute_perceptual_hash(file_path)
+        except Exception as e:
+            self.logger.debug(f"Failed to compute hashes for {file_path.name}: {e}")
         
         return {
             'file_path': str(file_path),
@@ -205,7 +217,9 @@ class DataMiner:
             'score': sidecar_score,
             'metadata': metadata or {},
             'keywords': keywords,
-            'error': metadata.get('error') if metadata else None
+            'error': metadata.get('error') if metadata else None,
+            'media_file_id': media_file_id,
+            'phash': phash
         }
     
     def _make_json_serializable(self, obj):
@@ -609,30 +623,51 @@ class DataMiner:
             
             # Metadata table
             metadata_html = ""
-            if file_data['metadata']:
+            if file_data['metadata'] or file_data.get('media_file_id') or file_data.get('phash'):
                 metadata_html = "<table class='metadata-table'><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody>"
-                for key, value in file_data['metadata'].items():
-                    if key not in ['extracted_keywords', 'error'] and value is not None:
-                        # Format certain values nicely
+
+                # 1) Hash information first (added in the id-hashes branch)
+                if file_data.get('media_file_id'):
+                    metadata_html += (
+                        f"<tr><td>Media File ID</td><td><code>{file_data['media_file_id']}</code></td></tr>"
+                    )
+                if file_data.get('phash'):
+                    metadata_html += (
+                        f"<tr><td>Perceptual Hash</td><td><code>{file_data['phash']}</code></td></tr>"
+                    )
+
+                # 2) Existing metadata (keep pillbox rendering from pillbox-tags branch)
+                if file_data['metadata']:
+                    for key, value in file_data['metadata'].items():
+                        if key in ['extracted_keywords', 'error'] or value is None:
+                            continue
+
+                        # Friendly formatting
+                        display_value = value
                         if key == 'file_size':
-                            value = f"{size_mb:.2f} MB"
+                            display_value = f"{size_mb:.2f} MB"
                         elif key == 'file_modified_at':
                             try:
-                                value = datetime.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
-                            except:
-                                pass
+                                import datetime as _dt
+                                display_value = _dt.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+                            except Exception:
+                                display_value = value
                         elif key == 'parsed_prompt_data' and isinstance(value, dict):
-                            # Special handling for parsed prompt data - show pill boxes
+                            # Special: show pill boxes using helper, not JSON
                             file_index = self.collected_data.index(file_data)
-                            value = self._format_parsed_prompt_data(value, file_index)
+                            display_value = self._format_parsed_prompt_data(value, file_index)
                         elif isinstance(value, dict):
-                            # Make sure nested objects are JSON serializable for display
+                            # Make nested objects JSON-serializable and pretty
+                            import json as _json
                             json_safe_value = self._make_json_serializable(value)
-                            # Don't truncate other dict data, but keep it readable
-                            value = json.dumps(json_safe_value, indent=2)
-                        
-                        metadata_html += f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(value)}</td></tr>"
+                            display_value = _json.dumps(json_safe_value, indent=2)
+
+                        metadata_html += (
+                            f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(display_value)}</td></tr>"
+                        )
+
                 metadata_html += "</tbody></table>"
+
             
             # Keywords
             keywords_html = ""
@@ -667,20 +702,24 @@ class DataMiner:
         
         <div class="database-structure">
 <strong>media_files</strong> table would contain:
-┌─────────────────────────────────────────────────────────────────┐
-│ id │ filename │ directory │ file_path │ score │ file_type │ ... │
-├─────────────────────────────────────────────────────────────────┤"""
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ id │ filename │ directory │ file_path │ score │ file_type │ media_file_id │ phash │
+├────────────────────────────────────────────────────────────────────────────────────────────────┤"""
         
         for i, file_data in enumerate(self.collected_data[:5], 1):
+            # Truncate hash values for display
+            media_file_id_display = (file_data.get('media_file_id', 'NULL')[:16] + '...') if file_data.get('media_file_id') else 'NULL'
+            phash_display = file_data.get('phash', 'NULL') or 'NULL'
+            
             html += f"""
-│ {i:2d} │ {file_data['filename'][:12]:<12} │ {str(self.settings.dir)[-12:]:<9} │ {file_data['file_path'][-20:]:<20} │ {str(file_data['score'] or 'NULL'):<5} │ {file_data['file_type']:<9} │ ... │"""
+│ {i:2d} │ {file_data['filename'][:10]:<10} │ {str(self.settings.dir)[-9:]:<9} │ {file_data['file_path'][-15:]:<15} │ {str(file_data['score'] or 'NULL'):<5} │ {file_data['file_type']:<9} │ {media_file_id_display:<19} │ {phash_display:<16} │"""
         
         if len(self.collected_data) > 5:
             html += f"""
 │ .. │ ... ({len(self.collected_data) - 5} more rows) ... │"""
         
         html += """
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
 
 <strong>media_metadata</strong> table would contain technical metadata:
 ┌─────────────────────────────────────────────────────────────────┐

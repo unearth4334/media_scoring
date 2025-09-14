@@ -6,3 +6,4 @@ jinja2
 sqlalchemy>=2.0
 alembic
 psycopg2-binary
+imagehash
