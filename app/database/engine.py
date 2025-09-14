@@ -7,6 +7,7 @@ from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool, QueuePool
 
 from .models import Base
+from .migrations import migrate_database
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +53,9 @@ def init_database(database_url: str) -> None:
     
     # Create all tables
     Base.metadata.create_all(bind=_engine)
+    
+    # Run migrations for existing databases
+    migrate_database(_engine)
     
     logger.info(f"Database initialized successfully")
 
