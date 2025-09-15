@@ -1,5 +1,6 @@
 """Metadata extraction and storage service."""
 
+import hashlib
 import json
 import logging
 import subprocess
@@ -8,11 +9,17 @@ from typing import Dict, Optional, Any
 
 from ..state import get_state
 from ..utils.png_chunks import read_png_parameters_text
+from ..utils.prompt_parser import parse_png_prompt_text
 
 try:
     from PIL import Image
 except ImportError:
     Image = None
+
+try:
+    import imagehash
+except ImportError:
+    imagehash = None
 
 logger = logging.getLogger(__name__)
 
@@ -186,35 +193,30 @@ def extract_workflow_from_video(file_path: Path) -> Dict[str, Any]:
     return workflow_data
 
 
-def parse_ai_parameters(png_text: Dict[str, str]) -> Dict[str, Any]:
+def parse_ai_parameters(png_text: str) -> Dict[str, Any]:
     """Parse AI generation parameters from PNG text."""
     ai_params = {}
     
     try:
-        # Look for common AI parameter fields
-        param_mapping = {
-            "parameters": "prompt",
-            "prompt": "prompt", 
-            "negative prompt": "negative_prompt",
-            "model": "model_name",
-            "sampler": "sampler",
-            "steps": "steps",
-            "cfg scale": "cfg_scale",
-            "seed": "seed"
+        # Use the new prompt parser to extract keywords and LoRAs
+        parsed_prompt = parse_png_prompt_text(png_text)
+        
+        # Store the raw prompts
+        if parsed_prompt.raw_positive:
+            ai_params["prompt"] = parsed_prompt.raw_positive
+        if parsed_prompt.raw_negative:
+            ai_params["negative_prompt"] = parsed_prompt.raw_negative
+        
+        # Store the parsed prompt data for the database
+        ai_params["parsed_prompt_data"] = {
+            "positive_keywords": parsed_prompt.positive_keywords,
+            "negative_keywords": parsed_prompt.negative_keywords,
+            "loras": parsed_prompt.loras
         }
         
-        for png_key, png_value in png_text.items():
-            png_key_lower = png_key.lower()
-            
-            # Direct mapping
-            if png_key_lower in param_mapping:
-                ai_params[param_mapping[png_key_lower]] = png_value
-                continue
-            
-            # Try to parse structured parameters (e.g., from Auto1111)
-            if png_key_lower == "parameters":
-                parsed = parse_auto1111_parameters(png_value)
-                ai_params.update(parsed)
+        # Also try to parse structured parameters (e.g., from Auto1111)
+        parsed_params = parse_auto1111_parameters(png_text)
+        ai_params.update(parsed_params)
                 
     except Exception as e:
         logger.debug(f"Failed to parse AI parameters: {e}")
