@@ -208,6 +208,9 @@ class DataMiner:
         except Exception as e:
             self.logger.debug(f"Failed to compute hashes for {file_path.name}: {e}")
         
+        # Handle thumbnail generation for HTML export
+        thumbnail_data = self._get_thumbnail_data(file_path)
+        
         return {
             'file_path': str(file_path),
             'filename': file_path.name,
@@ -219,8 +222,107 @@ class DataMiner:
             'keywords': keywords,
             'error': metadata.get('error') if metadata else None,
             'media_file_id': media_file_id,
-            'phash': phash
+            'phash': phash,
+            'thumbnail': thumbnail_data
         }
+    
+    def _get_thumbnail_data(self, file_path: Path) -> Dict:
+        """Generate thumbnail and return thumbnail data for HTML export."""
+        import base64
+        import subprocess
+        import tempfile
+        
+        # For the mining script, we'll generate thumbnails directly without using the app state
+        # since the thumbnail service requires the application state to be initialized
+        
+        # Define thumbnail path manually
+        thumbnail_dir = file_path.parent / ".thumbnails"
+        thumbnail_dir.mkdir(exist_ok=True, parents=True)
+        thumbnail_path = thumbnail_dir / f"{file_path.stem}_thumbnail.jpg"
+        
+        thumbnail_exists = thumbnail_path.exists()
+        
+        # Try to generate thumbnail if it doesn't exist
+        if not thumbnail_exists:
+            name_lower = file_path.name.lower()
+            success = False
+            
+            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                success = self._generate_image_thumbnail(file_path, thumbnail_path)
+                self.logger.debug(f"Generated image thumbnail for {file_path.name}: {success}")
+            elif name_lower.endswith('.mp4'):
+                success = self._generate_video_thumbnail(file_path, thumbnail_path) 
+                self.logger.debug(f"Generated video thumbnail for {file_path.name}: {success}")
+            
+            thumbnail_exists = success and thumbnail_path.exists()
+        
+        # Convert thumbnail to base64 for embedding in HTML
+        thumbnail_base64 = None
+        if thumbnail_exists:
+            try:
+                with open(thumbnail_path, 'rb') as f:
+                    thumbnail_bytes = f.read()
+                    thumbnail_base64 = base64.b64encode(thumbnail_bytes).decode('utf-8')
+            except Exception as e:
+                self.logger.warning(f"Failed to read thumbnail for {file_path.name}: {e}")
+        
+        return {
+            'exists': thumbnail_exists,
+            'path': str(thumbnail_path) if thumbnail_exists else None,
+            'base64': thumbnail_base64
+        }
+    
+    def _generate_image_thumbnail(self, image_path: Path, output_path: Path) -> bool:
+        """Generate thumbnail for an image file using PIL."""
+        try:
+            from PIL import Image
+            
+            with Image.open(image_path) as img:
+                # Calculate width to maintain aspect ratio (default height: 64px)
+                thumbnail_height = 64
+                aspect_ratio = img.width / img.height
+                width = int(thumbnail_height * aspect_ratio)
+                
+                # Resize image
+                img.thumbnail((width, thumbnail_height), Image.Resampling.LANCZOS)
+                
+                # Convert to RGB if needed (for RGBA images)
+                if img.mode in ('RGBA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = rgb_img
+                
+                # Save as JPEG
+                img.save(output_path, 'JPEG', quality=85, optimize=True)
+                return True
+        except Exception as e:
+            self.logger.error(f"Failed to generate image thumbnail for {image_path}: {e}")
+            return False
+    
+    def _generate_video_thumbnail(self, video_path: Path, output_path: Path) -> bool:
+        """Generate thumbnail for a video file by extracting first frame."""
+        import subprocess
+        try:
+            # Use ffmpeg to extract first frame (default height: 64px)  
+            thumbnail_height = 64
+            cmd = [
+                "ffmpeg", "-y", "-i", str(video_path), 
+                "-vf", f"scale=-1:{thumbnail_height}",
+                "-vframes", "1", "-q:v", "2",
+                str(output_path)
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode == 0:
+                return True
+            else:
+                self.logger.error(f"ffmpeg failed for {video_path}: {result.stderr}")
+                return False
+        except subprocess.TimeoutExpired:
+            self.logger.error(f"ffmpeg timeout for {video_path}")
+            return False
+        except Exception as e:
+            self.logger.error(f"Failed to generate video thumbnail for {video_path}: {e}")
+            return False
     
     def _make_json_serializable(self, obj):
         """Convert objects to JSON-serializable format."""
@@ -402,6 +504,40 @@ class DataMiner:
             border-radius: 8px;
             padding: 15px;
             background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+        }}
+        .file-content {{
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }}
+        .file-thumbnail {{
+            flex-shrink: 0;
+            width: 120px;
+            height: 90px;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }}
+        .file-thumbnail img {{
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }}
+        .file-thumbnail.no-thumb {{
+            background: #f1f3f4;
+            color: #666;
+            font-size: 0.8em;
+            text-align: center;
+        }}
+        .file-details {{
+            flex: 1;
+            min-width: 0;
         }}
         .file-header {{
             display: flex;
@@ -677,6 +813,13 @@ class DataMiner:
                     keywords_html += f'<span class="keyword">{keyword}</span>'
                 keywords_html += '</div>'
             
+            # Thumbnail
+            thumbnail_html = ""
+            if file_data.get('thumbnail', {}).get('base64'):
+                thumbnail_html = f'<div class="file-thumbnail"><img src="data:image/jpeg;base64,{file_data["thumbnail"]["base64"]}" alt="Thumbnail for {file_data["filename"]}"></div>'
+            else:
+                thumbnail_html = '<div class="file-thumbnail no-thumb">No Preview</div>'
+            
             html += f"""
             <div class="file-item">
                 <div class="file-header">
@@ -686,9 +829,14 @@ class DataMiner:
                         {score_html}
                     </div>
                 </div>
-                {f'<div style="color: red; font-weight: bold;">Error: {file_data["error"]}</div>' if file_data['error'] else ''}
-                {metadata_html}
-                {keywords_html}
+                <div class="file-content">
+                    {thumbnail_html}
+                    <div class="file-details">
+                        {f'<div style="color: red; font-weight: bold;">Error: {file_data["error"]}</div>' if file_data['error'] else ''}
+                        {metadata_html}
+                        {keywords_html}
+                    </div>
+                </div>
             </div>
 """
         
