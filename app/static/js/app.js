@@ -974,4 +974,228 @@ async function exportFiltered(){
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
+
+// =========================================================
+// SIDEBAR TABS FUNCTIONALITY
+// =========================================================
+
+// Initialize tab functionality
+function initializeTabs() {
+  const tabButtons = document.querySelectorAll('.tab-button');
+  const tabContents = document.querySelectorAll('.tab-content');
+  
+  tabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const tabName = button.getAttribute('data-tab');
+      
+      // Update active tab button
+      tabButtons.forEach(btn => btn.classList.remove('active'));
+      button.classList.add('active');
+      
+      // Update active tab content
+      tabContents.forEach(content => content.classList.remove('active'));
+      const targetContent = document.getElementById(`tab-${tabName}`);
+      if (targetContent) {
+        targetContent.classList.add('active');
+      }
+      
+      // Load content if necessary
+      if (tabName === 'folders' && !document.getElementById('directory_tree').hasAttribute('data-loaded')) {
+        loadDirectoryTree();
+      }
+    });
+  });
+}
+
+// =========================================================
+// DIRECTORY TREE FUNCTIONALITY  
+// =========================================================
+
+let directoryTreeData = null;
+let expandedNodes = new Set(); // Track expanded nodes
+
+// Load directory tree from API
+async function loadDirectoryTree() {
+  const treeContainer = document.getElementById('directory_tree');
+  const currentDir = document.getElementById('dir').value.trim() || './';
+  
+  try {
+    treeContainer.innerHTML = '<div class="tree-loading">Loading directory tree...</div>';
+    
+    const response = await fetch(`/api/directory-tree?path=${encodeURIComponent(currentDir)}&max_depth=3`);
+    if (!response.ok) {
+      throw new Error(`Failed to load directory tree: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    directoryTreeData = data.tree;
+    
+    renderDirectoryTree(directoryTreeData, treeContainer);
+    treeContainer.setAttribute('data-loaded', 'true');
+    
+  } catch (error) {
+    console.error('Error loading directory tree:', error);
+    treeContainer.innerHTML = '<div class="tree-loading">Error loading directory tree</div>';
+  }
+}
+
+// Reload directory tree (clears cache and reloads)
+function reloadDirectoryTree() {
+  const treeContainer = document.getElementById('directory_tree');
+  treeContainer.removeAttribute('data-loaded');
+  expandedNodes.clear(); // Clear expanded state since we're changing directories
+  
+  // If Folders tab is currently active, reload immediately
+  if (document.getElementById('tab-folders').classList.contains('active')) {
+    loadDirectoryTree();
+  }
+}
+
+// Render directory tree recursively
+function renderDirectoryTree(treeData, container) {
+  container.innerHTML = '';
+  
+  if (!treeData) {
+    container.innerHTML = '<div class="tree-loading">No directory data</div>';
+    return;
+  }
+  
+  const treeNode = createTreeNode(treeData, 0);
+  container.appendChild(treeNode);
+  
+  // Highlight current directory
+  highlightCurrentDirectory();
+}
+
+// Highlight the current directory in the tree
+function highlightCurrentDirectory() {
+  const currentDir = document.getElementById('dir').value.trim();
+  
+  document.querySelectorAll('.tree-item').forEach(item => {
+    item.classList.remove('current');
+  });
+  
+  document.querySelectorAll('.tree-label').forEach(label => {
+    if (label.title === currentDir) {
+      label.closest('.tree-item').classList.add('current');
+    }
+  });
+}
+
+// Create a tree node element
+function createTreeNode(nodeData, depth) {
+  const nodeDiv = document.createElement('div');
+  nodeDiv.className = 'tree-node';
+  
+  const itemDiv = document.createElement('div');
+  itemDiv.className = 'tree-item';
+  itemDiv.style.paddingLeft = `${depth * 12}px`;
+  
+  // Add expander icon
+  const expander = document.createElement('span');
+  expander.className = 'tree-expander';
+  
+  if (nodeData.children && nodeData.children.length > 0) {
+    const isExpanded = expandedNodes.has(nodeData.path);
+    expander.className += isExpanded ? ' expanded' : ' collapsed';
+    expander.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleNodeExpansion(nodeData.path, nodeDiv);
+    });
+  } else {
+    expander.className += ' leaf';
+  }
+  
+  // Add folder icon
+  const icon = document.createElement('span');
+  icon.className = 'tree-icon';
+  icon.textContent = '📁';
+  
+  // Add label
+  const label = document.createElement('span');
+  label.className = 'tree-label';
+  label.textContent = nodeData.name;
+  label.title = nodeData.path;
+  
+  // Add click handler to navigate to directory
+  itemDiv.addEventListener('click', () => {
+    navigateToDirectory(nodeData.path);
+  });
+  
+  itemDiv.appendChild(expander);
+  itemDiv.appendChild(icon);
+  itemDiv.appendChild(label);
+  nodeDiv.appendChild(itemDiv);
+  
+  // Add children if they exist and node is expanded
+  if (nodeData.children && nodeData.children.length > 0) {
+    const childrenDiv = document.createElement('div');
+    childrenDiv.className = 'tree-children';
+    
+    if (!expandedNodes.has(nodeData.path)) {
+      childrenDiv.classList.add('collapsed');
+    }
+    
+    nodeData.children.forEach(child => {
+      const childNode = createTreeNode(child, depth + 1);
+      childrenDiv.appendChild(childNode);
+    });
+    
+    nodeDiv.appendChild(childrenDiv);
+  }
+  
+  return nodeDiv;
+}
+
+// Toggle node expansion
+function toggleNodeExpansion(nodePath, nodeElement) {
+  const expander = nodeElement.querySelector('.tree-expander');
+  const children = nodeElement.querySelector('.tree-children');
+  
+  if (!children) return;
+  
+  if (expandedNodes.has(nodePath)) {
+    expandedNodes.delete(nodePath);
+    expander.className = expander.className.replace('expanded', 'collapsed');
+    children.classList.add('collapsed');
+  } else {
+    expandedNodes.add(nodePath);
+    expander.className = expander.className.replace('collapsed', 'expanded');
+    children.classList.remove('collapsed');
+  }
+}
+
+// Navigate to directory
+function navigateToDirectory(dirPath) {
+  const dirInput = document.getElementById('dir');
+  dirInput.value = dirPath;
+  
+  // Highlight current directory in tree
+  document.querySelectorAll('.tree-item').forEach(item => {
+    item.classList.remove('current');
+  });
+  
+  // Find and highlight the clicked item
+  document.querySelectorAll('.tree-label').forEach(label => {
+    if (label.title === dirPath) {
+      label.closest('.tree-item').classList.add('current');
+    }
+  });
+  
+  // Trigger directory scan
+  scanDir(dirPath);
+}
+
+// Hook into existing scanDir function to reload tree when directory changes
+const originalScanDir = window.scanDir;
+window.scanDir = async function(path) {
+  const result = await originalScanDir(path);
+  // Reload tree after directory scan
+  reloadDirectoryTree();
+  return result;
+};
+
+// Initialize tabs when DOM loads
+document.addEventListener('DOMContentLoaded', initializeTabs);
+
 window.addEventListener("load", loadVideos);
