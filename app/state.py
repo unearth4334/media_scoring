@@ -1,8 +1,8 @@
-"""Global application state management."""
+"""Application state management."""
 
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Optional
 
 from .settings import Settings
 
@@ -16,6 +16,7 @@ class ApplicationState:
         self.file_list: List[Path] = []
         self.file_pattern: str = settings.pattern
         self.logger: logging.Logger = logging.getLogger("video_scorer_fastapi")
+        self.media_db = None  # Will be initialized when directory is scanned
         
         # Thumbnail generation progress tracking
         self.thumbnail_progress = {

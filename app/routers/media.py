@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse
 from ..state import get_state
 from ..services.files import read_score, write_score, switch_directory
 from ..services.thumbnails import start_thumbnail_generation
-from ..utils.png_chunks import read_png_parameters_text
+from ..utils.png_chunks import read_png_parameters_text, extract_png_metadata
 
 try:
     from PIL import Image
@@ -115,6 +115,11 @@ def get_media_metadata(name: str):
                 txt = read_png_parameters_text(target)
                 if txt:
                     meta["png_text"] = txt
+                
+                # Also extract parsed generation parameters
+                generation_params = extract_png_metadata(target)
+                if generation_params:
+                    meta["generation_params"] = generation_params.to_dict()
             return meta
         except Exception as e:
             return {"error": str(e)}
