@@ -668,6 +668,302 @@ async def api_export_filtered(req: Request):
         Path(temp_zip.name).unlink(missing_ok=True)
         raise HTTPException(500, f"Failed to create zip archive: {str(e)}")
 
+
+@APP.post("/api/export-html")
+async def api_export_html(req: Request):
+    """Export media files with full metadata as HTML report.
+    JSON body: { "names": ["file1.mp4", "file2.png", ...] } (optional - if not provided, exports all files)
+    """
+    data = await req.json()
+    names = data.get("names")  # Optional - if None, export all files
+    
+    # For the monolithic app, we'll create a simplified HTML export using the existing file structure
+    
+    try:
+        # Get files to export
+        if names:
+            if not isinstance(names, list):
+                raise HTTPException(400, "names must be a list of filenames")
+            
+            export_files = []
+            for name in names:
+                file_path = VIDEO_DIR / name
+                if file_path.exists() and file_path in FILE_LIST:
+                    export_files.append(file_path)
+        else:
+            # Export all files
+            export_files = FILE_LIST[:]
+        
+        if not export_files:
+            raise HTTPException(400, "No files found to export")
+        
+        # Generate HTML content
+        html_content = generate_simple_html_report(export_files)
+        
+        # Create temporary HTML file
+        temp_html = tempfile.NamedTemporaryFile(delete=False, suffix='.html', mode='w', encoding='utf-8')
+        temp_html.write(html_content)
+        temp_html.close()
+        
+        # Return the HTML file
+        return FileResponse(
+            temp_html.name,
+            media_type="text/html",
+            filename="mining_test_results.html",
+            headers={"Content-Disposition": "attachment; filename=mining_test_results.html"}
+        )
+        
+    except Exception as e:
+        raise HTTPException(500, f"Failed to create HTML report: {str(e)}")
+
+
+def generate_simple_html_report(files):
+    """Generate a simplified HTML report for the monolithic app."""
+    from datetime import datetime
+    
+    total_files = len(files)
+    scored_files = len([f for f in files if read_score(f) is not None and read_score(f) > 0])
+    avg_score = sum(read_score(f) or 0 for f in files) / total_files if total_files > 0 else 0
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Mining Test Results - Media Files Export</title>
+        <style>
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                margin: 0;
+                padding: 20px;
+                background-color: #f5f5f5;
+                color: #333;
+            }}
+            .header {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 30px;
+                border-radius: 10px;
+                margin-bottom: 30px;
+                text-align: center;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            }}
+            .header h1 {{
+                margin: 0 0 10px 0;
+                font-size: 2.5em;
+                font-weight: 300;
+            }}
+            .stats {{
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }}
+            .stat-card {{
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                text-align: center;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                border-left: 4px solid #667eea;
+            }}
+            .stat-value {{
+                font-size: 2em;
+                font-weight: bold;
+                color: #667eea;
+                margin-bottom: 5px;
+            }}
+            .stat-label {{
+                color: #666;
+                font-size: 0.9em;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }}
+            .table-container {{
+                background: white;
+                border-radius: 10px;
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+                overflow: hidden;
+            }}
+            .table-header {{
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                padding: 20px;
+                font-size: 1.2em;
+                font-weight: 500;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9em;
+            }}
+            th, td {{
+                padding: 12px 8px;
+                text-align: left;
+                border-bottom: 1px solid #e0e0e0;
+                vertical-align: top;
+            }}
+            th {{
+                background-color: #f8f9fa;
+                font-weight: 600;
+                color: #444;
+                position: sticky;
+                top: 0;
+                z-index: 10;
+            }}
+            tr:hover {{
+                background-color: #f8f9ff;
+            }}
+            .score-badge {{
+                display: inline-block;
+                padding: 4px 8px;
+                border-radius: 15px;
+                font-weight: bold;
+                font-size: 0.8em;
+                min-width: 30px;
+                text-align: center;
+            }}
+            .score-0 {{ background: #e9ecef; color: #6c757d; }}
+            .score-1 {{ background: #ffeaa7; color: #d63031; }}
+            .score-2 {{ background: #fdcb6e; color: #e17055; }}
+            .score-3 {{ background: #a29bfe; color: #6c5ce7; }}
+            .score-4 {{ background: #74b9ff; color: #0984e3; }}
+            .score-5 {{ background: #55a3ff; color: #0055ff; }}
+            .score-reject {{ background: #ff6b6b; color: white; }}
+            .filepath {{
+                font-family: 'Courier New', monospace;
+                font-size: 0.85em;
+                background: #f1f3f4;
+                padding: 2px 6px;
+                border-radius: 3px;
+                word-break: break-all;
+            }}
+            .null-value {{
+                color: #999;
+                font-style: italic;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>🎬 Mining Test Results</h1>
+            <div class="subtitle">Media Files Export Report</div>
+            <div class="subtitle">Generated on {datetime.now().strftime('%B %d, %Y at %I:%M %p')}</div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-value">{total_files}</div>
+                <div class="stat-label">Total Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{scored_files}</div>
+                <div class="stat-label">Scored Files</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">{avg_score:.1f}</div>
+                <div class="stat-label">Average Score</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <div class="table-header">
+                📊 Media File Analysis
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Filepath</th>
+                        <th>Score</th>
+                        <th>Dimensions</th>
+                        <th>PNG Parameters</th>
+                    </tr>
+                </thead>
+                <tbody>
+    """
+    
+    # Add rows for each file
+    for file_path in files:
+        score = read_score(file_path) or 0
+        score_class = "score-reject" if score == -1 else f"score-{score}"
+        score_display = "R" if score == -1 else str(score)
+        
+        relative_path = str(file_path.relative_to(VIDEO_DIR))
+        
+        # Get dimensions and PNG parameters
+        dimensions = ""
+        png_params = ""
+        
+        ext = file_path.suffix.lower()
+        if ext in {'.png', '.jpg', '.jpeg'}:
+            try:
+                if Image:
+                    with Image.open(file_path) as img:
+                        dimensions = f"{img.width}×{img.height}"
+                
+                if ext == '.png':
+                    png_text = _read_png_parameters_text(file_path)
+                    if png_text:
+                        # Show first 100 characters of parameters
+                        png_params = png_text[:100] + ("..." if len(png_text) > 100 else "")
+                    else:
+                        png_params = '<span class="null-value">No parameters found</span>'
+                else:
+                    png_params = '<span class="null-value">N/A (not PNG)</span>'
+                        
+            except Exception:
+                dimensions = "Error reading file"
+                png_params = "Error reading metadata"
+        elif ext == '.mp4':
+            png_params = '<span class="null-value">N/A (video file)</span>'
+            # Try to get video dimensions
+            try:
+                import subprocess
+                cmd = [
+                    "ffprobe", "-v", "error",
+                    "-select_streams", "video:0", 
+                    "-show_entries", "stream=width,height",
+                    "-of", "json", str(file_path)
+                ]
+                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                info = json.loads(result.stdout or "{}")
+                if isinstance(info, dict) and info.get("streams"):
+                    st = info["streams"][0]
+                    w = st.get("width")
+                    h = st.get("height")
+                    if w and h:
+                        dimensions = f"{w}×{h}"
+            except Exception:
+                dimensions = "Error reading video"
+        
+        html += f"""
+                    <tr>
+                        <td><strong>{file_path.name}</strong></td>
+                        <td><span class="filepath">{relative_path}</span></td>
+                        <td><span class="score-badge {score_class}">{score_display}</span></td>
+                        <td>{dimensions}</td>
+                        <td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">{png_params}</td>
+                    </tr>
+        """
+    
+    html += """
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="text-align: center; margin-top: 40px; padding: 20px; color: #666; border-top: 1px solid #e0e0e0;">
+            <p>Generated by Media Scoring Application</p>
+            <p>This report contains analysis of media files including extracted metadata where available.</p>
+        </div>
+    </body>
+    </html>
+    """
+    
+    return html
+
+
 # ---------------------------
 # Client HTML/JS
 # ---------------------------
@@ -975,6 +1271,17 @@ CLIENT_HTML = r"""
               <path d="M10 16H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             Export Filtered
+          </button>
+          <button id="export_html_btn" class="pill" title="Export HTML report with full metadata">
+            <!-- HTML/Report icon SVG -->
+            <svg width="16" height="12" viewBox="0 0 24 24" fill="none" style="margin-right: 2px;">
+              <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 13H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M16 17H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M10 9H8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Export HTML Report
           </button>
         </div>
         <div style="margin-top: 4px;">
@@ -1943,9 +2250,46 @@ async function exportFiltered(){
     hideProgress();
   }
 }
+async function exportHtmlReport(){
+  if (!filtered.length) { alert("No items in current filter scope."); return; }
+  const names = filtered.map(v => v.name);
+  if (!names.length){ alert('No files in the current filtered view.'); return; }
+  
+  // Show progress
+  showProgress('Generating HTML report...');
+  
+  try{
+    const res = await fetch("/api/export-html", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ names })
+    });
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    }
+    // Create a blob from the response and trigger download
+    const blob = await res.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'mining_test_results.html';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    postKey("ExportHtmlReport");
+  }catch(e){
+    alert("HTML export failed: " + e);
+  } finally {
+    // Hide progress
+    hideProgress();
+  }
+}
 document.getElementById("extract_one").addEventListener("click", extractCurrent);
 document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
+document.getElementById("export_html_btn").addEventListener("click", exportHtmlReport);
 window.addEventListener("load", loadVideos);
 </script>
 </body>
