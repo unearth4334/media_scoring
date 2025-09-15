@@ -9,7 +9,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from ..state import get_state
-from ..services.files import read_score, write_score, switch_directory
+from ..services.files import read_score, write_score, switch_directory, ensure_media_metadata
 from ..services.thumbnails import start_thumbnail_generation
 from ..utils.png_chunks import read_png_parameters_text
 
@@ -27,13 +27,15 @@ def list_videos():
     """Return list of media files with scores and configuration."""
     state = get_state()
     
-    # Return list of entries with current score
+    # Return list of entries with current score and metadata
     items = []
     for p in state.file_list:
+        metadata = ensure_media_metadata(p)
         items.append({
             "name": p.name,
             "url": f"/media/{p.name}",
-            "score": read_score(p) if read_score(p) is not None else 0
+            "score": metadata.get("score", 0),
+            "metadata": metadata
         })
     
     return {
