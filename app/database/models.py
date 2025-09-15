@@ -6,7 +6,7 @@ from pathlib import Path
 
 from sqlalchemy import (
     Column, Integer, String, DateTime, Text, Float, Boolean,
-    ForeignKey, Index, UniqueConstraint
+    ForeignKey, Index, UniqueConstraint, JSON
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Session
@@ -26,6 +26,8 @@ class MediaFile(Base):
     file_type = Column(String(50))  # 'video', 'image'
     extension = Column(String(10))
     score = Column(Integer, default=0)  # -1 to 5
+    media_file_id = Column(String(64), nullable=True)  # SHA256 hash of exact pixel content
+    phash = Column(String(64), nullable=True)  # Perceptual hash for similarity detection
     created_at = Column(DateTime, default=dt.datetime.utcnow)
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
     last_accessed = Column(DateTime)
@@ -42,6 +44,8 @@ class MediaFile(Base):
         Index('idx_media_score', 'score'),
         Index('idx_media_type', 'file_type'),
         Index('idx_media_updated', 'updated_at'),
+        Index('idx_media_file_id', 'media_file_id'),
+        Index('idx_media_phash', 'phash'),
     )
     
     def __repr__(self):
@@ -77,6 +81,11 @@ class MediaMetadata(Base):
     steps = Column(Integer)
     cfg_scale = Column(Float)
     seed = Column(String(50))
+    
+    # Parsed prompt data with attention weights
+    positive_prompt_keywords = Column(JSON)  # Array of {text: str, weight: float} objects
+    negative_prompt_keywords = Column(JSON)  # Array of {text: str, weight: float} objects
+    loras = Column(JSON)  # Array of {name: str, weight: float} objects
     
     # File modification tracking
     file_modified_at = Column(DateTime)  # When the actual file was last modified
