@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import List, Dict, Optional
 
 from ..state import get_state
+from ..utils.png_chunks import read_png_parameters_text
+from ..utils.metadata_parser import parse_generation_metadata
 
 
 def get_scores_dir_for(directory: Path) -> Path:
@@ -40,12 +42,89 @@ def read_score(video_path: Path) -> Optional[int]:
 def write_score(video_path: Path, score: int) -> None:
     """Write score to sidecar file."""
     scp = get_sidecar_path_for(video_path)
-    payload = {
+    
+    # Read existing metadata if any
+    existing_data = {}
+    if scp.exists():
+        try:
+            existing_data = json.loads(scp.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    
+    # Update with new score
+    existing_data.update({
         "file": video_path.name,
         "score": int(score),
         "updated": dt.datetime.now().isoformat(timespec="seconds"),
+    })
+    
+    scp.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+
+
+def write_media_metadata(media_path: Path, media_dir: Optional[Path] = None) -> None:
+    """Extract and write complete media metadata to sidecar file."""
+    try:
+        state = get_state()
+        base_dir = state.video_dir
+    except RuntimeError:
+        # Fall back to provided media_dir or parent directory
+        base_dir = media_dir or media_path.parent
+    
+    scp = get_sidecar_path_for(media_path)
+    
+    # Read existing data if any
+    existing_data = {}
+    if scp.exists():
+        try:
+            existing_data = json.loads(scp.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    
+    # Base metadata
+    metadata = {
+        "filename": media_path.name,
+        "filepath": str(media_path.relative_to(base_dir)) if base_dir else media_path.name,
+        "updated": dt.datetime.now().isoformat(timespec="seconds"),
     }
-    scp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    
+    # Extract generation metadata for PNG files
+    if media_path.suffix.lower() == '.png':
+        try:
+            png_text = read_png_parameters_text(media_path)
+            if png_text:
+                generation_metadata = parse_generation_metadata(png_text)
+                metadata.update(generation_metadata)
+        except Exception as e:
+            metadata["metadata_error"] = str(e)
+    
+    # Merge with existing data (preserve score)
+    existing_data.update(metadata)
+    
+    scp.write_text(json.dumps(existing_data, indent=2), encoding="utf-8")
+
+
+def read_media_metadata(media_path: Path) -> Dict[str, any]:
+    """Read complete media metadata from sidecar file."""
+    scp = get_sidecar_path_for(media_path)
+    if not scp.exists():
+        return {}
+    
+    try:
+        return json.loads(scp.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def ensure_media_metadata(media_path: Path) -> Dict[str, any]:
+    """Ensure media metadata exists and return it."""
+    metadata = read_media_metadata(media_path)
+    
+    # If metadata doesn't exist or is incomplete, extract it
+    if not metadata or "filename" not in metadata:
+        write_media_metadata(media_path)
+        metadata = read_media_metadata(media_path)
+    
+    return metadata
 
 
 def match_union_pattern(directory: Path, pattern: str) -> List[Path]:
