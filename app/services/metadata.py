@@ -239,31 +239,133 @@ def parse_auto1111_parameters(param_string: str) -> Dict[str, Any]:
                 
             # Look for key: value patterns
             if ': ' in line:
-                key, value = line.split(': ', 1)
-                key = key.strip().lower()
-                value = value.strip()
-                
-                # Map to our schema
-                if key in ["steps"]:
-                    params[key] = int(value) if value.isdigit() else value
-                elif key in ["cfg scale", "cfg_scale"]:
-                    try:
-                        params["cfg_scale"] = float(value)
-                    except ValueError:
-                        params["cfg_scale"] = value
-                elif key in ["sampler"]:
-                    params["sampler"] = value
-                elif key in ["model"]:
-                    params["model_name"] = value
-                elif key in ["seed"]:
-                    params["seed"] = value
+                # Handle the first line specially if it contains comma-separated parameters
+                if line.startswith(('Steps:', 'Sampler:', 'Schedule type:')):
+                    # Parse comma-separated parameters line
+                    params.update(_parse_comma_separated_parameters(line))
+                else:
+                    # Handle simple key: value pairs
+                    key, value = line.split(': ', 1)
+                    key = key.strip()
+                    value = value.strip()
                     
-        # Look for prompt at the beginning
+                    # Map to our schema with proper data types
+                    params.update(_map_parameter_to_schema(key, value))
+                    
+        # Look for prompt at the beginning (if it's not a parameter line)
         if lines and not ': ' in lines[0]:
             params["prompt"] = lines[0].strip()
             
     except Exception as e:
         logger.debug(f"Failed to parse Auto1111 parameters: {e}")
+    
+    return params
+
+
+def _parse_comma_separated_parameters(param_line: str) -> Dict[str, Any]:
+    """Parse comma-separated parameter strings like 'Steps: 30, Sampler: DPM++ 3M SDE, ...'"""
+    params = {}
+    
+    try:
+        # Split by comma and parse each key: value pair
+        parts = param_line.split(', ')
+        
+        for part in parts:
+            part = part.strip()
+            if ': ' in part:
+                key, value = part.split(': ', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Map to our schema
+                params.update(_map_parameter_to_schema(key, value))
+                
+    except Exception as e:
+        logger.debug(f"Failed to parse comma-separated parameters: {e}")
+    
+    return params
+
+
+def _map_parameter_to_schema(key: str, value: str) -> Dict[str, Any]:
+    """Map a parameter key-value pair to our database schema with proper data types."""
+    params = {}
+    key_lower = key.lower().strip()
+    value = value.strip()
+    
+    try:
+        # Integer fields
+        if key_lower in ["steps"]:
+            params["steps"] = int(value) if value.isdigit() else None
+        
+        # Float fields  
+        elif key_lower in ["cfg scale"]:
+            params["cfg_scale"] = float(value)
+        elif key_lower in ["denoising strength"]:
+            params["denoising_strength"] = float(value)
+        elif key_lower in ["hires cfg scale"]:
+            params["hires_cfg_scale"] = float(value)
+        elif key_lower in ["hires upscale"]:
+            params["hires_upscale"] = float(value)
+        elif key_lower.startswith("dynthres_") and key_lower.endswith(("_scale", "_scale_min", "_threshold_percentile", "_sched_val", "_interpolate_phi")):
+            params[key_lower] = float(value)
+        
+        # String fields
+        elif key_lower in ["sampler"]:
+            params["sampler"] = value
+        elif key_lower in ["schedule type"]:
+            params["schedule_type"] = value
+        elif key_lower in ["seed"]:
+            params["seed"] = value
+        elif key_lower in ["size"]:
+            params["size"] = value
+        elif key_lower in ["model"]:
+            params["model_name"] = value
+        elif key_lower in ["model hash"]:
+            params["model_hash"] = value
+        elif key_lower in ["hires module 1"]:
+            params["hires_module_1"] = value
+        elif key_lower in ["hires upscaler"]:
+            params["hires_upscaler"] = value
+        elif key_lower in ["version"]:
+            params["version"] = value
+        elif key_lower in ["lora hashes"]:
+            params["lora_hashes"] = value
+        
+        # Boolean fields
+        elif key_lower in ["dynthres_enabled"]:
+            params["dynthres_enabled"] = value.lower() in ("true", "1", "yes", "on")
+        
+        # String fields for dynthres parameters that are not numeric
+        elif key_lower.startswith("dynthres_") and key_lower.endswith(("_mode", "_startpoint", "_measure", "_channels")):
+            params[key_lower] = value
+        elif key_lower == "dynthres_separate_feature_channels":
+            params["dynthres_separate_feature_channels"] = value
+        elif key_lower == "dynthres_variability_measure":
+            params["dynthres_variability_measure"] = value
+        elif key_lower == "dynthres_scaling_startpoint":
+            params["dynthres_scaling_startpoint"] = value
+        elif key_lower == "dynthres_mimic_mode":
+            params["dynthres_mimic_mode"] = value
+        elif key_lower == "dynthres_cfg_mode":
+            params["dynthres_cfg_mode"] = value
+            
+        # Generic handling for any remaining dynthres parameters
+        elif key_lower.startswith("dynthres_"):
+            # Try to parse as number first, fall back to string
+            try:
+                if '.' in value:
+                    params[key_lower] = float(value)
+                else:
+                    params[key_lower] = int(value)
+            except ValueError:
+                params[key_lower] = value
+                
+    except ValueError as e:
+        logger.debug(f"Failed to convert parameter {key}={value}: {e}")
+        # Store as string if conversion fails
+        params[key_lower.replace(' ', '_')] = value
+    except Exception as e:
+        logger.debug(f"Error mapping parameter {key}={value}: {e}")
     
     return params
 

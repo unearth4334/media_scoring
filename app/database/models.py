@@ -77,10 +77,38 @@ class MediaMetadata(Base):
     prompt = Column(Text)
     negative_prompt = Column(Text)
     model_name = Column(String(256))
+    model_hash = Column(String(64))  # Model hash
     sampler = Column(String(100))
     steps = Column(Integer)
     cfg_scale = Column(Float)
     seed = Column(String(50))
+    size = Column(String(20))  # e.g., "1152x896"
+    schedule_type = Column(String(50))  # e.g., "Karras"
+    
+    # Hires fix parameters
+    denoising_strength = Column(Float)
+    hires_module_1 = Column(String(100))
+    hires_cfg_scale = Column(Float)
+    hires_upscale = Column(Float)
+    hires_upscaler = Column(String(200))
+    
+    # Dynamic Thresholding extension parameters
+    dynthres_enabled = Column(Boolean)
+    dynthres_mimic_scale = Column(Float)
+    dynthres_threshold_percentile = Column(Float)
+    dynthres_mimic_mode = Column(String(50))
+    dynthres_mimic_scale_min = Column(Float)
+    dynthres_cfg_mode = Column(String(50))
+    dynthres_cfg_scale_min = Column(Float)
+    dynthres_sched_val = Column(Float)
+    dynthres_separate_feature_channels = Column(String(50))
+    dynthres_scaling_startpoint = Column(String(50))
+    dynthres_variability_measure = Column(String(50))
+    dynthres_interpolate_phi = Column(Float)
+    
+    # Version and hashes
+    version = Column(String(100))
+    lora_hashes = Column(Text)  # JSON string of LoRA hashes
     
     # Parsed prompt data with attention weights
     positive_prompt_keywords = Column(JSON)  # Array of {text: str, weight: float} objects
@@ -99,6 +127,10 @@ class MediaMetadata(Base):
         Index('idx_metadata_media_file', 'media_file_id'),
         Index('idx_metadata_dimensions', 'width', 'height'),
         Index('idx_metadata_model', 'model_name'),
+        Index('idx_metadata_model_hash', 'model_hash'),
+        Index('idx_metadata_sampler', 'sampler'),
+        Index('idx_metadata_steps', 'steps'),
+        Index('idx_metadata_cfg_scale', 'cfg_scale'),
     )
     
     def __repr__(self):
