@@ -5,6 +5,8 @@ __pycache__/
 
 # Virtual environments
 .venv/
+venv/
+testenv/
 
 # Distribution / packaging
 build/
@@ -41,7 +43,7 @@ coverage.xml
 # Pyre type checker
 .pyre/
 
-# Environments\
+# Environments
 test_env/
 
 # VS Code
@@ -60,7 +62,6 @@ Thumbs.db
 test_media/
 media/test_*.png
 media/test_*.jpg
-
 
 # Ignore self-generated files
 .thumbnails/

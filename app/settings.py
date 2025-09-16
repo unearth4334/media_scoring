@@ -78,7 +78,7 @@ class Settings(BaseModel):
     @classmethod
     def load_from_yaml(cls, config_file: Optional[Path] = None) -> 'Settings':
         """Load settings from YAML file with CLI arg and env var override capability."""
-        config_file = config_file or Path("config.yml")
+        config_file = config_file or Path("config/config.yml")
         
         config_data = {}
         if config_file.exists():
