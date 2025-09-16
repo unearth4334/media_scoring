@@ -260,8 +260,8 @@ class ModelGenerator:
         if default == "CURRENT_TIMESTAMP":
             default = dt.datetime.utcnow
         elif col_def.type == ColumnType.DATETIME and default:
-            if default == "CURRENT_TIMESTAMP":
-                default = dt.datetime.utcnow
+            pass
+        
         
         # Handle on_update
         onupdate = None
