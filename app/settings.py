@@ -36,6 +36,11 @@ class Settings(BaseModel):
     database_path: Optional[Path] = Field(default=None, description="Path to SQLite database file")
     database_url: Optional[str] = Field(default=None, description="Database URL for external database (overrides database_path)")
     
+    # Schema settings
+    schema_file: Optional[Path] = Field(default=None, description="YAML schema file for database structure")
+    auto_migrate: bool = Field(default=False, description="Automatically apply schema migrations")
+    validate_schema: bool = Field(default=True, description="Validate schema on startup")
+    
     @field_validator('dir', mode='before')
     @classmethod
     def expand_dir_path(cls, v):

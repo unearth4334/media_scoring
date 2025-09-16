@@ -133,6 +133,9 @@ def update_models(schema_path: Path, models_path: Optional[Path] = None) -> bool
     except Exception as e:
         print(f"❌ Model update failed: {e}", file=sys.stderr)
         return False
+
+
+def compare_schemas(schema1_path: Path, schema2_path: Path) -> bool:
     """Compare two schema files and show differences."""
     try:
         schema1 = load_schema(schema1_path)
