@@ -85,26 +85,12 @@ class MediaMetadata(Base):
     size = Column(String(20))  # e.g., "1152x896"
     schedule_type = Column(String(50))  # e.g., "Karras"
     
-    # Hires fix parameters
-    denoising_strength = Column(Float)
-    hires_module_1 = Column(String(100))
-    hires_cfg_scale = Column(Float)
-    hires_upscale = Column(Float)
-    hires_upscaler = Column(String(200))
+    # Hires fix parameters (consolidated into JSON)
+    denoising_strength = Column(Float)  # Keep this separate as it's commonly used standalone
+    hires_config = Column(JSON)  # JSON object containing: module_1, cfg_scale, upscale, upscaler
     
-    # Dynamic Thresholding extension parameters
-    dynthres_enabled = Column(Boolean)
-    dynthres_mimic_scale = Column(Float)
-    dynthres_threshold_percentile = Column(Float)
-    dynthres_mimic_mode = Column(String(50))
-    dynthres_mimic_scale_min = Column(Float)
-    dynthres_cfg_mode = Column(String(50))
-    dynthres_cfg_scale_min = Column(Float)
-    dynthres_sched_val = Column(Float)
-    dynthres_separate_feature_channels = Column(String(50))
-    dynthres_scaling_startpoint = Column(String(50))
-    dynthres_variability_measure = Column(String(50))
-    dynthres_interpolate_phi = Column(Float)
+    # Dynamic Thresholding extension parameters (consolidated into JSON)
+    dynthres_config = Column(JSON)  # JSON object containing all dynthres parameters
     
     # Version and hashes
     version = Column(String(100))

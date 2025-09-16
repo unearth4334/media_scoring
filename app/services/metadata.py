@@ -303,11 +303,19 @@ def _map_parameter_to_schema(key: str, value: str) -> Dict[str, Any]:
         elif key_lower in ["denoising strength"]:
             params["denoising_strength"] = float(value)
         elif key_lower in ["hires cfg scale"]:
-            params["hires_cfg_scale"] = float(value)
+            if "hires_config" not in params:
+                params["hires_config"] = {}
+            params["hires_config"]["cfg_scale"] = float(value)
         elif key_lower in ["hires upscale"]:
-            params["hires_upscale"] = float(value)
+            if "hires_config" not in params:
+                params["hires_config"] = {}
+            params["hires_config"]["upscale"] = float(value)
         elif key_lower.startswith("dynthres_") and key_lower.endswith(("_scale", "_scale_min", "_threshold_percentile", "_sched_val", "_interpolate_phi")):
-            params[key_lower] = float(value)
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            # Remove the dynthres_ prefix for cleaner JSON
+            clean_key = key_lower[9:]  # Remove "dynthres_" prefix
+            params["dynthres_config"][clean_key] = float(value)
         
         # String fields
         elif key_lower in ["sampler"]:
@@ -323,9 +331,13 @@ def _map_parameter_to_schema(key: str, value: str) -> Dict[str, Any]:
         elif key_lower in ["model hash"]:
             params["model_hash"] = value
         elif key_lower in ["hires module 1"]:
-            params["hires_module_1"] = value
+            if "hires_config" not in params:
+                params["hires_config"] = {}
+            params["hires_config"]["module_1"] = value
         elif key_lower in ["hires upscaler"]:
-            params["hires_upscaler"] = value
+            if "hires_config" not in params:
+                params["hires_config"] = {}
+            params["hires_config"]["upscaler"] = value
         elif key_lower in ["version"]:
             params["version"] = value
         elif key_lower in ["lora hashes"]:
@@ -333,32 +345,50 @@ def _map_parameter_to_schema(key: str, value: str) -> Dict[str, Any]:
         
         # Boolean fields
         elif key_lower in ["dynthres_enabled"]:
-            params["dynthres_enabled"] = value.lower() in ("true", "1", "yes", "on")
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["enabled"] = value.lower() in ("true", "1", "yes", "on")
         
         # String fields for dynthres parameters that are not numeric
         elif key_lower.startswith("dynthres_") and key_lower.endswith(("_mode", "_startpoint", "_measure", "_channels")):
-            params[key_lower] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            clean_key = key_lower[9:]  # Remove "dynthres_" prefix
+            params["dynthres_config"][clean_key] = value
         elif key_lower == "dynthres_separate_feature_channels":
-            params["dynthres_separate_feature_channels"] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["separate_feature_channels"] = value
         elif key_lower == "dynthres_variability_measure":
-            params["dynthres_variability_measure"] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["variability_measure"] = value
         elif key_lower == "dynthres_scaling_startpoint":
-            params["dynthres_scaling_startpoint"] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["scaling_startpoint"] = value
         elif key_lower == "dynthres_mimic_mode":
-            params["dynthres_mimic_mode"] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["mimic_mode"] = value
         elif key_lower == "dynthres_cfg_mode":
-            params["dynthres_cfg_mode"] = value
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            params["dynthres_config"]["cfg_mode"] = value
             
         # Generic handling for any remaining dynthres parameters
         elif key_lower.startswith("dynthres_"):
+            if "dynthres_config" not in params:
+                params["dynthres_config"] = {}
+            clean_key = key_lower[9:]  # Remove "dynthres_" prefix
             # Try to parse as number first, fall back to string
             try:
                 if '.' in value:
-                    params[key_lower] = float(value)
+                    params["dynthres_config"][clean_key] = float(value)
                 else:
-                    params[key_lower] = int(value)
+                    params["dynthres_config"][clean_key] = int(value)
             except ValueError:
-                params[key_lower] = value
+                params["dynthres_config"][clean_key] = value
                 
     except ValueError as e:
         logger.debug(f"Failed to convert parameter {key}={value}: {e}")
