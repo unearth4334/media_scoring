@@ -239,9 +239,14 @@ class MigrationGenerator:
         if col.default is not None:
             if isinstance(col.default, str):
                 options.append(f'server_default="{col.default}"')
+            elif isinstance(col.default, (int, float)):
+                options.append(f"server_default=sa.text('{col.default}')")
+            elif isinstance(col.default, bool):
+                # Most SQL backends expect '1' or '0' for booleans
+                options.append(f"server_default=sa.text('1')" if col.default else f"server_default=sa.text('0')")
             else:
-                options.append(f'server_default=sa.text("{col.default}")')
-        
+                # Fallback: treat as string
+                options.append(f'server_default="{col.default}"')
         if options:
             args.extend(options)
         
