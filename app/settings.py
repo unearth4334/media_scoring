@@ -1,5 +1,6 @@
 """Application settings using Pydantic for configuration management."""
 
+import os
 from pathlib import Path
 from typing import List, Optional
 from pydantic import BaseModel, Field, field_validator
@@ -30,6 +31,11 @@ class Settings(BaseModel):
     # Directory sorting
     directory_sort_desc: bool = Field(default=True, description="Sort directory dropdown in descending order")
     
+    # Database settings
+    enable_database: bool = Field(default=True, description="Enable database storage for metadata and search")
+    database_path: Optional[Path] = Field(default=None, description="Path to SQLite database file")
+    database_url: Optional[str] = Field(default=None, description="Database URL for external database (overrides database_path)")
+    
     @field_validator('dir', mode='before')
     @classmethod
     def expand_dir_path(cls, v):
@@ -45,6 +51,16 @@ class Settings(BaseModel):
         if not 1 <= v <= 65535:
             raise ValueError(f"Port must be between 1 and 65535, got {v}")
         return v
+    
+    @field_validator('database_path', mode='before')
+    @classmethod
+    def expand_database_path(cls, v):
+        """Expand and resolve database path."""
+        if v is None:
+            return None
+        if isinstance(v, str):
+            return Path(v).expanduser().resolve()
+        return v.resolve() if isinstance(v, Path) else v
     
     @field_validator('thumbnail_height')
     @classmethod
@@ -67,4 +83,23 @@ class Settings(BaseModel):
             except Exception as e:
                 print(f"Warning: Could not load {config_file}: {e}")
         
+        # Override with environment variables
+        if os.getenv('DATABASE_URL'):
+            config_data['database_url'] = os.getenv('DATABASE_URL')
+        
         return cls(**config_data)
+    
+    def get_database_path(self) -> Path:
+        """Get the database path, defaulting to .scores/media.db in the media directory."""
+        if self.database_path:
+            return self.database_path
+        else:
+            return self.dir / ".scores" / "media.db"
+    
+    def get_database_url(self) -> str:
+        """Get the database URL, defaulting to SQLite file if no URL specified."""
+        if self.database_url:
+            return self.database_url
+        else:
+            db_path = self.get_database_path()
+            return f"sqlite:///{db_path}"

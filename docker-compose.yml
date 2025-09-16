@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:15
+    container_name: media-scorer-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-media_scoring}
+      POSTGRES_USER: ${POSTGRES_USER:-media_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-media_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-media_user} -d ${POSTGRES_DB:-media_scoring}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
   media-scorer:
     build: .
     container_name: media-scorer
@@ -17,9 +35,14 @@ services:
       - HOST_PORT=${HOST_PORT}
       - MEDIA_PATTERN=${MEDIA_PATTERN}
       - GENERATE_THUMBNAILS=${GENERATE_THUMBNAILS}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://${POSTGRES_USER:-media_user}:${POSTGRES_PASSWORD:-media_password}@postgres:5432/${POSTGRES_DB:-media_scoring}}
     restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
+  postgres_data:
   scores_data:
   thumbnails_data:
   workflows_data:

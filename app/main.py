@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .settings import Settings
 from .state import init_state
-from .routers import core, media, extract, thumbnails_api, root
+from .routers import core, media, extract, thumbnails_api, root, search
 from .services.files import switch_directory
 from .services.thumbnails import start_thumbnail_generation
 
@@ -34,6 +34,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(media.router)
     app.include_router(extract.router)
     app.include_router(thumbnails_api.router)
+    app.include_router(search.router)  # Database search functionality
     
     # Initialize application
     _initialize_app(state)
@@ -76,6 +77,10 @@ def cli_main():
     parser.add_argument("--toggle-extensions", nargs='*', help="File extensions for toggle buttons")
     parser.add_argument("--directory-sort-desc", action="store_true", help="Sort directory dropdown in descending order")
     parser.add_argument("--directory-sort-asc", action="store_true", help="Sort directory dropdown in ascending order")
+    parser.add_argument("--enable-database", action="store_true", help="Enable database storage for metadata and search")
+    parser.add_argument("--disable-database", action="store_true", help="Disable database functionality")
+    parser.add_argument("--database-path", type=Path, help="Path to SQLite database file")
+    parser.add_argument("--database-url", help="Database URL for external database (overrides database-path)")
     
     args = parser.parse_args()
     
@@ -103,6 +108,14 @@ def cli_main():
         overrides['directory_sort_desc'] = True
     if args.directory_sort_asc:
         overrides['directory_sort_desc'] = False
+    if args.enable_database:
+        overrides['enable_database'] = True
+    if args.disable_database:
+        overrides['enable_database'] = False
+    if args.database_path is not None:
+        overrides['database_path'] = args.database_path
+    if args.database_url is not None:
+        overrides['database_url'] = args.database_url
     
     # Create new settings with overrides
     try:
