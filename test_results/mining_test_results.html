@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Mining Test Results</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .header {
+            background: #343a40;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section h2 {
+            margin-top: 0;
+            color: #343a40;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .file-list {
+            display: grid;
+            gap: 15px;
+        }
+        .file-item {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+            display: flex;
+            flex-direction: column;
+        }
+        .file-content {
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+        }
+        .file-thumbnail {
+            flex-shrink: 0;
+            width: 120px;
+            height: 90px;
+            border-radius: 4px;
+            overflow: hidden;
+            background: #fff;
+            border: 1px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .file-thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .file-thumbnail.no-thumb {
+            background: #f1f3f4;
+            color: #666;
+            font-size: 0.8em;
+            text-align: center;
+        }
+        .file-details {
+            flex: 1;
+            min-width: 0;
+        }
+        .file-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .filename {
+            font-weight: bold;
+            color: #495057;
+        }
+        .file-type {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        .file-type.image { background: #d1ecf1; color: #0c5460; }
+        .file-type.video { background: #d4edda; color: #155724; }
+        .score {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .score.positive { background: #d1ecf1; color: #0c5460; }
+        .score.none { background: #f8d7da; color: #721c24; }
+        .metadata-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        .metadata-table th, .metadata-table td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .metadata-table th {
+            background: #e9ecef;
+            font-weight: bold;
+        }
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .keyword {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.8em;
+        }
+        .database-structure {
+            background: #f1f3f4;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            overflow-x: auto;
+        }
+        .highlight { background: #fff3cd; padding: 2px 4px; border-radius: 3px; }
+        /* pill box styles for parsed prompt data */
+        .pill-box {
+            line-height: 25px;
+        }
+        .pill-box-left,
+        .pill-box-right {
+            border: 1px solid #e6e6e6;
+            border-radius: 4px;
+            color: #666;
+            padding: 2px;
+        }
+        .pill-box-left {
+            background-color: #e6e6e6;
+            border-bottom-right-radius:0;
+            border-top-right-radius:0;
+            padding-left: 6px;
+            text-align: center;
+        }
+        .pill-box-right {
+            background-color: #fff;
+            border-bottom-left-radius:0;
+            border-top-left-radius:0;
+            border-left: 0;
+            padding-left: 4px;
+            padding-right: 6px;
+        }
+        /* red */
+        .pill-red .pill-box-left,
+        .pill-red .pill-box-right {
+            border-color: #ff704d;
+        }
+        .pill-red .pill-box-left {
+            background-color: #ff704d;
+            color: #991f00;
+        }
+        /* green */
+        .pill-green .pill-box-left,
+        .pill-green .pill-box-right {
+            border-color: #70db70;
+        }
+        .pill-green .pill-box-left {
+            background-color: #70db70;
+            color: #ebfaeb;
+        }
+        /* parsed prompt data display */
+        .parsed-prompt-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 5px;
+        }
+        .raw-data-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            margin-right: 10px;
+        }
+        .raw-data-button:hover {
+            background: #5a6268;
+        }
+        /* overlay styles */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+        }
+        .overlay-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 80%;
+            max-height: 80%;
+            overflow: auto;
+        }
+        .overlay-close {
+            float: right;
+            font-size: 24px;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        .raw-json-display {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow: auto;
+        }
+        .raw-data-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .raw-data-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80%;
+            overflow: auto;
+        }
+        .raw-data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .raw-data-close {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .raw-data-close:hover {
+            background: #c82333;
+        }
+        .raw-data-json {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow: auto;
+        }
+        .config-display {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }
+        .config-item {
+            background: #e7f3ff;
+            color: #004085;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }
+        .raw-data-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-family: monospace;
+        }
+        .raw-data-button:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔍 Data Mining Test Results</h1>
+        <p>Generated on 2025-09-16 04:25:08</p>
+        <p>Source Directory: <code>media</code></p>
+        <p>File Pattern: <code>*.mp4|*.png|*.jpg</code></p>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">2</div>
+            <div>Total Files</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">2</div>
+            <div>Image Files</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div>Video Files</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">0</div>
+            <div>Files with Scores</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">12</div>
+            <div>Keywords Generated</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">2</div>
+            <div>Files with Keywords</div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📂 File Details</h2>
+        <div class="file-list">
+
+            <div class="file-item">
+                <div class="file-header">
+                    <span class="filename">test_ai_image.png</span>
+                    <div>
+                        <span class="file-type image">IMAGE</span>
+                        <span class="score none">No Score</span>
+                    </div>
+                </div>
+                <div class="file-content">
+                    <div class="file-thumbnail"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABAAEADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAj/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAYI/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AmEBstOgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//Z" alt="Thumbnail for test_ai_image.png"></div>
+                    <div class="file-details">
+                        
+                        <table class='metadata-table'><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody><tr><td>Media File ID</td><td><code>f43a563448509b3dd5fe7fc92601580d0e1fd639787a511de1ca941b6ce827ee</code></td></tr><tr><td>Perceptual Hash</td><td><code>0000000000000000</code></td></tr><tr><td colspan="2" style="background-color: #e7f3ff; font-weight: bold;">🎨 AI Generation Parameters</td></tr><tr><td>Steps</td><td><strong>20</strong></td></tr><tr><td>Sampler</td><td><strong>DPM++ 2M Karras</strong></td></tr><tr><td>CFG Scale</td><td><strong>7.0</strong></td></tr><tr><td>Seed</td><td><strong>123456789</strong></td></tr><tr><td>Size</td><td><strong>512x512</strong></td></tr><tr><td>Model Name</td><td><strong>sd_xl_base_1.0</strong></td></tr><tr><td>Denoising Strength</td><td><strong>0.7</strong></td></tr><tr><td colspan="2" style="background-color: #f0f8e7; font-weight: bold;">🔍 Hires Fix Parameters</td></tr>
+        <tr>
+            <td>Hires Fix</td>
+            <td>
+                <div class="config-display">
+                    <span class="config-item"><strong>Cfg Scale:</strong> 6.0</span> 
+                    <button class="raw-data-button" onclick="showRawData(`{
+  &quot;cfg_scale&quot;: 6.0
+}`, 'Hires Fix')">{...}</button>
+                </div>
+            </td>
+        </tr><tr><td colspan="2" style="background-color: #fff2e7; font-weight: bold;">⚡ Dynamic Thresholding Parameters</td></tr>
+        <tr>
+            <td>Dynamic Thresholding</td>
+            <td>
+                <div class="config-display">
+                    <span class="config-item"><strong>Mimic Mode:</strong> Constant</span> 
+                    <button class="raw-data-button" onclick="showRawData(`{
+  &quot;mimic_mode&quot;: &quot;Constant&quot;
+}`, 'Dynamic Thresholding')">{...}</button>
+                </div>
+            </td>
+        </tr><tr><td colspan="2" style="background-color: #f8f0ff; font-weight: bold;">📋 Version & Hash Info</td></tr><tr><td>Version</td><td><strong>v1.6.0</strong></td></tr><tr><td colspan="2" style="background-color: #f0f0f0; font-weight: bold;">📊 Additional Metadata</td></tr><tr><td>File Size</td><td>0.00 MB</td></tr><tr><td>File Modified At</td><td>2025-09-16 04:25:01</td></tr><tr><td>Width</td><td>512</td></tr><tr><td>Height</td><td>512</td></tr><tr><td>Color Mode</td><td>RGB</td></tr><tr><td>Has Alpha</td><td>False</td></tr><tr><td>Png Text</td><td>beautiful portrait, detailed, masterpiece
+Negative prompt: bad quality, blurry
+Steps: 20, Sampler: DPM++ 2M Karras, CFG scale: 7.0, Seed: 123456789, Size: 512x512, Model: sd_xl_base_1.0, Denoising strength: 0.7, Hires upscale: 2.0, Hires module 1: R-ESRGAN 4x+, Hires CFG scale: 6.0, DynThres_enabled: True, DynThres_mimic_scale: 7.0, DynThres_threshold_percentile: 99.5, DynThres_mimic_mode: Constant, Version: v1.6.0</td></tr><tr><td>Prompt</td><td>beautiful portrait, detailed, masterpiece</td></tr><tr><td>Negative Prompt</td><td>bad quality, blurry</td></tr><tr><td>Parsed Prompt Data</td><td><button class="raw-data-button" onclick="showRawData(`{
+  &quot;positive_keywords&quot;: [
+    {
+      &quot;text&quot;: &quot;beautiful portrait&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;detailed&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;masterpiece&quot;,
+      &quot;weight&quot;: 1.0
+    }
+  ],
+  &quot;negative_keywords&quot;: [
+    {
+      &quot;text&quot;: &quot;bad quality&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;blurry&quot;,
+      &quot;weight&quot;: 1.0
+    }
+  ],
+  &quot;loras&quot;: []
+}`)">{...}</button><div class="parsed-prompt-container">
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">beautiful portrait</span>
+                    </span>
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">detailed</span>
+                    </span>
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">masterpiece</span>
+                    </span>
+                    <span class="pill-box pill-red">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">bad quality</span>
+                    </span>
+                    <span class="pill-box pill-red">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">blurry</span>
+                    </span></div></td></tr><tr><td>Hires Config</td><td>{
+  "cfg_scale": 6.0
+}</td></tr><tr><td>Dynthres Config</td><td>{
+  "mimic_mode": "Constant"
+}</td></tr></tbody></table>
+                        <div class="keywords"><span class="keyword">square</span><span class="keyword">detailed</span><span class="keyword">masterpiece</span><span class="keyword">512x512</span><span class="keyword">portrait</span><span class="keyword">beautiful</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="file-item">
+                <div class="file-header">
+                    <span class="filename">test_anime_image.png</span>
+                    <div>
+                        <span class="file-type image">IMAGE</span>
+                        <span class="score none">No Score</span>
+                    </div>
+                </div>
+                <div class="file-content">
+                    <div class="file-thumbnail"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAUDBAQEAwUEBAQFBQUGBwwIBwcHBw8LCwkMEQ8SEhEPERETFhwXExQaFRERGCEYGh0dHx8fExciJCIeJBweHx7/2wBDAQUFBQcGBw4ICA4eFBEUHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh7/wAARCABAAEADASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAf/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFgEBAQEAAAAAAAAAAAAAAAAAAAcI/8QAFBEBAAAAAAAAAAAAAAAAAAAAAP/aAAwDAQACEQMRAD8AlgCdNlgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//Z" alt="Thumbnail for test_anime_image.png"></div>
+                    <div class="file-details">
+                        
+                        <table class='metadata-table'><thead><tr><th>Property</th><th>Value</th></tr></thead><tbody><tr><td>Media File ID</td><td><code>516b93e17392f8232a168e49352d8e5dd0ddf3147fad67bff8a010299e00925c</code></td></tr><tr><td>Perceptual Hash</td><td><code>0000000000000000</code></td></tr><tr><td colspan="2" style="background-color: #e7f3ff; font-weight: bold;">🎨 AI Generation Parameters</td></tr><tr><td>Steps</td><td><strong>25</strong></td></tr><tr><td>Sampler</td><td><strong>Euler a</strong></td></tr><tr><td>CFG Scale</td><td><strong>8.5</strong></td></tr><tr><td>Seed</td><td><strong>987654321</strong></td></tr><tr><td>Size</td><td><strong>1024x1024</strong></td></tr><tr><td>Model Name</td><td><strong>animixXL_v10</strong></td></tr><tr><td colspan="2" style="background-color: #f0f8e7; font-weight: bold;">🔍 Hires Fix Parameters</td></tr>
+        <tr>
+            <td>Hires Fix</td>
+            <td>
+                <div class="config-display">
+                    <span class="config-item"><strong>Upscaler:</strong> Latent</span> 
+                    <button class="raw-data-button" onclick="showRawData(`{
+  &quot;upscaler&quot;: &quot;Latent&quot;
+}`, 'Hires Fix')">{...}</button>
+                </div>
+            </td>
+        </tr><tr><td colspan="2" style="background-color: #fff2e7; font-weight: bold;">⚡ Dynamic Thresholding Parameters</td></tr>
+        <tr>
+            <td>Dynamic Thresholding</td>
+            <td>
+                <div class="config-display">
+                    <span class="config-item"><strong>Enabled:</strong> False</span> 
+                    <button class="raw-data-button" onclick="showRawData(`{
+  &quot;enabled&quot;: false
+}`, 'Dynamic Thresholding')">{...}</button>
+                </div>
+            </td>
+        </tr><tr><td colspan="2" style="background-color: #f8f0ff; font-weight: bold;">📋 Version & Hash Info</td></tr><tr><td>Version</td><td><strong>v1.7.0</strong></td></tr><tr><td colspan="2" style="background-color: #f0f0f0; font-weight: bold;">📊 Additional Metadata</td></tr><tr><td>File Size</td><td>0.01 MB</td></tr><tr><td>File Modified At</td><td>2025-09-16 04:25:01</td></tr><tr><td>Width</td><td>1024</td></tr><tr><td>Height</td><td>1024</td></tr><tr><td>Color Mode</td><td>RGB</td></tr><tr><td>Has Alpha</td><td>False</td></tr><tr><td>Png Text</td><td>anime girl, cute, kawaii
+Negative prompt: nsfw, adult
+Steps: 25, Sampler: Euler a, CFG scale: 8.5, Seed: 987654321, Size: 1024x1024, Model: animixXL_v10, Hires upscale: 1.5, Hires upscaler: Latent, DynThres_enabled: False, Version: v1.7.0</td></tr><tr><td>Prompt</td><td>anime girl, cute, kawaii</td></tr><tr><td>Negative Prompt</td><td>nsfw, adult</td></tr><tr><td>Parsed Prompt Data</td><td><button class="raw-data-button" onclick="showRawData(`{
+  &quot;positive_keywords&quot;: [
+    {
+      &quot;text&quot;: &quot;anime girl&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;cute&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;kawaii&quot;,
+      &quot;weight&quot;: 1.0
+    }
+  ],
+  &quot;negative_keywords&quot;: [
+    {
+      &quot;text&quot;: &quot;nsfw&quot;,
+      &quot;weight&quot;: 1.0
+    },
+    {
+      &quot;text&quot;: &quot;adult&quot;,
+      &quot;weight&quot;: 1.0
+    }
+  ],
+  &quot;loras&quot;: []
+}`)">{...}</button><div class="parsed-prompt-container">
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">anime girl</span>
+                    </span>
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">cute</span>
+                    </span>
+                    <span class="pill-box pill-green">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">kawaii</span>
+                    </span>
+                    <span class="pill-box pill-red">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">nsfw</span>
+                    </span>
+                    <span class="pill-box pill-red">
+                        <span class="pill-box-left">1.00</span><span class="pill-box-right">adult</span>
+                    </span></div></td></tr><tr><td>Hires Config</td><td>{
+  "upscaler": "Latent"
+}</td></tr><tr><td>Dynthres Config</td><td>{
+  "enabled": false
+}</td></tr></tbody></table>
+                        <div class="keywords"><span class="keyword">square</span><span class="keyword">kawaii</span><span class="keyword">girl</span><span class="keyword">cute</span><span class="keyword">1024x1024</span><span class="keyword">anime</span></div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🗃️ Database Structure Preview</h2>
+        <p>This shows how the extracted data would be organized in the database tables:</p>
+        
+        <div class="database-structure">
+<strong>media_files</strong> table would contain:
+┌────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ id │ filename │ directory │ file_path │ score │ file_type │ media_file_id │ phash │
+├────────────────────────────────────────────────────────────────────────────────────────────────┤
+│  1 │ test_ai_im │ media     │ st_ai_image.png │ NULL  │ image     │ f43a563448509b3d... │ 0000000000000000 │
+│  2 │ test_anime │ media     │ anime_image.png │ NULL  │ image     │ 516b93e17392f823... │ 0000000000000000 │
+└────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+<strong>media_metadata</strong> table would contain technical metadata with enhanced PNG parameters:
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ media_file_id │ width │ height │ model_name │ steps │ sampler │ cfg_scale │ seed │ size │ model_hash │ version │ dynthres_enabled │ ... │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│             1 │ 512   │ 512    │ sd_xl_base_1 │ 20    │ DPM++ 2M K │ 7.0       │ 12345678 │ 512x512  │ NULL       │ v1.6.0   │ NULL             │ ... │
+│             2 │ 1024  │ 1024   │ animixXL_v10 │ 25    │ Euler a    │ 8.5       │ 98765432 │ 1024x102 │ NULL       │ v1.7.0   │ NULL             │ ... │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+<strong>New PNG Parameter Columns Added (24 total):</strong>
+• Basic AI Generation: model_hash, size, schedule_type, denoising_strength
+• Hires Fix: hires_module_1, hires_cfg_scale, hires_upscale, hires_upscaler  
+• Dynamic Thresholding: dynthres_enabled, dynthres_mimic_scale, dynthres_threshold_percentile,
+  dynthres_mimic_mode, dynthres_mimic_scale_min, dynthres_cfg_mode, dynthres_cfg_scale_min,
+  dynthres_sched_val, dynthres_separate_feature_channels, dynthres_scaling_startpoint,
+  dynthres_variability_measure, dynthres_interpolate_phi
+• Version Info: version, lora_hashes
+
+<strong>media_keywords</strong> table would contain 12 keyword entries:
+┌─────────────────────────────────────────────────────────────────┐
+│ media_file_id │ keyword │ keyword_type │ confidence │ source │
+├─────────────────────────────────────────────────────────────────┤
+│             1 │ square     │ auto         │ 1.0        │ metadata │
+│             1 │ detailed   │ auto         │ 1.0        │ metadata │
+│             2 │ square     │ auto         │ 1.0        │ metadata │
+│             2 │ kawaii     │ auto         │ 1.0        │ metadata │
+│ ... (7 more keyword entries) ... │
+└─────────────────────────────────────────────────────────────────┘
+        </div>
+        
+        <p><span class="highlight">💡 Tip:</span> Run with <code>--enable-database</code> to actually store this data in the database for searching and management via the web interface.</p>
+    </div>
+
+    <div class="section">
+        <h2>🚀 Next Steps</h2>
+        <ol>
+            <li><strong>Review the extracted data above</strong> to ensure it meets your expectations</li>
+            <li><strong>Run with database enabled:</strong> <code>python mine_data.py {self.settings.dir} --enable-database</code></li>
+            <li><strong>Start the web interface:</strong> <code>python run.py --dir {self.settings.dir} --enable-database</code></li>
+            <li><strong>Search and manage your media</strong> via the web interface at <code>http://localhost:7862</code></li>
+        </ol>
+    </div>
+
+    <!-- Overlay for raw data display -->
+    <div id="rawDataOverlay" class="overlay">
+        <div class="overlay-content">
+            <button class="overlay-close" onclick="closeRawDataOverlay()">&times;</button>
+            <h3>Raw Parsed Prompt Data</h3>
+            <div id="rawJsonDisplay" class="raw-json-display"></div>
+        </div>
+    </div>
+
+    <script>
+        function showRawData(rawData) {
+            document.getElementById('rawJsonDisplay').textContent = rawData;
+            document.getElementById('rawDataOverlay').style.display = 'block';
+        }
+        
+        function closeRawDataOverlay() {
+            document.getElementById('rawDataOverlay').style.display = 'none';
+        }
+        
+        // Close overlay when clicking outside of it
+        document.getElementById('rawDataOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRawDataOverlay();
+            }
+        });
+        
+        // Close overlay with escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeRawDataOverlay();
+            }
+        });
+        
+        // New function for JSON config modal
+        function showRawData(jsonData, configName) {
+            const modal = document.getElementById('rawDataModal');
+            const title = document.getElementById('rawDataTitle');
+            const content = document.getElementById('rawDataJson');
+            
+            title.textContent = configName + ' (Raw JSON for Database)';
+            content.textContent = jsonData;
+            modal.style.display = 'block';
+        }
+        
+        function closeRawDataModal() {
+            document.getElementById('rawDataModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('rawDataModal');
+            if (event.target === modal) {
+                closeRawDataModal();
+            }
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeRawDataModal();
+            }
+        });
+    </script>
+    
+    <!-- Raw Data Modal -->
+    <div id="rawDataModal" class="raw-data-modal">
+        <div class="raw-data-content">
+            <div class="raw-data-header">
+                <h3 id="rawDataTitle">Raw JSON Data</h3>
+                <button class="raw-data-close" onclick="closeRawDataModal()">Close</button>
+            </div>
+            <div id="rawDataJson" class="raw-data-json"></div>
+        </div>
+    </div>
+
+</body>
+</html>

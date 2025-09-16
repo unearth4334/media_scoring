@@ -339,6 +339,34 @@ class DataMiner:
         else:
             return obj
 
+    def _format_json_config_with_button(self, config_name: str, config_data: dict) -> str:
+        """Format JSON config data with readable display and {...} button for raw JSON."""
+        import html
+        import json
+        
+        # Create readable display of key-value pairs
+        readable_html = ""
+        for key, value in config_data.items():
+            # Convert underscores to spaces and title case for display
+            display_key = key.replace('_', ' ').title()
+            readable_html += f'<span class="config-item"><strong>{display_key}:</strong> {value}</span> '
+        
+        # Create raw JSON for the button
+        raw_json = json.dumps(config_data, indent=2)
+        escaped_raw_json = html.escape(raw_json)
+        
+        # Generate HTML with both readable format and {...} button
+        return f'''
+        <tr>
+            <td>{config_name}</td>
+            <td>
+                <div class="config-display">
+                    {readable_html}
+                    <button class="raw-data-button" onclick="showRawData(`{escaped_raw_json}`, '{config_name}')">{{...}}</button>
+                </div>
+            </td>
+        </tr>'''
+
     def _format_parsed_prompt_data(self, parsed_prompt_data, file_index):
         """Format parsed prompt data with pill boxes and raw data button."""
         import html
@@ -704,6 +732,83 @@ class DataMiner:
             max-height: 400px;
             overflow: auto;
         }}
+        .raw-data-modal {{
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }}
+        .raw-data-content {{
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 800px;
+            max-height: 80%;
+            overflow: auto;
+        }}
+        .raw-data-header {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }}
+        .raw-data-close {{
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }}
+        .raw-data-close:hover {{
+            background: #c82333;
+        }}
+        .raw-data-json {{
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow: auto;
+        }}
+        .config-display {{
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+        }}
+        .config-item {{
+            background: #e7f3ff;
+            color: #004085;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            white-space: nowrap;
+        }}
+        .raw-data-button {{
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-family: monospace;
+        }}
+        .raw-data-button:hover {{
+            background: #5a6268;
+        }}
     </style>
 </head>
 <body>
@@ -825,22 +930,34 @@ class DataMiner:
                             metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
                     
                     # Display Hires Fix parameters if any exist
-                    hires_values = [file_data['metadata'].get(key) for key, _ in hires_params]
-                    if any(v is not None for v in hires_values):
+                    hires_config = file_data['metadata'].get('hires_config')
+                    if hires_config:
                         metadata_html += '<tr><td colspan="2" style="background-color: #f0f8e7; font-weight: bold;">🔍 Hires Fix Parameters</td></tr>'
-                        for key, display_name in hires_params:
-                            value = file_data['metadata'].get(key)
-                            if value is not None:
-                                metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
+                        metadata_html += self._format_json_config_with_button('Hires Fix', hires_config)
+                    else:
+                        # Fallback to individual parameters for backward compatibility
+                        hires_values = [file_data['metadata'].get(key) for key, _ in hires_params]
+                        if any(v is not None for v in hires_values):
+                            metadata_html += '<tr><td colspan="2" style="background-color: #f0f8e7; font-weight: bold;">🔍 Hires Fix Parameters</td></tr>'
+                            for key, display_name in hires_params:
+                                value = file_data['metadata'].get(key)
+                                if value is not None:
+                                    metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
                     
                     # Display Dynamic Thresholding parameters if any exist
-                    dynthres_values = [file_data['metadata'].get(key) for key, _ in dynthres_params]
-                    if any(v is not None for v in dynthres_values):
+                    dynthres_config = file_data['metadata'].get('dynthres_config')
+                    if dynthres_config:
                         metadata_html += '<tr><td colspan="2" style="background-color: #fff2e7; font-weight: bold;">⚡ Dynamic Thresholding Parameters</td></tr>'
-                        for key, display_name in dynthres_params:
-                            value = file_data['metadata'].get(key)
-                            if value is not None:
-                                metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
+                        metadata_html += self._format_json_config_with_button('Dynamic Thresholding', dynthres_config)
+                    else:
+                        # Fallback to individual parameters for backward compatibility
+                        dynthres_values = [file_data['metadata'].get(key) for key, _ in dynthres_params]
+                        if any(v is not None for v in dynthres_values):
+                            metadata_html += '<tr><td colspan="2" style="background-color: #fff2e7; font-weight: bold;">⚡ Dynamic Thresholding Parameters</td></tr>'
+                            for key, display_name in dynthres_params:
+                                value = file_data['metadata'].get(key)
+                                if value is not None:
+                                    metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
                     
                     # Display version and hash info
                     version_values = [file_data['metadata'].get(key) for key, _ in version_params]
@@ -1064,7 +1181,48 @@ class DataMiner:
                 closeRawDataOverlay();
             }
         });
+        
+        // New function for JSON config modal
+        function showRawData(jsonData, configName) {
+            const modal = document.getElementById('rawDataModal');
+            const title = document.getElementById('rawDataTitle');
+            const content = document.getElementById('rawDataJson');
+            
+            title.textContent = configName + ' (Raw JSON for Database)';
+            content.textContent = jsonData;
+            modal.style.display = 'block';
+        }
+        
+        function closeRawDataModal() {
+            document.getElementById('rawDataModal').style.display = 'none';
+        }
+        
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('rawDataModal');
+            if (event.target === modal) {
+                closeRawDataModal();
+            }
+        }
+        
+        // Close modal with Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeRawDataModal();
+            }
+        });
     </script>
+    
+    <!-- Raw Data Modal -->
+    <div id="rawDataModal" class="raw-data-modal">
+        <div class="raw-data-content">
+            <div class="raw-data-header">
+                <h3 id="rawDataTitle">Raw JSON Data</h3>
+                <button class="raw-data-close" onclick="closeRawDataModal()">Close</button>
+            </div>
+            <div id="rawDataJson" class="raw-data-json"></div>
+        </div>
+    </div>
 
 </body>
 </html>"""

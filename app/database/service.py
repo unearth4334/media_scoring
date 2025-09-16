@@ -128,7 +128,7 @@ class DatabaseService:
         
         # Update fields from metadata dict
         for key, value in metadata.items():
-            if hasattr(metadata_obj, key) and key not in ['png_text', 'workflow_data', 'parsed_prompt_data']:
+            if hasattr(metadata_obj, key) and key not in ['png_text', 'workflow_data', 'parsed_prompt_data', 'hires_config', 'dynthres_config']:
                 setattr(metadata_obj, key, value)
         
         # Store PNG text as JSON if present
@@ -138,6 +138,14 @@ class DatabaseService:
         # Store workflow data as JSON if present  
         if 'workflow_data' in metadata and metadata['workflow_data']:
             metadata_obj.workflow_data = json.dumps(metadata['workflow_data'])
+        
+        # Store hires config as JSON if present
+        if 'hires_config' in metadata and metadata['hires_config']:
+            metadata_obj.hires_config = metadata['hires_config']
+        
+        # Store dynthres config as JSON if present
+        if 'dynthres_config' in metadata and metadata['dynthres_config']:
+            metadata_obj.dynthres_config = metadata['dynthres_config']
         
         # Store parsed prompt data if present
         if 'parsed_prompt_data' in metadata:
