@@ -772,35 +772,126 @@ class DataMiner:
                         f"<tr><td>Perceptual Hash</td><td><code>{file_data['phash']}</code></td></tr>"
                     )
 
-                # 2) Existing metadata (keep pillbox rendering from pillbox-tags branch)
+                # 2) Enhanced metadata display with organized sections
                 if file_data['metadata']:
+                    # First show basic AI generation parameters prominently
+                    ai_params = [
+                        ('steps', 'Steps'),
+                        ('sampler', 'Sampler'),
+                        ('schedule_type', 'Schedule Type'),
+                        ('cfg_scale', 'CFG Scale'),
+                        ('seed', 'Seed'),
+                        ('size', 'Size'),
+                        ('model_name', 'Model Name'),
+                        ('model_hash', 'Model Hash'),
+                        ('denoising_strength', 'Denoising Strength'),
+                    ]
+                    
+                    # Hires Fix parameters
+                    hires_params = [
+                        ('hires_module_1', 'Hires Module 1'),
+                        ('hires_cfg_scale', 'Hires CFG Scale'),
+                        ('hires_upscale', 'Hires Upscale'),
+                        ('hires_upscaler', 'Hires Upscaler'),
+                    ]
+                    
+                    # Dynamic Thresholding parameters
+                    dynthres_params = [
+                        ('dynthres_enabled', 'DynThres Enabled'),
+                        ('dynthres_mimic_scale', 'DynThres Mimic Scale'),
+                        ('dynthres_threshold_percentile', 'DynThres Threshold Percentile'),
+                        ('dynthres_mimic_mode', 'DynThres Mimic Mode'),
+                        ('dynthres_mimic_scale_min', 'DynThres Mimic Scale Min'),
+                        ('dynthres_cfg_mode', 'DynThres CFG Mode'),
+                        ('dynthres_cfg_scale_min', 'DynThres CFG Scale Min'),
+                        ('dynthres_sched_val', 'DynThres Sched Val'),
+                        ('dynthres_separate_feature_channels', 'DynThres Separate Feature Channels'),
+                        ('dynthres_scaling_startpoint', 'DynThres Scaling Startpoint'),
+                        ('dynthres_variability_measure', 'DynThres Variability Measure'),
+                        ('dynthres_interpolate_phi', 'DynThres Interpolate Phi'),
+                    ]
+                    
+                    # Version and hash info
+                    version_params = [
+                        ('version', 'Version'),
+                        ('lora_hashes', 'LoRA Hashes'),
+                    ]
+                    
+                    # Display AI generation parameters first
+                    metadata_html += '<tr><td colspan="2" style="background-color: #e7f3ff; font-weight: bold;">🎨 AI Generation Parameters</td></tr>'
+                    for key, display_name in ai_params:
+                        value = file_data['metadata'].get(key)
+                        if value is not None:
+                            metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
+                    
+                    # Display Hires Fix parameters if any exist
+                    hires_values = [file_data['metadata'].get(key) for key, _ in hires_params]
+                    if any(v is not None for v in hires_values):
+                        metadata_html += '<tr><td colspan="2" style="background-color: #f0f8e7; font-weight: bold;">🔍 Hires Fix Parameters</td></tr>'
+                        for key, display_name in hires_params:
+                            value = file_data['metadata'].get(key)
+                            if value is not None:
+                                metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
+                    
+                    # Display Dynamic Thresholding parameters if any exist
+                    dynthres_values = [file_data['metadata'].get(key) for key, _ in dynthres_params]
+                    if any(v is not None for v in dynthres_values):
+                        metadata_html += '<tr><td colspan="2" style="background-color: #fff2e7; font-weight: bold;">⚡ Dynamic Thresholding Parameters</td></tr>'
+                        for key, display_name in dynthres_params:
+                            value = file_data['metadata'].get(key)
+                            if value is not None:
+                                metadata_html += f"<tr><td>{display_name}</td><td><strong>{value}</strong></td></tr>"
+                    
+                    # Display version and hash info
+                    version_values = [file_data['metadata'].get(key) for key, _ in version_params]
+                    if any(v is not None for v in version_values):
+                        metadata_html += '<tr><td colspan="2" style="background-color: #f8f0ff; font-weight: bold;">📋 Version & Hash Info</td></tr>'
+                        for key, display_name in version_params:
+                            value = file_data['metadata'].get(key)
+                            if value is not None:
+                                # Truncate long hashes for display
+                                display_value = str(value)
+                                if len(display_value) > 100:
+                                    display_value = display_value[:100] + "..."
+                                metadata_html += f"<tr><td>{display_name}</td><td><strong>{display_value}</strong></td></tr>"
+                    
+                    # Display other metadata (existing functionality preserved)
+                    other_metadata = []
+                    all_param_keys = set([key for key, _ in ai_params + hires_params + dynthres_params + version_params])
+                    
                     for key, value in file_data['metadata'].items():
-                        if key in ['extracted_keywords', 'error'] or value is None:
+                        if (key in ['extracted_keywords', 'error'] or 
+                            value is None or 
+                            key in all_param_keys):
                             continue
+                        other_metadata.append((key, value))
+                    
+                    if other_metadata:
+                        metadata_html += '<tr><td colspan="2" style="background-color: #f0f0f0; font-weight: bold;">📊 Additional Metadata</td></tr>'
+                        for key, value in other_metadata:
+                            # Friendly formatting (existing logic preserved)
+                            display_value = value
+                            if key == 'file_size':
+                                display_value = f"{size_mb:.2f} MB"
+                            elif key == 'file_modified_at':
+                                try:
+                                    import datetime as _dt
+                                    display_value = _dt.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
+                                except Exception:
+                                    display_value = value
+                            elif key == 'parsed_prompt_data' and isinstance(value, dict):
+                                # Special: show pill boxes using helper, not JSON
+                                file_index = self.collected_data.index(file_data)
+                                display_value = self._format_parsed_prompt_data(value, file_index)
+                            elif isinstance(value, dict):
+                                # Make nested objects JSON-serializable and pretty
+                                import json as _json
+                                json_safe_value = self._make_json_serializable(value)
+                                display_value = _json.dumps(json_safe_value, indent=2)
 
-                        # Friendly formatting
-                        display_value = value
-                        if key == 'file_size':
-                            display_value = f"{size_mb:.2f} MB"
-                        elif key == 'file_modified_at':
-                            try:
-                                import datetime as _dt
-                                display_value = _dt.datetime.fromtimestamp(value).strftime('%Y-%m-%d %H:%M:%S')
-                            except Exception:
-                                display_value = value
-                        elif key == 'parsed_prompt_data' and isinstance(value, dict):
-                            # Special: show pill boxes using helper, not JSON
-                            file_index = self.collected_data.index(file_data)
-                            display_value = self._format_parsed_prompt_data(value, file_index)
-                        elif isinstance(value, dict):
-                            # Make nested objects JSON-serializable and pretty
-                            import json as _json
-                            json_safe_value = self._make_json_serializable(value)
-                            display_value = _json.dumps(json_safe_value, indent=2)
-
-                        metadata_html += (
-                            f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(display_value)}</td></tr>"
-                        )
+                            metadata_html += (
+                                f"<tr><td>{key.replace('_', ' ').title()}</td><td>{str(display_value)}</td></tr>"
+                            )
 
                 metadata_html += "</tbody></table>"
 
@@ -869,27 +960,43 @@ class DataMiner:
         html += """
 └────────────────────────────────────────────────────────────────────────────────────────────────┘
 
-<strong>media_metadata</strong> table would contain technical metadata:
-┌─────────────────────────────────────────────────────────────────┐
-│ media_file_id │ width │ height │ duration │ model_name │ ... │
-├─────────────────────────────────────────────────────────────────┤"""
+<strong>media_metadata</strong> table would contain technical metadata with enhanced PNG parameters:
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ media_file_id │ width │ height │ model_name │ steps │ sampler │ cfg_scale │ seed │ size │ model_hash │ version │ dynthres_enabled │ ... │
+├────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┤"""
         
         for i, file_data in enumerate(self.collected_data[:5], 1):
             metadata = file_data.get('metadata', {})
             width = metadata.get('width', 'NULL')
             height = metadata.get('height', 'NULL')
-            duration = metadata.get('duration', 'NULL')
-            model = str(metadata.get('model_name', 'NULL'))[:10] if metadata.get('model_name') else 'NULL'
+            model = str(metadata.get('model_name', 'NULL'))[:12] if metadata.get('model_name') else 'NULL'
+            steps = metadata.get('steps', 'NULL')
+            sampler = str(metadata.get('sampler', 'NULL'))[:10] if metadata.get('sampler') else 'NULL'
+            cfg_scale = metadata.get('cfg_scale', 'NULL')
+            seed = str(metadata.get('seed', 'NULL'))[:8] if metadata.get('seed') else 'NULL'
+            size = str(metadata.get('size', 'NULL'))[:8] if metadata.get('size') else 'NULL'
+            model_hash = str(metadata.get('model_hash', 'NULL'))[:8] if metadata.get('model_hash') else 'NULL'
+            version = str(metadata.get('version', 'NULL'))[:8] if metadata.get('version') else 'NULL'
+            dynthres = metadata.get('dynthres_enabled', 'NULL')
             
             html += f"""
-│ {i:13d} │ {str(width):<5} │ {str(height):<6} │ {str(duration):<8} │ {model:<10} │ ... │"""
+│ {i:13d} │ {str(width):<5} │ {str(height):<6} │ {model:<12} │ {str(steps):<5} │ {sampler:<10} │ {str(cfg_scale):<9} │ {seed:<8} │ {size:<8} │ {model_hash:<10} │ {version:<8} │ {str(dynthres):<16} │ ... │"""
         
         if len(self.collected_data) > 5:
             html += f"""
-│ ... ({len(self.collected_data) - 5} more rows) ... │"""
+│ ... ({len(self.collected_data) - 5} more rows with {24} new PNG parameter columns) ... │"""
         
         html += f"""
-└─────────────────────────────────────────────────────────────────┘
+└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+<strong>New PNG Parameter Columns Added (24 total):</strong>
+• Basic AI Generation: model_hash, size, schedule_type, denoising_strength
+• Hires Fix: hires_module_1, hires_cfg_scale, hires_upscale, hires_upscaler  
+• Dynamic Thresholding: dynthres_enabled, dynthres_mimic_scale, dynthres_threshold_percentile,
+  dynthres_mimic_mode, dynthres_mimic_scale_min, dynthres_cfg_mode, dynthres_cfg_scale_min,
+  dynthres_sched_val, dynthres_separate_feature_channels, dynthres_scaling_startpoint,
+  dynthres_variability_measure, dynthres_interpolate_phi
+• Version Info: version, lora_hashes
 
 <strong>media_keywords</strong> table would contain {total_keywords} keyword entries:
 ┌─────────────────────────────────────────────────────────────────┐
