@@ -20,7 +20,7 @@ ENV_GENERATE_THUMBNAILS="${GENERATE_THUMBNAILS:-}"
 echo "Reading configuration from config.yml..."
 if [ -f "config.yml" ]; then
     # Use the read_config.py script to get values in shell format
-    eval "$(python read_config.py --file config.yml --format sh)"
+    eval "$(python tools/read_config.py --file config/config.yml --format sh)"
     echo "Config loaded: dir=$DIR, port=$PORT, host=$HOST, pattern=$PATTERN"
 else
     echo "Warning: config/config.yml not found, using defaults"
