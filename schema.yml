@@ -1,0 +1,267 @@
+database: media_scoring
+version: 1.0
+description: "Database schema for media scoring application"
+
+tables:
+  media_files:
+    description: "Primary entity representing media files in the system"
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+        autoincrement: true
+      - name: filename
+        type: text
+        nullable: false
+        length: 512
+      - name: directory
+        type: text
+        nullable: false
+        length: 1024
+      - name: file_path
+        type: text
+        nullable: false
+        unique: true
+        length: 1536
+      - name: file_size
+        type: integer
+      - name: file_type
+        type: text
+        length: 50
+        note: "video, image"
+      - name: extension
+        type: text
+        length: 10
+      - name: score
+        type: integer
+        default: 0
+        note: "-1 to 5 (-1=rejected, 0=unrated, 1-5=stars)"
+      - name: media_file_id
+        type: text
+        length: 64
+        note: "SHA256 hash of exact pixel content"
+      - name: phash
+        type: text
+        length: 64
+        note: "Perceptual hash for similarity detection"
+      - name: created_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+      - name: updated_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+        on_update: CURRENT_TIMESTAMP
+      - name: last_accessed
+        type: datetime
+
+    indexes:
+      - name: idx_media_file_path
+        columns: [file_path]
+        unique: true
+      - name: idx_media_directory
+        columns: [directory]
+      - name: idx_media_score
+        columns: [score]
+      - name: idx_media_type
+        columns: [file_type]
+      - name: idx_media_updated
+        columns: [updated_at]
+      - name: idx_media_file_id
+        columns: [media_file_id]
+      - name: idx_media_phash
+        columns: [phash]
+
+  media_metadata:
+    description: "Metadata for media files including AI-generated image parameters"
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+        autoincrement: true
+      - name: media_file_id
+        type: integer
+        nullable: false
+        foreign_key: media_files.id
+      - name: width
+        type: integer
+      - name: height
+        type: integer
+      - name: duration
+        type: real
+        note: "Video duration in seconds"
+      - name: frame_rate
+        type: real
+        note: "Video frame rate"
+      - name: color_mode
+        type: text
+        length: 50
+        note: "RGB, RGBA, etc."
+      - name: has_alpha
+        type: boolean
+        default: false
+      - name: png_text
+        type: text
+        note: "JSON string of PNG text chunks"
+      - name: workflow_data
+        type: text
+        note: "JSON string of ComfyUI/AI workflow"
+      - name: prompt
+        type: text
+      - name: negative_prompt
+        type: text
+      - name: model_name
+        type: text
+        length: 256
+      - name: model_hash
+        type: text
+        length: 64
+        note: "Model hash"
+      - name: sampler
+        type: text
+        length: 100
+      - name: steps
+        type: integer
+      - name: cfg_scale
+        type: real
+      - name: seed
+        type: text
+        length: 50
+      - name: size
+        type: text
+        length: 20
+        note: "e.g., 1152x896"
+      - name: schedule_type
+        type: text
+        length: 50
+        note: "e.g., Karras"
+      - name: denoising_strength
+        type: real
+        note: "Keep separate as commonly used standalone"
+      - name: hires_config
+        type: json
+        note: "JSON object containing: module_1, cfg_scale, upscale, upscaler"
+      - name: dynthres_config
+        type: json
+        note: "JSON object containing all dynamic thresholding parameters"
+      - name: version
+        type: text
+        length: 100
+      - name: lora_hashes
+        type: text
+        note: "JSON string of LoRA hashes"
+      - name: positive_prompt_keywords
+        type: json
+        note: "Array of {text: str, weight: float} objects"
+      - name: negative_prompt_keywords
+        type: json
+        note: "Array of {text: str, weight: float} objects"
+      - name: loras
+        type: json
+        note: "Array of {name: str, weight: float} objects"
+      - name: file_modified_at
+        type: datetime
+        note: "When the actual file was last modified"
+      - name: metadata_extracted_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+      - name: created_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+
+    indexes:
+      - name: idx_metadata_media_file
+        columns: [media_file_id]
+      - name: idx_metadata_dimensions
+        columns: [width, height]
+      - name: idx_metadata_model
+        columns: [model_name]
+      - name: idx_metadata_model_hash
+        columns: [model_hash]
+      - name: idx_metadata_sampler
+        columns: [sampler]
+      - name: idx_metadata_steps
+        columns: [steps]
+      - name: idx_metadata_cfg_scale
+        columns: [cfg_scale]
+
+  media_keywords:
+    description: "Searchable keywords and tags associated with media files"
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+        autoincrement: true
+      - name: media_file_id
+        type: integer
+        nullable: false
+        foreign_key: media_files.id
+      - name: keyword
+        type: text
+        nullable: false
+        length: 256
+      - name: keyword_type
+        type: text
+        length: 50
+        default: user
+        note: "user, prompt, auto, workflow"
+      - name: confidence
+        type: real
+        default: 1.0
+        note: "Confidence score for auto-generated keywords"
+      - name: source
+        type: text
+        length: 100
+        note: "Where this keyword came from"
+      - name: created_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+
+    indexes:
+      - name: idx_keyword_media_file
+        columns: [media_file_id]
+      - name: idx_keyword_search
+        columns: [keyword]
+      - name: idx_keyword_type
+        columns: [keyword_type]
+    
+    constraints:
+      - name: uq_media_keyword
+        type: unique
+        columns: [media_file_id, keyword, keyword_type]
+
+  media_thumbnails:
+    description: "Thumbnail data storage for media files"
+    columns:
+      - name: id
+        type: integer
+        primary_key: true
+        autoincrement: true
+      - name: media_file_id
+        type: integer
+        nullable: false
+        foreign_key: media_files.id
+      - name: thumbnail_path
+        type: text
+        length: 1024
+        note: "Path to thumbnail file"
+      - name: thumbnail_data
+        type: blob
+        note: "Binary thumbnail data (alternative to file path)"
+      - name: width
+        type: integer
+      - name: height
+        type: integer
+      - name: file_size
+        type: integer
+        note: "Size of thumbnail in bytes"
+      - name: created_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+      - name: updated_at
+        type: datetime
+        default: CURRENT_TIMESTAMP
+        on_update: CURRENT_TIMESTAMP
+
+    indexes:
+      - name: idx_thumbnail_media_file
+        columns: [media_file_id]
