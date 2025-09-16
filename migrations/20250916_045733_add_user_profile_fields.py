@@ -20,7 +20,7 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("is_active", sa.Boolean(), server_default=sa.text("True")))
     op.add_column("users", sa.Column("updated_at", sa.DateTime(), server_default="CURRENT_TIMESTAMP"))
     op.add_column("users", sa.Column("full_name", sa.String(200)))
-    op.create_index("idx_users_active", "users", ["column_name"])
+    op.create_index("idx_users_active", "users", ["is_active"])
 
 
 def downgrade() -> None:
