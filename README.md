@@ -20,7 +20,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 
 ### Data Mining
 - **Archive Processing**: Extract metadata from existing media archives
-- **Standalone CLI Tool**: `mine_data.py` for batch processing without web server
+- **Standalone CLI Tool**: `tools/mine_data.py` for batch processing without web server
 - **Database Integration**: Store extracted metadata, keywords, and scores
 - **Flexible Patterns**: Process specific file types with glob patterns
 - **Progress Reporting**: Detailed statistics and progress tracking
@@ -79,34 +79,70 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 ## 📂 Project Structure
 
 ```
-.
-├── run.py                     # Main entry point
-├── mine_data.py               # ✨ NEW: Data mining CLI tool
-├── mine_archive.sh            # ✨ NEW: Convenient wrapper script
-├── extract_comfyui_workflow.py # Extracts workflow JSON from MP4 metadata
-├── config.yml                  # Default config values (dir, host, port, pattern)
+media_scoring/
+├── README.md                   # This file - main documentation
+├── run.py                      # Main application entry point
 ├── requirements.txt            # Python dependencies
-├── LICENSE                     # Apache 2.0 license
-├── README.md                   # This documentation
-├── MINING_TOOL.md              # ✨ NEW: Mining tool documentation
-├── DOCKER.md                   # Docker deployment guide
+├── Dockerfile                  # Docker container definition
+├── docker-compose.yml          # Docker Compose configuration
+├── license                     # Project license
 │
-├── Dockerfile                  # Docker container configuration
-├── docker-compose.yml          # Basic Docker Compose setup
-├── docker-compose.override.yml # Advanced Docker Compose with env vars
-├── .env.example               # Example environment configuration
-├── validate-docker-setup.sh   # Docker setup validation script
+├── app/                        # 🏗️ Main application code
+│   ├── main.py                 # FastAPI application
+│   ├── settings.py             # Configuration management
+│   ├── state.py                # Application state
+│   ├── routers/                # API route handlers
+│   ├── services/               # Business logic services
+│   ├── database/               # Database models and utilities
+│   ├── templates/              # HTML templates
+│   ├── static/                 # CSS, JS, and static assets
+│   └── utils/                  # Utility functions
 │
-├── run_video_scorer.sh         # Linux/macOS entrypoint
-├── run_video_scorer.ps1        # Windows PowerShell entrypoint
-├── run_video_scorer.bat        # Windows CMD entrypoint
+├── config/                     # ⚙️ Configuration files
+│   ├── config.yml              # Main application config
+│   ├── schema.yml              # Database schema definition
+│   ├── .env.example            # Environment variables template
+│   └── .env                    # Environment variables (create from example)
 │
-├── .scores/                    # Auto-created: stores sidecar score files + logs
+├── scripts/                    # 🔧 Launch scripts and utilities
+│   ├── run_video_scorer.sh     # Linux/macOS launcher
+│   ├── run_video_scorer.ps1    # Windows PowerShell launcher
+│   ├── run_video_scorer.bat    # Windows CMD launcher
+│   ├── docker-entrypoint.sh    # Docker container entry point
+│   └── validate-docker-setup.sh # Docker setup validation
+│
+├── tools/                      # 🛠️ CLI tools and utilities
+│   ├── mine_data.py            # Data mining and extraction tool
+│   ├── schema_cli.py           # Database schema management CLI
+│   ├── extract_comfyui_workflow.py # ComfyUI workflow extraction
+│   └── read_config.py          # Configuration file reader utility
+│
+├── tests/                      # 🧪 Test files
+│   ├── test_database.py        # Database functionality tests
+│   ├── test_full_integration.py # Full integration tests
+│   ├── test_mining_tool.py     # Data mining tool tests
+│   ├── test_prompt_parser.py   # Prompt parsing tests
+│   └── test_schema.py          # Database schema tests
+│
+├── docs/                       # 📚 Documentation
+│   ├── DATABASE.md             # Database design documentation
+│   ├── DEVELOPMENT.md          # Development setup guide
+│   ├── MINING_TOOL.md          # Data mining tool documentation
+│   └── SCHEMA.md               # Database schema specification
+│
+├── examples/                   # 📋 Example files and demos
+│   ├── schema_example.py       # Database schema usage examples
+│   └── demo_mining_results.html # Sample mining results display
+│
+├── media/                      # 📁 Sample media files (for development)
+├── migrations/                 # 🗄️ Database migration files
+│
+├── .scores/                    # 📊 Auto-created: score files and logs
 │   ├── file1.mp4.json
-│   ├── media.db               # ✨ NEW: SQLite database (when enabled)
+│   ├── media.db               # SQLite database (when enabled)
 │   └── .log/video_scorer.log
 │
-└── workflows/                  # Auto-created: workflow JSON outputs
+└── workflows/                  # 🔄 Auto-created: workflow JSON outputs
     └── file1_workflow.json
 ```
 
@@ -114,7 +150,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 
 ## ⚙️ Configuration
 
-Configuration is stored in `config.yml` (or `config.wml` in some setups):
+Configuration is stored in `config/config.yml`:
 
 ```yaml
 dir: /path/to/media        # Default directory to scan
@@ -125,6 +161,12 @@ generate_thumbnails: false # Generate thumbnail previews for media files
 thumbnail_height: 64       # Height in pixels for thumbnail previews
 ```
 
+Environment variables can be configured in `config/.env`:
+```bash
+# Copy the example file and customize
+cp config/.env.example config/.env
+```
+
 You can override these values at runtime via:
 - **CLI arguments** (`--dir`, `--port`, `--host`, `--pattern`)
 - **Entrypoint script parameters** (see below)
@@ -133,26 +175,26 @@ You can override these values at runtime via:
 
 ## 🚀 Entrypoint Scripts
 
-To simplify launching, three entrypoints are provided.  
-All scripts read defaults from **config.yml**, but allow overrides.
+To simplify launching, three entrypoints are provided in the `scripts/` directory.  
+All scripts read defaults from **config/config.yml**, but allow overrides.
 
 ### Linux/macOS (sh)
 ```bash
-chmod +x run_video_scorer.sh
-./run_video_scorer.sh                 # use config.yml defaults
-./run_video_scorer.sh /media/dir 9000 "*.mp4|*.jpg"  # override dir, port & pattern
+chmod +x scripts/run_video_scorer.sh
+./scripts/run_video_scorer.sh                 # use config/config.yml defaults
+./scripts/run_video_scorer.sh /media/dir 9000 "*.mp4|*.jpg"  # override dir, port & pattern
 ```
 
 ### Windows PowerShell
 ```powershell
-.\run_video_scorer.ps1                 # use config.yml defaults
-.\run_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Pattern "*.mp4|*.jpg" -Host 0.0.0.0
+.\scripts\run_video_scorer.ps1                 # use config/config.yml defaults
+.\scripts\run_video_scorer.ps1 -Dir "D:\media" -Port 9000 -Pattern "*.mp4|*.jpg" -Host 0.0.0.0
 ```
 
 ### Windows CMD
 ```bat
-run_video_scorer.bat                   REM use config.yml defaults
-run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
+scripts\run_video_scorer.bat                   REM use config/config.yml defaults
+scripts\run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default.css
 ```
 
 ---
@@ -164,15 +206,15 @@ Extract metadata from existing media archives and populate the database without 
 ### Quick Start
 ```bash
 # Test archive scanning (dry run)
-python mine_data.py /path/to/archive
+python tools/mine_data.py /path/to/archive
 
 # Mine data and store in database
-python mine_data.py /path/to/archive --enable-database
+python tools/mine_data.py /path/to/archive --enable-database
 
 # Use convenient wrapper script
-./mine_archive.sh quick /path/to/archive
-./mine_archive.sh images /path/to/photos
-./mine_archive.sh videos /path/to/videos
+./scripts/mine_archive.sh quick /path/to/archive
+./scripts/mine_archive.sh images /path/to/photos
+./scripts/mine_archive.sh videos /path/to/videos
 ```
 
 ### Key Features
@@ -186,7 +228,7 @@ python mine_data.py /path/to/archive --enable-database
 
 ### Example Output
 ```
-$ ./mine_archive.sh images /media/photos
+$ ./scripts/mine_archive.sh images /media/photos
 [INFO] Mining images from: /media/photos
 [INFO] Database initialized with URL: sqlite:///media/photos/.scores/media.db
 [INFO] Found 156 files matching pattern
