@@ -19,7 +19,7 @@ from typing import List, Dict, Optional
 import time
 
 # Set up path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.settings import Settings
 from app.database.engine import init_database, get_session

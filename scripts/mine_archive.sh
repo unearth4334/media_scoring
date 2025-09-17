@@ -4,7 +4,7 @@
 # Makes it easier to use the mining tool with common options
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MINE_SCRIPT="$SCRIPT_DIR/mine_data.py"
+MINE_SCRIPT="$SCRIPT_DIR/../tools/mine_data.py"
 
 # Colors for output
 RED='\033[0;31m'
@@ -62,9 +62,9 @@ show_help() {
 
 # Check if Python virtual environment is available
 check_environment() {
-    if [[ -d "$SCRIPT_DIR/.venv" ]]; then
+    if [[ -d "$SCRIPT_DIR/../.venv" ]]; then
         print_status "Activating Python virtual environment..."
-        source "$SCRIPT_DIR/.venv/bin/activate"
+        source "$SCRIPT_DIR/../.venv/bin/activate"
     else
         print_warning "No virtual environment found. Using system Python."
     fi
@@ -116,14 +116,35 @@ case "$COMMAND" in
     test)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for test command"
-            echo "Usage: $0 test <directory>"
+            echo "Usage: $0 test <directory> [--test-output-dir <dir>]"
             exit 1
         fi
         DIRECTORY="$1"
         shift
+        # Collect all remaining args
+        EXTRA_ARGS=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --test-output-dir)
+                    EXTRA_ARGS+=("$1")
+                    shift
+                    if [[ $# -gt 0 ]]; then
+                        EXTRA_ARGS+=("$1")
+                        shift
+                    else
+                        print_error "--test-output-dir requires a value"
+                        exit 1
+                    fi
+                    ;;
+                *)
+                    EXTRA_ARGS+=("$1")
+                    shift
+                    ;;
+            esac
+        done
         print_status "Testing directory scan for: $DIRECTORY"
         check_environment
-        run_mining_tool "$DIRECTORY" --dry-run --verbose "$@"
+        run_mining_tool "$DIRECTORY" --dry-run --verbose "${EXTRA_ARGS[@]}"
         ;;
     mine)
         if [[ $# -eq 0 ]]; then
