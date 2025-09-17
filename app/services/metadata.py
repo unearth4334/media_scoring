@@ -277,13 +277,25 @@ def _parse_comma_separated_parameters(param_line: str) -> Dict[str, Any]:
                 key = key.strip()
                 value = value.strip()
                 
-                # Map to our schema
-                params.update(_map_parameter_to_schema(key, value))
+                # Map to our schema and merge nested configs properly
+                mapped_params = _map_parameter_to_schema(key, value)
+                _deep_merge_dicts(params, mapped_params)
                 
     except Exception as e:
         logger.debug(f"Failed to parse comma-separated parameters: {e}")
     
     return params
+
+
+def _deep_merge_dicts(target: Dict[str, Any], source: Dict[str, Any]) -> None:
+    """Deep merge source dictionary into target dictionary, preserving nested structures."""
+    for key, value in source.items():
+        if key in target and isinstance(target[key], dict) and isinstance(value, dict):
+            # Both are dicts, merge recursively
+            _deep_merge_dicts(target[key], value)
+        else:
+            # Overwrite with new value
+            target[key] = value
 
 
 def _map_parameter_to_schema(key: str, value: str) -> Dict[str, Any]:
