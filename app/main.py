@@ -80,7 +80,7 @@ def cli_main():
     parser.add_argument("--enable-database", action="store_true", help="Enable database storage for metadata and search")
     parser.add_argument("--disable-database", action="store_true", help="Disable database functionality")
     parser.add_argument("--database-path", type=Path, help="Path to SQLite database file")
-    parser.add_argument("--database-url", help="Database URL for external database (overrides database-path)")
+    parser.add_argument("--database-url", help="Database URL for external database (overrides database-path, respects DATABASE_URL/MEDIA_DB_URL env vars)")
     
     args = parser.parse_args()
     

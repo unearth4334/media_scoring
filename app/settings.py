@@ -88,9 +88,10 @@ class Settings(BaseModel):
             except Exception as e:
                 print(f"Warning: Could not load {config_file}: {e}")
         
-        # Override with environment variables
-        if os.getenv('DATABASE_URL'):
-            config_data['database_url'] = os.getenv('DATABASE_URL')
+        # Override with environment variables (check both DATABASE_URL and MEDIA_DB_URL)
+        env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
+        if env_db_url:
+            config_data['database_url'] = env_db_url
         
         return cls(**config_data)
     

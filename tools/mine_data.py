@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -109,6 +110,11 @@ class DataMiner:
         
         if self.settings.database_path:
             return f"sqlite:///{self.settings.database_path}"
+        
+        # Check environment variables for database URL
+        env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
+        if env_db_url:
+            return env_db_url
         
         # Default: create database in .scores directory
         scores_dir = get_scores_dir_for(directory)
@@ -1294,6 +1300,10 @@ Examples:
   python mine_data.py /media/archive1 --database-path /custom/path/media.db
   python mine_data.py /media/archive1 --verbose --dry-run
   python mine_data.py /media/archive1 --dry-run --test-output-dir /tmp/results
+
+Environment Variables:
+  DATABASE_URL or MEDIA_DB_URL - Database connection URL (e.g., postgresql://user:pass@host/db)
+                                 Overrides default SQLite behavior when set
         """
     )
     
@@ -1325,7 +1335,7 @@ Examples:
     
     parser.add_argument(
         "--database-url",
-        help="Database URL for external database (overrides --database-path)"
+        help="Database URL for external database (overrides --database-path, respects DATABASE_URL/MEDIA_DB_URL env vars)"
     )
     
     parser.add_argument(

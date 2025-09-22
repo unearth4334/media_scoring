@@ -88,12 +88,21 @@ case $yn in
 from pathlib import Path
 from app.database.engine import init_database
 from app.database.service import DatabaseService
+from app.settings import Settings
 import os, sys
 
 media_dir = Path("$MEDIA_DIR")
 
+# Use the same database configuration logic as the application
+settings = Settings.load_from_yaml()
+settings.dir = media_dir
+
+# Get the database URL using the same logic as the mining tool
+db_url = settings.get_database_url()
+print(f"Connecting to database: {db_url}")
+
 # Connect to the database created by the mining tool
-init_database(f"sqlite:///{media_dir}/.scores/media.db")
+init_database(db_url)
 
 with DatabaseService() as db:
     stats = db.get_stats()
