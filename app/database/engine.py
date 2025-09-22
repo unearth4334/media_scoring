@@ -1,10 +1,9 @@
 """Database engine and session management."""
 
 import logging
-from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool, QueuePool
+from sqlalchemy.pool import QueuePool
 
 from .models import Base
 from .migrations import migrate_database
@@ -17,52 +16,24 @@ _session_factory = None
 
 
 def init_database(database_url: str) -> None:
-    """Initialize the database with the given URL."""
+    """Initialize the PostgreSQL database with the given URL."""
     global _engine, _session_factory
     
     logger.info(f"Initializing database with URL: {database_url}")
     
-    # Configure engine based on database type
-    if database_url.startswith("sqlite://"):
-        # SQLite configuration
-        db_path = database_url.replace("sqlite:///", "")
-        db_path_obj = Path(db_path)
-        
-        # If the path is not absolute, resolve it relative to the current directory
-        if not db_path_obj.is_absolute():
-            db_path_obj = db_path_obj.resolve()
-            logger.debug(f"Resolved relative database path to: {db_path_obj}")
-        
-        # Create parent directory with proper error handling
-        try:
-            db_path_obj.parent.mkdir(parents=True, exist_ok=True)
-            logger.debug(f"Created database directory: {db_path_obj.parent}")
-        except PermissionError as e:
-            logger.error(f"Permission denied creating database directory {db_path_obj.parent}: {e}")
-            raise PermissionError(f"Cannot create database directory {db_path_obj.parent}: {e}")
-        except OSError as e:
-            logger.error(f"OS error creating database directory {db_path_obj.parent}: {e}")
-            raise OSError(f"Cannot create database directory {db_path_obj.parent}: {e}")
-        
-        _engine = create_engine(
-            database_url,
-            poolclass=StaticPool,
-            connect_args={
-                "check_same_thread": False,
-                "timeout": 20
-            },
-            echo=False
-        )
-    else:
-        # PostgreSQL or other database configuration
-        _engine = create_engine(
-            database_url,
-            poolclass=QueuePool,
-            pool_size=10,
-            max_overflow=20,
-            pool_pre_ping=True,
-            echo=False
-        )
+    # Validate PostgreSQL URL
+    if not database_url.startswith("postgresql://"):
+        raise ValueError("Only PostgreSQL databases are supported. URL must start with 'postgresql://'")
+    
+    # Configure PostgreSQL engine
+    _engine = create_engine(
+        database_url,
+        poolclass=QueuePool,
+        pool_size=10,
+        max_overflow=20,
+        pool_pre_ping=True,
+        echo=False
+    )
     
     # Create session factory
     _session_factory = sessionmaker(bind=_engine)
