@@ -1,31 +1,28 @@
 # Database Configuration Guide
 
-This document explains how to configure database connections for the Media Scoring application.
+This document explains how to configure PostgreSQL database connections for the Media Scoring application.
 
 ## Overview
 
-The application supports both SQLite (for local development) and PostgreSQL (for production) databases. The system uses a priority-based configuration system to determine which database to use.
+The application **requires PostgreSQL** as its database backend. SQLite support has been removed to ensure consistent performance and reliability across all deployments.
 
 ## Configuration Priority
 
 Database configuration follows this priority order (highest to lowest):
 
-1. **CLI Arguments** (`--database-url`, `--database-path`)
+1. **CLI Arguments** (`--database-url`)
 2. **Environment Variables** (`DATABASE_URL` or `MEDIA_DB_URL`)
 3. **Configuration File** (`config/config.yml`)
-4. **Default SQLite Fallback** (`<media_dir>/.scores/media.db`)
+4. **ERROR** - No fallback (PostgreSQL URL is required)
 
 ## Environment Variables
 
 ### DATABASE_URL
-Primary database environment variable. Supports full database URLs:
+Primary database environment variable. Must be a PostgreSQL URL:
 
 ```bash
-# PostgreSQL
+# PostgreSQL (required)
 export DATABASE_URL="postgresql://username:password@host:port/database"
-
-# SQLite (explicit)
-export DATABASE_URL="sqlite:///path/to/database.db"
 ```
 
 ### MEDIA_DB_URL
@@ -45,9 +42,6 @@ DATABASE_URL="postgresql://user:pass@host/db" python run.py --dir /media
 
 # Override with CLI argument
 python run.py --dir /media --database-url "postgresql://user:pass@host/db"
-
-# Use SQLite explicitly
-python run.py --dir /media --database-path "/custom/path/media.db"
 ```
 
 ### Data Mining Tool
@@ -57,9 +51,6 @@ DATABASE_URL="postgresql://user:pass@host/db" python tools/mine_data.py /media -
 
 # Override with CLI argument
 python tools/mine_data.py /media --enable-database --database-url "postgresql://user:pass@host/db"
-
-# Use SQLite explicitly
-python tools/mine_data.py /media --enable-database --database-path "/custom/path/media.db"
 ```
 
 ## Docker Configuration
@@ -75,11 +66,11 @@ The Docker setup automatically passes this to the application.
 
 ## Configuration Examples
 
-### Local Development (SQLite)
-No configuration needed - SQLite is the default:
+### Local Development (PostgreSQL Required)
+Set up a local PostgreSQL instance and configure:
 ```bash
+export DATABASE_URL="postgresql://postgres:password@localhost:5432/media_scoring"
 python run.py --dir /media
-# Uses: sqlite:///media/.scores/media.db
 ```
 
 ### Production (PostgreSQL via Environment)
@@ -93,28 +84,27 @@ python run.py --dir /media
 # Test with PostgreSQL
 DATABASE_URL="postgresql://test:test@localhost/test_db" python tools/mine_data.py /test_media --dry-run
 
-# Test with SQLite in custom location
-python tools/mine_data.py /test_media --database-path /tmp/test.db --dry-run
+# Test with another PostgreSQL instance
+python tools/mine_data.py /test_media --database-url "postgresql://user:pass@testhost/testdb" --dry-run
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **SQLite being used instead of PostgreSQL**
-   - Check that `DATABASE_URL` or `MEDIA_DB_URL` is set correctly
-   - Verify the environment variable is available to the process
-   - Use `--verbose` flag to see which database URL is being used
+1. **Application fails to start**
+   - Ensure `DATABASE_URL` or `MEDIA_DB_URL` is set with a valid PostgreSQL URL
+   - Check that the URL starts with `postgresql://`
+   - Use `--database-url` CLI argument if environment variables aren't working
 
 2. **Connection refused errors**
    - Verify PostgreSQL server is running and accessible
    - Check hostname, port, username, and password in the URL
    - Ensure firewall allows connections to the database port
 
-3. **Permission denied for SQLite**
-   - Ensure the media directory is writable
-   - Check that `.scores` subdirectory can be created
-   - Consider using `--database-path` with a writable location
+3. **Invalid database URL error**
+   - Only PostgreSQL URLs are supported (must start with `postgresql://`)
+   - SQLite and other database types are not supported
 
 ### Debugging Database Configuration
 
@@ -138,11 +128,28 @@ python tools/mine_data.py /media --enable-database --verbose
 - Use connection pooling and SSL for production PostgreSQL connections
 - Regularly rotate database passwords and credentials
 
-## Migration from SQLite to PostgreSQL
+## Setting Up PostgreSQL
 
-1. Set up PostgreSQL server and create database
-2. Set `DATABASE_URL` environment variable
-3. Restart the application - it will automatically use PostgreSQL
-4. Existing SQLite data must be migrated manually if needed
+### Local Development
+```bash
+# Install PostgreSQL (Ubuntu/Debian)
+sudo apt update && sudo apt install postgresql postgresql-contrib
 
-The application will create necessary tables automatically when connecting to a new PostgreSQL database.
+# Create database and user
+sudo -u postgres psql
+CREATE DATABASE media_scoring;
+CREATE USER media_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE media_scoring TO media_user;
+\q
+
+# Set environment variable
+export DATABASE_URL="postgresql://media_user:your_password@localhost:5432/media_scoring"
+```
+
+### Docker (Recommended)
+Use the provided docker-compose.yml which includes PostgreSQL:
+```bash
+docker-compose up -d
+```
+
+The application will create necessary tables automatically when connecting to PostgreSQL.
