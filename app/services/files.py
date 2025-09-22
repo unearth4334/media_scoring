@@ -12,8 +12,35 @@ from ..state import get_state
 def get_scores_dir_for(directory: Path) -> Path:
     """Get and create scores directory for a given directory."""
     sdir = directory / ".scores"
-    sdir.mkdir(exist_ok=True, parents=True)
-    (sdir / ".log").mkdir(exist_ok=True, parents=True)
+    
+    try:
+        sdir.mkdir(exist_ok=True, parents=True)
+        (sdir / ".log").mkdir(exist_ok=True, parents=True)
+    except PermissionError as e:
+        # If we can't create the scores directory in the target location,
+        # fall back to using a temporary directory or user's home directory
+        import tempfile
+        import os
+        
+        # Try user's home directory first
+        try:
+            fallback_dir = Path.home() / ".media_scoring" / "scores" / directory.name
+            fallback_dir.mkdir(parents=True, exist_ok=True)
+            (fallback_dir / ".log").mkdir(exist_ok=True, parents=True)
+            logging.getLogger(__name__).warning(
+                f"Could not create scores directory in {directory}, using fallback: {fallback_dir}"
+            )
+            return fallback_dir
+        except (PermissionError, OSError):
+            # Last resort: use temporary directory
+            temp_dir = Path(tempfile.mkdtemp(prefix="media_scoring_"))
+            logging.getLogger(__name__).warning(
+                f"Could not create scores directory, using temporary directory: {temp_dir}"
+            )
+            return temp_dir
+    except OSError as e:
+        raise OSError(f"Cannot create scores directory {sdir}: {e}")
+    
     return sdir
 
 
@@ -66,8 +93,13 @@ def match_union_pattern(directory: Path, pattern: str) -> List[Path]:
     seen: Dict[Path, Path] = {}
     for pat in pats:
         for p in directory.glob(pat):
-            if p.is_file():
-                seen[p.resolve()] = p
+            try:
+                if p.is_file():
+                    seen[p.resolve()] = p
+            except (PermissionError, OSError) as e:
+                # Log permission issues but continue with other files
+                logging.getLogger(__name__).warning(f"Permission denied accessing {p}: {e}")
+                continue
     return sorted(seen.values())
 
 

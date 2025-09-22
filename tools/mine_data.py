@@ -61,10 +61,20 @@ class DataMiner:
         if self.settings.enable_database:
             try:
                 database_url = self._get_database_url(directory)
+                self.logger.debug(f"Attempting database initialization with URL: {database_url}")
                 init_database(database_url)
                 self.logger.info(f"Database initialized with URL: {database_url}")
+            except PermissionError as e:
+                self.logger.error(f"Permission denied accessing database directory: {e}")
+                self.logger.error("Please check that you have write permissions to the target directory")
+                self.logger.error("Consider using --database-path to specify an alternative location")
+                raise
+            except ValueError as e:
+                self.logger.error(f"Invalid database configuration: {e}")
+                raise
             except Exception as e:
                 self.logger.error(f"Failed to initialize database: {e}")
+                self.logger.error(f"Database URL was: {database_url if 'database_url' in locals() else 'not set'}")
                 if not self.settings.database_url:  # Only fail if using local SQLite
                     raise
         

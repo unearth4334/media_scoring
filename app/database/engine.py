@@ -26,7 +26,23 @@ def init_database(database_url: str) -> None:
     if database_url.startswith("sqlite://"):
         # SQLite configuration
         db_path = database_url.replace("sqlite:///", "")
-        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+        db_path_obj = Path(db_path)
+        
+        # Check if the database path is absolute and valid
+        if not db_path_obj.is_absolute():
+            logger.error(f"Database path must be absolute: {db_path}")
+            raise ValueError(f"Database path must be absolute: {db_path}")
+        
+        # Create parent directory with proper error handling
+        try:
+            db_path_obj.parent.mkdir(parents=True, exist_ok=True)
+            logger.debug(f"Created database directory: {db_path_obj.parent}")
+        except PermissionError as e:
+            logger.error(f"Permission denied creating database directory {db_path_obj.parent}: {e}")
+            raise PermissionError(f"Cannot create database directory {db_path_obj.parent}: {e}")
+        except OSError as e:
+            logger.error(f"OS error creating database directory {db_path_obj.parent}: {e}")
+            raise OSError(f"Cannot create database directory {db_path_obj.parent}: {e}")
         
         _engine = create_engine(
             database_url,
