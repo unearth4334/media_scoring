@@ -15,12 +15,12 @@ fi
 
 echo "📁 Step 1: Test the archive with dry run"
 echo "---------------------------------------"
-./mine_archive.sh test ./media
+./scripts/mine_archive.sh test ./media
 echo ""
 
 echo "💾 Step 2: Mine the archive data into database"
 echo "---------------------------------------------"
-./mine_archive.sh mine ./media
+./scripts/mine_archive.sh mine ./media
 echo ""
 
 echo "📊 Step 3: Check what was stored in the database"

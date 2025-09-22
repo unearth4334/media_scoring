@@ -28,10 +28,10 @@ def init_database(database_url: str) -> None:
         db_path = database_url.replace("sqlite:///", "")
         db_path_obj = Path(db_path)
         
-        # Check if the database path is absolute and valid
+        # If the path is not absolute, resolve it relative to the current directory
         if not db_path_obj.is_absolute():
-            logger.error(f"Database path must be absolute: {db_path}")
-            raise ValueError(f"Database path must be absolute: {db_path}")
+            db_path_obj = db_path_obj.resolve()
+            logger.debug(f"Resolved relative database path to: {db_path_obj}")
         
         # Create parent directory with proper error handling
         try:
