@@ -9,10 +9,10 @@
 - Configured with proper environment variables
 
 ### 2. Database Configuration
-- Updated application to support both SQLite and PostgreSQL
-- Added `database_url` setting to support external databases
-- Enhanced database engine to handle different database types
-- Added PostgreSQL connection pooling configuration
+- Updated application to require PostgreSQL database
+- Removed SQLite support for consistency and reliability
+- Enhanced database engine for PostgreSQL-only operations
+- Optimized PostgreSQL connection pooling configuration
 
 ### 3. Environment Variables & Configuration
 - Added database settings to .env file:
@@ -34,22 +34,22 @@
 - Documented backup/restore procedures
 
 ### 5. Testing & Validation
-- Created test_database.py script to verify connectivity
+- Created test_database.py script to verify PostgreSQL connectivity
 - Enhanced validate-docker-setup.sh with database information
 - Added demo.sh to showcase functionality
-- Verified backward compatibility with SQLite
+- Ensured all tests work with PostgreSQL-only setup
 
 ### 6. Requirements & Dependencies
 - Added psycopg2-binary for PostgreSQL support
-- Updated CLI arguments to support --database-url
-- Enhanced Settings class to read DATABASE_URL from environment
+- Updated CLI arguments to require --database-url
+- Enhanced Settings class to require PostgreSQL DATABASE_URL
 
 ## 🔧 How It Works
 
 ### Development Mode (Local)
-- Uses SQLite database stored in `.scores/media.db`
-- No external dependencies required
-- Data stored alongside media files
+- Requires local PostgreSQL instance or development database
+- Set DATABASE_URL environment variable
+- No local file dependencies
 
 ### Production Mode (Docker)
 - Uses PostgreSQL service in Docker network
@@ -99,7 +99,7 @@ The PostgreSQL database is now accessible from:
 3. **Debugging**: Direct SQL access for troubleshooting
 4. **Backup**: Standard PostgreSQL backup/restore procedures
 5. **Scalability**: Better performance for large media collections
-6. **Development**: Maintains SQLite compatibility for local development
+6. **Development**: PostgreSQL required for all environments (consistency)
 
 ## 🚀 Quick Start
 
