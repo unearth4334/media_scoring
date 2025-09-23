@@ -6,7 +6,6 @@ Integration test for prompt parsing in the full pipeline.
 import sys
 import tempfile
 import json
-import os
 from pathlib import Path
 
 # Add the parent directory to Python path for imports
@@ -100,19 +99,14 @@ def test_parse_ai_parameters():
 
 
 def test_database_storage():
-    """Test storing the parsed data in the database (requires PostgreSQL DATABASE_URL).""" 
+    """Test storing the parsed data in the database.""" 
     print("\nTesting database storage...")
     print("=" * 60)
     
-    # Check if DATABASE_URL is set
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url or not db_url.startswith('postgresql://'):
-        print("⏭️  Database storage test skipped (no PostgreSQL DATABASE_URL set)")
-        return
-    
-    # Initialize database
+    # Initialize a temporary database
     with tempfile.TemporaryDirectory() as temp_dir:
-        database_url = db_url
+        db_path = Path(temp_dir) / "test.db"
+        database_url = f"sqlite:///{db_path}"
         
         print(f"Initializing test database: {database_url}")
         init_database(database_url)

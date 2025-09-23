@@ -6,7 +6,7 @@ This tool allows you to extract metadata, scores, and keywords from existing arc
 
 - **Standalone CLI tool** - Runs independently of the web server
 - **Flexible file patterns** - Support for multiple file types using glob patterns
-- **Database integration** - Stores extracted data in PostgreSQL database
+- **Database integration** - Stores extracted data in SQLite or PostgreSQL database
 - **Metadata extraction** - Extracts technical metadata from images and videos
 - **Keyword extraction** - Automatically generates searchable keywords from metadata
 - **Score import** - Imports existing scores from sidecar files
@@ -100,7 +100,7 @@ python mine_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-dat
 
 ### Database Mode
 ```
-2025-09-11 04:54:06 | INFO  | Database initialized with URL: postgresql://media_user:password@localhost:5432/media_scoring
+2025-09-11 04:54:06 | INFO  | Database initialized with URL: sqlite:///archive/.scores/media.db
 2025-09-11 04:54:06 | INFO  | Found 156 files matching pattern
 2025-09-11 04:54:06 | INFO  | Processing files with database storage enabled
 2025-09-11 04:54:07 | INFO  | Processing file 50/156: image_050.png
@@ -137,8 +137,8 @@ Once you've mined data from your archives:
 
 ## Database Storage
 
-- **PostgreSQL** (required): Use `DATABASE_URL` environment variable or `--database-url` argument
-- **Configuration**: Set `DATABASE_URL=postgresql://user:pass@host:port/database`
+- **SQLite** (default): Database stored in `<directory>/.scores/media.db`
+- **PostgreSQL**: Use `--database-url` for external databases
 - **Backward compatible**: Works alongside existing sidecar score files
 
 ## Performance

@@ -130,9 +130,9 @@ def test_mine_data_respects_env_vars():
     return True
 
 
-def test_postgresql_required_without_env():
-    """Test that PostgreSQL URL is required when no DATABASE_URL is set."""
-    print("🧪 Testing PostgreSQL requirement behavior...")
+def test_sqlite_fallback_without_env():
+    """Test that SQLite is used when no DATABASE_URL is set."""
+    print("🧪 Testing SQLite fallback behavior...")
     
     # Ensure no database environment variables are set
     os.environ.pop('DATABASE_URL', None)
@@ -147,16 +147,13 @@ def test_postgresql_required_without_env():
         settings.dir = temp_path
         settings.enable_database = True
         
-        try:
-            result_url = settings.get_database_url()
-            print(f"❌ Should require PostgreSQL URL but got: {result_url}")
+        result_url = settings.get_database_url()
+        
+        if result_url.startswith('sqlite:///'):
+            print("✅ Correctly falls back to SQLite when no env vars set")
+        else:
+            print(f"❌ SQLite fallback failed: got {result_url}")
             return False
-        except ValueError as e:
-            if "PostgreSQL DATABASE_URL is required" in str(e):
-                print("✅ Correctly requires PostgreSQL URL when no env vars set")
-            else:
-                print(f"❌ Wrong error message: {e}")
-                return False
     
     return True
 
@@ -171,7 +168,7 @@ def main():
         test_settings_respects_media_db_url,
         test_database_url_precedence,
         test_mine_data_respects_env_vars,
-        test_postgresql_required_without_env,
+        test_sqlite_fallback_without_env,
     ]
     
     passed = 0

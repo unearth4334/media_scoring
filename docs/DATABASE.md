@@ -6,10 +6,10 @@ This document describes the database implementation for the Media Scoring applic
 
 ## Technology Stack
 
-- **Database**: PostgreSQL (production-grade, concurrent access, ACID compliant)
+- **Database**: SQLite (file-based, no server required)
 - **ORM**: SQLAlchemy 2.0+ with declarative models
-- **Migration**: Alembic (for schema changes)
-- **Access**: Via DATABASE_URL environment variable
+- **Migration**: Alembic (for future schema changes)
+- **Location**: Stored in `.scores/media.db` within each media directory
 
 ## Database Schema
 
@@ -296,9 +296,9 @@ For large directories:
 
 ### Memory Usage
 
-- PostgreSQL provides efficient memory management and connection pooling
-- Connection pooling handles concurrent access across multiple clients
-- Large metadata (like workflow JSON) is stored as TEXT/JSONB
+- SQLite is file-based with minimal memory footprint
+- Connection pooling handles concurrent access
+- Large metadata (like workflow JSON) is stored as TEXT
 
 ## Migration and Upgrades
 
@@ -350,9 +350,8 @@ _engine = create_engine(database_url, echo=True)
 
 **Check Database Contents:**
 ```bash
-# Using psql to connect to PostgreSQL
-psql $DATABASE_URL
-\dt  -- List tables
+sqlite3 .scores/media.db
+.tables
 SELECT COUNT(*) FROM media_files;
 SELECT * FROM media_keywords LIMIT 10;
 ```
@@ -459,18 +458,18 @@ docker exec -i media-scorer-db psql -U media_user media_scoring < backup.sql
 
 ### Development vs Production
 
-**Development (Local PostgreSQL):**
-- Uses local PostgreSQL instance
-- Set DATABASE_URL environment variable
-- Shared database across development team possible
+**Development (Local SQLite):**
+- Uses file-based SQLite database in `.scores/media.db`
+- No external dependencies
+- Data stored alongside media files
 
 **Production (Docker with PostgreSQL):**
 - Uses PostgreSQL service in Docker
 - Accessible via external tools
 - Data persisted in Docker volume
-- Optimized performance for concurrent access
+- Better performance for concurrent access
 
-All deployments now require PostgreSQL - there is no SQLite fallback.
+To switch between modes, set or unset the `DATABASE_URL` environment variable.
 
 ## Future Extensions
 

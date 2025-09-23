@@ -1,27 +1,26 @@
 # Database Configuration Guide
 
-This document explains how to configure PostgreSQL database connections for the Media Scoring application.
+This document explains how to configure database connections for the Media Scoring application.
 
 ## Overview
 
-The application **requires PostgreSQL** as its database backend. SQLite support has been removed to ensure consistent performance and reliability across all deployments.
-
+The application supports PostgreSQL database.
 
 ## Configuration Priority
 
 Database configuration follows this priority order (highest to lowest):
 
-1. **CLI Arguments** (`--database-url`)
+1. **CLI Arguments** (`--database-url`, `--database-path`)
 2. **Environment Variables** (`DATABASE_URL` or `MEDIA_DB_URL`)
 3. **Configuration File** (`config/config.yml`)
 
 ## Environment Variables
 
 ### DATABASE_URL
-Primary database environment variable. Must be a PostgreSQL URL:
+Primary database environment variable. Supports full database URLs:
 
 ```bash
-# PostgreSQL (required)
+# PostgreSQL
 export DATABASE_URL="postgresql://username:password@host:port/database"
 ```
 
@@ -66,13 +65,6 @@ The Docker setup automatically passes this to the application.
 
 ## Configuration Examples
 
-### Local Development (PostgreSQL Required)
-Set up a local PostgreSQL instance and configure:
-```bash
-export DATABASE_URL="postgresql://postgres:password@localhost:5432/media_scoring"
-python run.py --dir /media
-```
-
 ### Production (PostgreSQL via Environment)
 ```bash
 export DATABASE_URL="postgresql://app_user:secure_password@db.internal:5432/media_production"
@@ -89,23 +81,10 @@ DATABASE_URL="postgresql://test:test@localhost/test_db" python tools/mine_data.p
 
 ### Common Issues
 
-
-1. **Application fails to start**
-   - Ensure `DATABASE_URL` or `MEDIA_DB_URL` is set with a valid PostgreSQL URL
-   - Check that the URL starts with `postgresql://`
-   - Use `--database-url` CLI argument if environment variables aren't working
-
-2. **Connection refused errors**
-
+1. **Connection refused errors**
    - Verify PostgreSQL server is running and accessible
    - Check hostname, port, username, and password in the URL
    - Ensure firewall allows connections to the database port
-
-
-3. **Invalid database URL error**
-   - Only PostgreSQL URLs are supported (must start with `postgresql://`)
-   - SQLite and other database types are not supported
-
 
 ### Debugging Database Configuration
 
@@ -130,28 +109,4 @@ python tools/mine_data.py /media --enable-database --verbose
 - Regularly rotate database passwords and credentials
 
 
-## Setting Up PostgreSQL
-
-### Local Development
-```bash
-# Install PostgreSQL (Ubuntu/Debian)
-sudo apt update && sudo apt install postgresql postgresql-contrib
-
-# Create database and user
-sudo -u postgres psql
-CREATE DATABASE media_scoring;
-CREATE USER media_user WITH PASSWORD 'your_password';
-GRANT ALL PRIVILEGES ON DATABASE media_scoring TO media_user;
-\q
-
-# Set environment variable
-export DATABASE_URL="postgresql://media_user:your_password@localhost:5432/media_scoring"
-```
-
-### Docker (Recommended)
-Use the provided docker-compose.yml which includes PostgreSQL:
-```bash
-docker-compose up -d
-```
-
-The application will create necessary tables automatically when connecting to PostgreSQL.
+The application will create necessary tables automatically when connecting to a new PostgreSQL database.

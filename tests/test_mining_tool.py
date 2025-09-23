@@ -3,13 +3,12 @@
 Tests for the data mining tool.
 
 This script tests the mine_data.py tool to ensure it works correctly.
-Note: Database tests require PostgreSQL DATABASE_URL to be set.
 """
 
 import subprocess
 import tempfile
 import json
-import os
+import sqlite3
 from pathlib import Path
 import sys
 
@@ -97,14 +96,8 @@ def test_error_handling():
 
 
 def test_database_integration():
-    """Test database integration (requires PostgreSQL DATABASE_URL)."""
+    """Test database integration."""
     print("Testing database integration...")
-    
-    # Check if DATABASE_URL is set
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url or not db_url.startswith('postgresql://'):
-        print("⏭️  Database integration test skipped (no PostgreSQL DATABASE_URL set)")
-        return
     
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -115,16 +108,15 @@ def test_database_integration():
         shutil.copy("./media/image1.jpg", test_image)
         
         # Run mining with database
-        env = os.environ.copy()
-        env['DATABASE_URL'] = db_url
-        result = subprocess.run(
-            f"python mine_data.py {temp_dir} --enable-database",
-            shell=True, capture_output=True, text=True, env=env
-        )
+        result = run_command(f"python mine_data.py {temp_dir} --enable-database")
         assert result.returncode == 0
         
+        # Check database was created
+        db_path = temp_path / ".scores" / "media.db"
+        assert db_path.exists()
+        
         # Check database contents
-        init_database(db_url)
+        init_database(f"sqlite:///{db_path}")
         with DatabaseService() as db:
             stats = db.get_stats()
             assert stats['total_files'] >= 1
@@ -154,14 +146,8 @@ def test_wrapper_script():
 
 
 def test_sidecar_import():
-    """Test importing scores from sidecar files (requires PostgreSQL DATABASE_URL)."""
+    """Test importing scores from sidecar files."""
     print("Testing sidecar score import...")
-    
-    # Check if DATABASE_URL is set
-    db_url = os.getenv('DATABASE_URL')
-    if not db_url or not db_url.startswith('postgresql://'):
-        print("⏭️  Sidecar import test skipped (no PostgreSQL DATABASE_URL set)")
-        return
     
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -183,17 +169,13 @@ def test_sidecar_import():
         sidecar.write_text(json.dumps(sidecar_data))
         
         # Run mining
-        env = os.environ.copy()
-        env['DATABASE_URL'] = db_url
-        result = subprocess.run(
-            f"python mine_data.py {temp_dir} --enable-database",
-            shell=True, capture_output=True, text=True, env=env
-        )
+        result = run_command(f"python mine_data.py {temp_dir} --enable-database")
         assert result.returncode == 0
         assert "Scores imported: 1" in result.stdout
         
         # Verify score was imported
-        init_database(db_url)
+        db_path = temp_path / ".scores" / "media.db"
+        init_database(f"sqlite:///{db_path}")
         with DatabaseService() as db:
             score = db.get_media_file_score(test_file)
             assert score == 4
