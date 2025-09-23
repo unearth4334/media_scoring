@@ -294,7 +294,7 @@ input[type="text"] {
 .toolbar-container { transition: all 0.3s ease; overflow: visible; }
 .toolbar-container.collapsed { max-height: 0; opacity: 0; margin: 0; padding: 0; }
 .toolbar-container.collapsed header { margin: 0; padding: 0; }
-.toolbar-container.collapsed .toolbar-rows { display: none; }
+.toolbar-container.collapsed .pill-bar-container { display: none; }
 
 body.toolbar-collapsed main {
   padding-top: 8px;
@@ -390,3 +390,302 @@ aside#sidebar {
   margin-left: 6px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   PILL BAR SYSTEM
+   --------------------------------------------------------- */
+.pill-bar-container {
+  padding: 12px 50px;
+}
+
+.pill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+/* Mobile: horizontal scroll instead of wrap */
+@media (max-width: 768px) {
+  .pill-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+  }
+  
+  .pill-bar::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .pill-bar::-webkit-scrollbar-track {
+    background: #333;
+    border-radius: 2px;
+  }
+  
+  .pill-bar::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 2px;
+  }
+  
+  .pill-bar-container {
+    padding: 12px 16px;
+  }
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--btn-bg);
+  border: 1px solid var(--btn-border);
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  color: var(--btn-text);
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+.pill:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+.pill.active {
+  background: #4CAF50;
+  border-color: #45a049;
+  color: white;
+}
+
+.pill-label {
+  font-weight: 500;
+}
+
+.pill-value {
+  background: rgba(255,255,255,0.15);
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.pill.active .pill-value {
+  background: rgba(255,255,255,0.25);
+}
+
+/* Special styling for search pill */
+.pill-search .pill-value:empty {
+  display: none;
+}
+
+.pill-search .pill-value:not(:empty) {
+  background: #ffa726;
+  color: #333;
+}
+
+/* Pill editors */
+.pill-editors {
+  position: relative;
+}
+
+.pill-editor {
+  display: none;
+  background: var(--dropdown-bg);
+  border: 1px solid var(--dropdown-border);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  margin-bottom: 12px;
+  z-index: 100;
+}
+
+.pill-editor.active {
+  display: block;
+}
+
+/* Desktop: absolute positioning for popover */
+@media (min-width: 769px) {
+  .pill-editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 280px;
+    margin-bottom: 0;
+  }
+}
+
+/* Mobile: full width inline panel */
+@media (max-width: 768px) {
+  .pill-editor {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
+
+.editor-content {
+  padding: 16px;
+}
+
+.editor-content input,
+.editor-content select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  color: #ffffff;
+  border: 1px solid #00ffff;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.editor-content input:focus,
+.editor-content select:focus {
+  outline: none;
+  border-color: #4CAF50;
+}
+
+.filetype-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filetype-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--btn-text);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.filetype-checkboxes input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.editor-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.editor-btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+.editor-btn.editor-apply {
+  background: #4CAF50;
+  border-color: #45a049;
+  color: white;
+}
+
+.editor-btn.editor-apply:hover {
+  background: #45a049;
+}
+
+.editor-btn.editor-clear {
+  background: #f44336;
+  border-color: #d32f2f;
+  color: white;
+}
+
+.editor-btn.editor-clear:hover {
+  background: #d32f2f;
+}
+
+/* Date editor specific styles */
+.date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-input-group label {
+  min-width: 50px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.date-input-group input[type="date"] {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preset-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+/* Controls row styling */
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.filter-info {
+  font-family: monospace;
+  opacity: 0.8;
+  color: var(--btn-text);
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}

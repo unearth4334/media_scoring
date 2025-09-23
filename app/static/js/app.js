@@ -598,6 +598,9 @@ async function loadVideos(){
   thumbnailHeight = data.thumbnail_height || 64;
   toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
   
+  // Store database flag globally for pill bar to use
+  window.databaseEnabled = data.database_enabled || false;
+  
   document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
   const dirInput = document.getElementById('dir');
   if (dirInput && !dirInput.value) dirInput.value = currentDir;
@@ -862,11 +865,11 @@ document.addEventListener('click', (e) => {
   const siblingContainer = document.querySelector('.dir-input-container');
   const siblingDropdown = document.getElementById('dir_siblings_dropdown');
   
-  if (!dropdownContainer.contains(e.target)) {
+  if (dropdownContainer && !dropdownContainer.contains(e.target)) {
     hideDirectoryDropdown();
   }
   
-  if (!siblingContainer.contains(e.target)) {
+  if (siblingContainer && !siblingContainer.contains(e.target)) {
     hideSiblingDirectoryDropdown();
   }
 });

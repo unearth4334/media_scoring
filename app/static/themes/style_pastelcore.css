@@ -291,7 +291,7 @@ input[type="text"] {
 .toolbar-container { transition: all 0.3s ease; overflow: visible; }
 .toolbar-container.collapsed { max-height: 0; opacity: 0; margin: 0; padding: 0; }
 .toolbar-container.collapsed header { margin: 0; padding: 0; }
-.toolbar-container.collapsed .toolbar-rows { display: none; }
+.toolbar-container.collapsed .pill-bar-container { display: none; }
 
 /* =========================================================
    SIDEBAR LIST
@@ -389,3 +389,256 @@ aside#sidebar {
   margin-left: 6px;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* =========================================================
+   PILL BAR SYSTEM (Pastelcore Theme)
+   --------------------------------------------------------- */
+.pill-bar-container {
+  padding: 12px 50px;
+}
+
+.pill-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+
+/* Mobile: horizontal scroll instead of wrap */
+@media (max-width: 768px) {
+  .pill-bar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    padding-bottom: 4px;
+  }
+  
+  .pill-bar::-webkit-scrollbar {
+    height: 4px;
+  }
+  
+  .pill-bar::-webkit-scrollbar-track {
+    background: #e8d8e8;
+    border-radius: 2px;
+  }
+  
+  .pill-bar::-webkit-scrollbar-thumb {
+    background: #a8c2e8;
+    border-radius: 2px;
+  }
+  
+  .pill-bar-container {
+    padding: 12px 16px;
+  }
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #f5f0f5;                /* pastel background */
+  border: 1px solid #d4b8c9;         /* pastel border */
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+  color: #7d5a78;                     /* pastel text */
+  white-space: nowrap;
+  min-width: max-content;
+}
+
+.pill:hover {
+  background: #e8d8e8;               /* pastel hover */
+  border-color: #c2a8bd;
+}
+
+.pill.active {
+  background: #a8c2e8;               /* pastel active blue */
+  border-color: #8bb3de;
+  color: #4a5a7a;
+}
+
+.pill-label {
+  font-weight: 500;
+}
+
+.pill-value {
+  background: rgba(125,90,120,0.15);  /* pastel purple tint */
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.pill.active .pill-value {
+  background: rgba(74,90,122,0.25);   /* pastel blue tint */
+}
+
+/* Special styling for search pill */
+.pill-search .pill-value:empty {
+  display: none;
+}
+
+.pill-search .pill-value:not(:empty) {
+  background: #f4c2a1;               /* pastel orange */
+  color: #8b4513;
+}
+
+/* Pill editors */
+.pill-editors {
+  position: relative;
+}
+
+.pill-editor {
+  display: none;
+  background: #f8f4f8;               /* light pastel background */
+  border: 1px solid #d4b8c9;
+  border-radius: 12px;               /* more rounded for pastel theme */
+  box-shadow: 0 4px 12px rgba(125,90,120,0.15);
+  margin-bottom: 12px;
+  z-index: 100;
+}
+
+.pill-editor.active {
+  display: block;
+}
+
+/* Desktop: absolute positioning for popover */
+@media (min-width: 769px) {
+  .pill-editor {
+    position: absolute;
+    top: 0;
+    left: 0;
+    min-width: 280px;
+    margin-bottom: 0;
+  }
+}
+
+/* Mobile: full width inline panel */
+@media (max-width: 768px) {
+  .pill-editor {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
+
+.editor-content {
+  padding: 16px;
+}
+
+.editor-content input,
+.editor-content select {
+  width: 100%;
+  padding: 8px 12px;
+  background: #ffffff;
+  color: #7d5a78;
+  border: 1px solid #d4b8c9;
+  border-radius: 8px;               /* more rounded for pastel */
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.editor-content input:focus,
+.editor-content select:focus {
+  outline: none;
+  border-color: #a8c2e8;
+  box-shadow: 0 0 0 2px rgba(168,194,232,0.2);
+}
+
+.filetype-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.filetype-checkboxes label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #7d5a78;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.filetype-checkboxes input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  accent-color: #a8c2e8;            /* pastel checkbox color */
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.editor-btn {
+  padding: 6px 12px;
+  border: 1px solid #d4b8c9;
+  background: #f5f0f5;
+  color: #7d5a78;
+  border-radius: 6px;               /* slightly more rounded */
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.editor-btn:hover {
+  background: #e8d8e8;
+  border-color: #c2a8bd;
+}
+
+.editor-btn.editor-apply {
+  background: #a8c2e8;
+  border-color: #8bb3de;
+  color: #4a5a7a;
+}
+
+.editor-btn.editor-apply:hover {
+  background: #8bb3de;
+}
+
+.editor-btn.editor-clear {
+  background: #f4a1a1;
+  border-color: #e88888;
+  color: #8b4513;
+}
+
+.editor-btn.editor-clear:hover {
+  background: #e88888;
+}
+
+/* Controls row styling */
+.controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.filter-info {
+  font-family: monospace;
+  opacity: 0.8;
+  color: #7d5a78;
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .controls-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .controls {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
