@@ -10,7 +10,9 @@ let pillBarFilters = {
   sort: 'name',
   directory: '',
   filetype: ['jpg', 'png', 'mp4'],
-  rating: 'none'
+  rating: 'none',
+  dateStart: null,
+  dateEnd: null
 };
 
 // Initialize pill bar functionality
@@ -143,6 +145,11 @@ function populateEditor(pillType) {
     case 'rating':
       document.getElementById('rating-select').value = filter;
       break;
+      
+    case 'date':
+      document.getElementById('date-start').value = pillBarFilters.dateStart || '';
+      document.getElementById('date-end').value = pillBarFilters.dateEnd || '';
+      break;
   }
 }
 
@@ -169,6 +176,19 @@ function setupEditorActions() {
   document.getElementById('rating-apply').addEventListener('click', () => applyFilter('rating'));
   document.getElementById('rating-clear').addEventListener('click', () => clearFilter('rating'));
   document.getElementById('rating-close').addEventListener('click', closePillEditor);
+  
+  // Date editor
+  document.getElementById('date-apply').addEventListener('click', () => applyFilter('date'));
+  document.getElementById('date-clear').addEventListener('click', () => clearFilter('date'));
+  document.getElementById('date-close').addEventListener('click', closePillEditor);
+  
+  // Date preset buttons
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      applyDatePreset(btn.dataset.preset);
+    });
+  });
   
   // Enter key support
   document.addEventListener('keydown', (e) => {
@@ -227,6 +247,11 @@ function applyFilter(pillType) {
       document.getElementById('min_filter').value = newValue;
       minFilter = newValue === 'none' ? null : newValue;
       break;
+      
+    case 'date':
+      pillBarFilters.dateStart = document.getElementById('date-start').value || null;
+      pillBarFilters.dateEnd = document.getElementById('date-end').value || null;
+      break;
   }
   
   updatePillValues();
@@ -253,6 +278,13 @@ function clearFilter(pillType) {
       document.getElementById('rating-select').value = 'none';
       document.getElementById('min_filter').value = 'none';
       minFilter = null;
+      break;
+      
+    case 'date':
+      pillBarFilters.dateStart = null;
+      pillBarFilters.dateEnd = null;
+      document.getElementById('date-start').value = '';
+      document.getElementById('date-end').value = '';
       break;
   }
   
@@ -299,6 +331,22 @@ function updatePillValues() {
     '5': '★5'
   };
   ratingValue.textContent = ratingLabels[pillBarFilters.rating] || 'All';
+  
+  // Date
+  const dateValue = document.getElementById('date-value');
+  if (pillBarFilters.dateStart || pillBarFilters.dateEnd) {
+    let dateText = '';
+    if (pillBarFilters.dateStart && pillBarFilters.dateEnd) {
+      dateText = `${pillBarFilters.dateStart} to ${pillBarFilters.dateEnd}`;
+    } else if (pillBarFilters.dateStart) {
+      dateText = `From ${pillBarFilters.dateStart}`;
+    } else if (pillBarFilters.dateEnd) {
+      dateText = `Until ${pillBarFilters.dateEnd}`;
+    }
+    dateValue.textContent = dateText;
+  } else {
+    dateValue.textContent = 'All';
+  }
 }
 
 function applyCurrentFilters() {
@@ -361,7 +409,7 @@ function handleOutsideClick(event) {
   const pillBar = document.querySelector('.pill-bar');
   const activeEditor = document.querySelector('.pill-editor.active');
   
-  if (!pillBar.contains(event.target) && 
+  if (pillBar && !pillBar.contains(event.target) && 
       (!activeEditor || !activeEditor.contains(event.target))) {
     closePillEditor();
   }
@@ -403,6 +451,135 @@ window.addEventListener('resize', () => {
     }
   }
 });
+
+// Date preset functionality
+function applyDatePreset(preset) {
+  const today = new Date();
+  let startDate = null;
+  let endDate = null;
+  
+  switch (preset) {
+    case 'today':
+      startDate = endDate = today.toISOString().split('T')[0];
+      break;
+      
+    case 'week':
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay());
+      startDate = startOfWeek.toISOString().split('T')[0];
+      endDate = today.toISOString().split('T')[0];
+      break;
+      
+    case 'month':
+      const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+      startDate = startOfMonth.toISOString().split('T')[0];
+      endDate = today.toISOString().split('T')[0];
+      break;
+      
+    case 'year':
+      const startOfYear = new Date(today.getFullYear(), 0, 1);
+      startDate = startOfYear.toISOString().split('T')[0];
+      endDate = today.toISOString().split('T')[0];
+      break;
+  }
+  
+  document.getElementById('date-start').value = startDate || '';
+  document.getElementById('date-end').value = endDate || '';
+}
+
+// Updated applyCurrentFilters to use database if available
+function applyCurrentFilters() {
+  // Check if database is enabled by checking for database_enabled in the last API response
+  if (window.databaseEnabled) {
+    applyDatabaseFilters();
+  } else {
+    applyClientSideFilters();
+  }
+}
+
+async function applyDatabaseFilters() {
+  try {
+    // Build filter request
+    const filterRequest = {
+      file_types: pillBarFilters.filetype,
+      start_date: pillBarFilters.dateStart ? `${pillBarFilters.dateStart}T00:00:00Z` : null,
+      end_date: pillBarFilters.dateEnd ? `${pillBarFilters.dateEnd}T23:59:59Z` : null
+    };
+    
+    // Add rating filters
+    if (pillBarFilters.rating !== 'none') {
+      if (pillBarFilters.rating === 'unrated') {
+        filterRequest.max_score = 0;
+      } else {
+        filterRequest.min_score = parseInt(pillBarFilters.rating);
+      }
+    }
+    
+    const response = await fetch('/api/filter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(filterRequest)
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      videos = data.videos;
+      
+      // Apply search filter client-side
+      if (pillBarFilters.search) {
+        filtered = videos.filter(video => 
+          video.name.toLowerCase().includes(pillBarFilters.search.toLowerCase())
+        );
+      } else {
+        filtered = [...videos];
+      }
+      
+      // Apply sort
+      applySortFilter();
+      
+      // Update display
+      if (typeof renderSidebar === 'function') {
+        renderSidebar();
+      }
+      
+      if (filtered.length > 0) {
+        show(0);
+      }
+    }
+  } catch (error) {
+    console.error('Database filter failed:', error);
+    // Fallback to client-side filtering
+    applyClientSideFilters();
+  }
+}
+
+function applyClientSideFilters() {
+  // Apply search filter
+  if (pillBarFilters.search) {
+    filtered = videos.filter(video => 
+      video.name.toLowerCase().includes(pillBarFilters.search.toLowerCase())
+    );
+  } else {
+    filtered = [...videos];
+  }
+  
+  // Apply rating filter using existing function
+  if (typeof applyFilter === 'function') {
+    applyFilter();
+  }
+  
+  // Apply sort
+  applySortFilter();
+  
+  // Update display
+  if (typeof renderSidebar === 'function') {
+    renderSidebar();
+  }
+  
+  if (filtered.length > 0) {
+    show(0);
+  }
+}
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {

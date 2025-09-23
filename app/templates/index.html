@@ -47,6 +47,12 @@
           <span class="pill-label">Rating</span>
           <span class="pill-value" id="rating-value">All</span>
         </div>
+        
+        <!-- Creation date pill -->
+        <div class="pill pill-date" id="pill-date" data-pill="date">
+          <span class="pill-label">Creation Date</span>
+          <span class="pill-value" id="date-value">All</span>
+        </div>
       </div>
       
       <!-- Pill editors container -->
@@ -123,6 +129,33 @@
               <button class="editor-btn editor-apply" id="rating-apply">Apply</button>
               <button class="editor-btn editor-clear" id="rating-clear">Clear</button>
               <button class="editor-btn editor-close" id="rating-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Date editor -->
+        <div class="pill-editor" id="editor-date" data-editor="date">
+          <div class="editor-content">
+            <div class="date-inputs">
+              <div class="date-input-group">
+                <label>From:</label>
+                <input type="date" id="date-start" />
+              </div>
+              <div class="date-input-group">
+                <label>To:</label>
+                <input type="date" id="date-end" />
+              </div>
+            </div>
+            <div class="date-presets">
+              <button class="preset-btn" data-preset="today">Today</button>
+              <button class="preset-btn" data-preset="week">This Week</button>
+              <button class="preset-btn" data-preset="month">This Month</button>
+              <button class="preset-btn" data-preset="year">This Year</button>
+            </div>
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="date-apply">Apply</button>
+              <button class="editor-btn editor-clear" id="date-clear">Clear</button>
+              <button class="editor-btn editor-close" id="date-close">Close</button>
             </div>
           </div>
         </div>

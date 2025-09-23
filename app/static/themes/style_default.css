@@ -613,6 +613,54 @@ aside#sidebar {
   background: #d32f2f;
 }
 
+/* Date editor specific styles */
+.date-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.date-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.date-input-group label {
+  min-width: 50px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.date-input-group input[type="date"] {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.date-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.preset-btn {
+  padding: 4px 8px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  transition: all 0.2s ease;
+}
+
+.preset-btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
 /* Controls row styling */
 .controls-row {
   display: flex;

@@ -107,6 +107,40 @@ class DatabaseService:
             
         return query.order_by(desc(MediaFile.score), MediaFile.filename).all()
     
+    def get_all_media_files(self, 
+                           min_score: Optional[int] = None,
+                           max_score: Optional[int] = None,
+                           file_types: Optional[List[str]] = None,
+                           start_date: Optional[datetime] = None,
+                           end_date: Optional[datetime] = None) -> List[MediaFile]:
+        """Get all media files with optional filters."""
+        query = self.session.query(MediaFile)
+        
+        # Apply score filters
+        if min_score is not None:
+            query = query.filter(MediaFile.score >= min_score)
+        if max_score is not None:
+            query = query.filter(MediaFile.score <= max_score)
+        
+        # Apply file type filters
+        if file_types:
+            # Convert extensions to include dot prefix if needed
+            extensions = []
+            for ext in file_types:
+                if not ext.startswith('.'):
+                    extensions.append(f'.{ext}')
+                else:
+                    extensions.append(ext)
+            query = query.filter(MediaFile.extension.in_(extensions))
+        
+        # Apply date filters using created_at
+        if start_date is not None:
+            query = query.filter(MediaFile.created_at >= start_date)
+        if end_date is not None:
+            query = query.filter(MediaFile.created_at <= end_date)
+            
+        return query.order_by(desc(MediaFile.created_at), MediaFile.filename).all()
+    
     # Metadata Operations
     
     def store_media_metadata(self, file_path: Path, metadata: Dict) -> MediaMetadata:
