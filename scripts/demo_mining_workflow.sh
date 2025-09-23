@@ -5,8 +5,9 @@
 # =========================================================
 #
 # Usage:
-#   ./workflow.sh <media_dir>
+#   ./workflow.sh <media_dir> [--database-url <url>]
 #       Run the full interactive workflow using the given media directory.
+#       Optionally specify a PostgreSQL database URL for use outside containers.
 #
 #   ./workflow.sh --help
 #       Show this usage information.
@@ -14,39 +15,69 @@
 # Examples:
 #   ./workflow.sh ./media
 #   ./workflow.sh /absolute/path/to/media
+#   ./workflow.sh ./media --database-url "postgresql://user:pass@host/db"
 #
 # Requirements:
 #   - A Python virtual environment in ".venv" alongside this script.
 #   - The "mine_archive.sh" helper script in the same directory.
+#   - For PostgreSQL: A running PostgreSQL server and valid connection URL.
 #
 # Workflow Steps:
 #   1. Test the archive (dry run) with results saved in ./results
-#   2. Mine the archive data into an SQLite database
+#   2. Mine the archive data into PostgreSQL database
 #   3. Query the database and display statistics + sample records
 #   4. Instructions to launch the web application
 #
 # =========================================================
 
-# --- Resolve script directory regardless of caller's CWD ---
+## Resolve script directory regardless of caller's CWD
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/../.venv"
 MINER="$SCRIPT_DIR/mine_archive.sh"
 
-# --- Handle --help option ---
-if [[ "$1" == "--help" || "$1" == "-h" ]]; then
-    grep "^# " "$0" | sed 's/^# //'
-    exit 0
-fi
+## Parse CLI arguments
+MEDIA_DIR=""
+DATABASE_URL=""
+MINING_ARGS=()
 
-# --- Require media dir as CLI argument ---
-if [[ -z "$1" ]]; then
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --database-url)
+            DATABASE_URL="$2"
+            MINING_ARGS+=("--database-url" "$2")
+            shift 2
+            ;;
+        --help|-h)
+            sed -n '3,29p' "$0" | sed 's/^# //'
+            exit 0
+            ;;
+        -*)
+            echo "❌ Error: Unknown option: $1"
+            echo "Run './workflow.sh --help' for usage."
+            exit 1
+            ;;
+        *)
+            if [[ -z "$MEDIA_DIR" ]]; then
+                MEDIA_DIR="$1"
+            else
+                echo "❌ Error: Multiple directories specified: '$MEDIA_DIR' and '$1'"
+                echo "Run './workflow.sh --help' for usage."
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Require media dir as CLI argument
+if [[ -z "$MEDIA_DIR" ]]; then
     echo "❌ Error: Missing required argument <media_dir>"
     echo "Run './workflow.sh --help' for usage."
     exit 1
 fi
 
 # Normalize media dir (absolute path)
-MEDIA_DIR="$(realpath "$1")"
+MEDIA_DIR="$(realpath "$MEDIA_DIR")"
 
 # Check if media directory exists
 if [[ ! -d "$MEDIA_DIR" ]]; then
@@ -63,7 +94,7 @@ read -p "📁 Step 1: Test the archive with dry run. Continue? (y/n): " yn
 case $yn in
     [Yy]* ) 
         echo "---------------------------------------"
-        "$MINER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results"
+        "$MINER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results" "${MINING_ARGS[@]}"
         echo ""
         ;;
     * ) echo "Skipped Step 1."; exit 0;;
@@ -73,7 +104,7 @@ read -p "💾 Step 2: Mine the archive data into database. Continue? (y/n): " yn
 case $yn in
     [Yy]* ) 
         echo "---------------------------------------------"
-        "$MINER" mine "$MEDIA_DIR"
+        "$MINER" mine "$MEDIA_DIR" "${MINING_ARGS[@]}"
         echo ""
         ;;
     * ) echo "Skipped Step 2."; exit 0;;
@@ -88,21 +119,34 @@ case $yn in
 from pathlib import Path
 from app.database.engine import init_database
 from app.database.service import DatabaseService
-from app.settings import Settings
 import os, sys
 
 media_dir = Path("$MEDIA_DIR")
+database_url = "$DATABASE_URL"
 
-# Use the same database configuration logic as the application
-settings = Settings.load_from_yaml()
-settings.dir = media_dir
-
-# Get the database URL using the same logic as the mining tool
-db_url = settings.get_database_url()
-print(f"Connecting to database: {db_url}")
+# Determine database URL to use
+if database_url:
+    print(f"Using provided database URL: {database_url}")
+    db_url = database_url
+else:
+    # Check environment variables for database URL (like the mining tool does)
+    env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
+    if env_db_url:
+        print(f"Using database URL from environment: {env_db_url}")
+        db_url = env_db_url
+    else:
+        print("❌ Error: No database URL provided.")
+        print("Please provide --database-url or set DATABASE_URL environment variable.")
+        print("PostgreSQL database is required for this workflow.")
+        sys.exit(1)
 
 # Connect to the database created by the mining tool
-init_database(db_url)
+try:
+    init_database(db_url)
+    print(f"✅ Connected to database successfully")
+except Exception as e:
+    print(f"❌ Failed to connect to database: {e}")
+    sys.exit(1)
 
 with DatabaseService() as db:
     stats = db.get_stats()
@@ -131,7 +175,11 @@ esac
 echo "🌐 Step 4: Start the web application (will use the same database)"
 echo "----------------------------------------------------------------"
 echo "You can now run:"
-echo "  python run.py --dir \"$MEDIA_DIR\" --enable-database --port 7862"
+if [[ -n "$DATABASE_URL" ]]; then
+    echo "  DATABASE_URL=\"$DATABASE_URL\" python run.py --dir \"$MEDIA_DIR\" --enable-database --port 7862"
+else
+    echo "  python run.py --dir \"$MEDIA_DIR\" --enable-database --port 7862"
+fi
 echo ""
 echo "Then visit: http://127.0.0.1:7862"
 echo ""
