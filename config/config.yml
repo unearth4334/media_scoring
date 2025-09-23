@@ -9,7 +9,7 @@ toggle_extensions: ["jpg", "png", "mp4"]  # File extensions for toggle buttons (
 directory_sort_desc: true     # Sort directory dropdown in descending order (true) or ascending (false)
 
 # Database settings for metadata storage and search functionality
-enable_database: true         # Enable database storage for metadata and search features
+enable_database: false        # Enable database storage for metadata and search features
 database_path: null           # Custom database path (default: .scores/media.db in media directory)
 
 # Schema management settings
