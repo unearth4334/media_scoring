@@ -66,9 +66,8 @@ class DataMiner:
                 init_database(database_url)
                 self.logger.info(f"Database initialized with URL: {database_url}")
             except PermissionError as e:
-                self.logger.error(f"Permission denied accessing database directory: {e}")
-                self.logger.error("Please check that you have write permissions to the target directory")
-                self.logger.error("Consider using --database-path to specify an alternative location")
+                self.logger.error(f"Permission denied accessing database: {e}")
+                self.logger.error("Please check that you have proper database permissions")
                 raise
             except ValueError as e:
                 self.logger.error(f"Invalid database configuration: {e}")
@@ -104,22 +103,17 @@ class DataMiner:
         return self.stats
     
     def _get_database_url(self, directory: Path) -> str:
-        """Get the database URL for the directory."""
+        """Get the PostgreSQL database URL."""
         if self.settings.database_url:
             return self.settings.database_url
-        
-        if self.settings.database_path:
-            return f"sqlite:///{self.settings.database_path}"
         
         # Check environment variables for database URL
         env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
         if env_db_url:
             return env_db_url
         
-        # Default: create database in .scores directory
-        scores_dir = get_scores_dir_for(directory)
-        db_path = scores_dir / "media.db"
-        return f"sqlite:///{db_path}"
+        # No default fallback - PostgreSQL URL is required
+        raise ValueError("PostgreSQL DATABASE_URL is required. Please set the DATABASE_URL environment variable.")
     
     def _process_files_with_database(self, files: List[Path]) -> None:
         """Process files and store data in database."""
@@ -1297,12 +1291,12 @@ Examples:
   python mine_data.py /media/archive1
   python mine_data.py /media/archive1 --pattern "*.mp4|*.png"
   python mine_data.py /media/archive1 --enable-database
-  python mine_data.py /media/archive1 --database-path /custom/path/media.db
+  python mine_data.py /media/archive1 --database-url "postgresql://user:pass@host/db"
   python mine_data.py /media/archive1 --verbose --dry-run
   python mine_data.py /media/archive1 --dry-run --test-output-dir /tmp/results
 
 Environment Variables:
-  DATABASE_URL or MEDIA_DB_URL - Database connection URL (e.g., postgresql://user:pass@host/db)
+  DATABASE_URL or MEDIA_DB_URL - PostgreSQL connection URL (e.g., postgresql://user:pass@host/db)
                                  Overrides default SQLite behavior when set
         """
     )
@@ -1328,14 +1322,8 @@ Environment Variables:
     )
     
     parser.add_argument(
-        "--database-path",
-        type=Path,
-        help="Custom database file path (default: <directory>/.scores/media.db)"
-    )
-    
-    parser.add_argument(
         "--database-url",
-        help="Database URL for external database (overrides --database-path, respects DATABASE_URL/MEDIA_DB_URL env vars)"
+        help="PostgreSQL database URL (also respects DATABASE_URL/MEDIA_DB_URL env vars)"
     )
     
     parser.add_argument(
@@ -1385,8 +1373,6 @@ Environment Variables:
         settings.pattern = args.pattern
         settings.enable_database = args.enable_database and not args.dry_run
         
-        if args.database_path:
-            settings.database_path = args.database_path
         if args.database_url:
             settings.database_url = args.database_url
             
@@ -1404,8 +1390,7 @@ Environment Variables:
         if settings.database_url:
             logger.info(f"Database URL: {settings.database_url}")
         else:
-            db_path = args.database_path or (args.directory / ".scores" / "media.db")
-            logger.info(f"Database path: {db_path}")
+            logger.info("No database URL configured - will require DATABASE_URL environment variable")
     else:
         logger.info("Running in dry-run mode (no database storage)")
         if args.test_output_dir:
