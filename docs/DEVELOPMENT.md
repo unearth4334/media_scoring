@@ -347,10 +347,10 @@ _engine = create_engine(
 
 ```bash
 # Connect to the database directly
-sqlite3 .scores/media.db
+psql $DATABASE_URL
 
 # Useful queries
-.tables
+\dt  -- List tables
 SELECT COUNT(*) FROM media_files;
 SELECT keyword_type, COUNT(*) FROM media_keywords GROUP BY keyword_type;
 SELECT * FROM media_metadata WHERE prompt IS NOT NULL LIMIT 5;

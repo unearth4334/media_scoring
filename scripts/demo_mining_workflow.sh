@@ -1,38 +1,152 @@
 #!/bin/bash
 
-# Example: Complete workflow using the mining tool with the web application
+# =========================================================
+# Media Archive Data Mining & Web App Integration Example
+# =========================================================
+#
+# Usage:
+#   ./workflow.sh <media_dir> [--database-url <url>]
+#       Run the full interactive workflow using the given media directory.
+#       Optionally specify a PostgreSQL database URL for use outside containers.
+#
+#   ./workflow.sh --help
+#       Show this usage information.
+#
+# Examples:
+#   ./workflow.sh ./media
+#   ./workflow.sh /absolute/path/to/media
+#   ./workflow.sh ./media --database-url "postgresql://user:pass@host/db"
+#
+# Requirements:
+#   - A Python virtual environment in ".venv" alongside this script.
+#   - The "mine_archive.sh" helper script in the same directory.
+#   - For PostgreSQL: A running PostgreSQL server and valid connection URL.
+#
+# Workflow Steps:
+#   1. Test the archive (dry run) with results saved in ./results
+#   2. Mine the archive data into PostgreSQL database
+#   3. Query the database and display statistics + sample records
+#   4. Instructions to launch the web application
+#
+# =========================================================
 
-echo "🗂️  Media Archive Data Mining & Web App Integration Example"
-echo "========================================================="
-echo ""
+## Resolve script directory regardless of caller's CWD
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+VENV_DIR="$SCRIPT_DIR/../.venv"
+MINER="$SCRIPT_DIR/mine_archive.sh"
 
-# Check if we have a test directory
-if [[ ! -d "./media" ]]; then
-    echo "❌ Error: ./media directory not found"
-    echo "This example needs the sample media directory"
+## Parse CLI arguments
+MEDIA_DIR=""
+DATABASE_URL=""
+MINING_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --database-url)
+            DATABASE_URL="$2"
+            MINING_ARGS+=("--database-url" "$2")
+            shift 2
+            ;;
+        --help|-h)
+            sed -n '3,29p' "$0" | sed 's/^# //'
+            exit 0
+            ;;
+        -*)
+            echo "❌ Error: Unknown option: $1"
+            echo "Run './workflow.sh --help' for usage."
+            exit 1
+            ;;
+        *)
+            if [[ -z "$MEDIA_DIR" ]]; then
+                MEDIA_DIR="$1"
+            else
+                echo "❌ Error: Multiple directories specified: '$MEDIA_DIR' and '$1'"
+                echo "Run './workflow.sh --help' for usage."
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+# Require media dir as CLI argument
+if [[ -z "$MEDIA_DIR" ]]; then
+    echo "❌ Error: Missing required argument <media_dir>"
+    echo "Run './workflow.sh --help' for usage."
     exit 1
 fi
 
-echo "📁 Step 1: Test the archive with dry run"
-echo "---------------------------------------"
-./mine_archive.sh test ./media
+# Normalize media dir (absolute path)
+MEDIA_DIR="$(realpath "$MEDIA_DIR")"
+
+# Check if media directory exists
+if [[ ! -d "$MEDIA_DIR" ]]; then
+    echo "❌ Error: $MEDIA_DIR directory not found"
+    exit 1
+fi
+
+echo "🗂️  Media Archive Data Mining & Web App Integration Example"
+echo "========================================================="
+echo "Using media directory: $MEDIA_DIR"
 echo ""
 
-echo "💾 Step 2: Mine the archive data into database"
-echo "---------------------------------------------"
-./mine_archive.sh mine ./media
-echo ""
+read -p "📁 Step 1: Test the archive with dry run. Continue? (y/n): " yn
+case $yn in
+    [Yy]* ) 
+        echo "---------------------------------------"
+        "$MINER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results" "${MINING_ARGS[@]}"
+        echo ""
+        ;;
+    * ) echo "Skipped Step 1."; exit 0;;
+esac
 
-echo "📊 Step 3: Check what was stored in the database"
-echo "-----------------------------------------------"
-source .venv/bin/activate
-python -c "
+read -p "💾 Step 2: Mine the archive data into database. Continue? (y/n): " yn
+case $yn in
+    [Yy]* ) 
+        echo "---------------------------------------------"
+        "$MINER" mine "$MEDIA_DIR" "${MINING_ARGS[@]}"
+        echo ""
+        ;;
+    * ) echo "Skipped Step 2."; exit 0;;
+esac
+
+read -p "📊 Step 3: Check what was stored in the database. Continue? (y/n): " yn
+case $yn in
+    [Yy]* ) 
+        echo "-----------------------------------------------"
+        source "$VENV_DIR/bin/activate"
+        python - <<EOF
 from pathlib import Path
 from app.database.engine import init_database
 from app.database.service import DatabaseService
+import os, sys
+
+media_dir = Path("$MEDIA_DIR")
+database_url = "$DATABASE_URL"
+
+# Determine database URL to use
+if database_url:
+    print(f"Using provided database URL: {database_url}")
+    db_url = database_url
+else:
+    # Check environment variables for database URL (like the mining tool does)
+    env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
+    if env_db_url:
+        print(f"Using database URL from environment: {env_db_url}")
+        db_url = env_db_url
+    else:
+        print("❌ Error: No database URL provided.")
+        print("Please provide --database-url or set DATABASE_URL environment variable.")
+        print("PostgreSQL database is required for this workflow.")
+        sys.exit(1)
 
 # Connect to the database created by the mining tool
-init_database('sqlite:///media/.scores/media.db')
+try:
+    init_database(db_url)
+    print(f"✅ Connected to database successfully")
+except Exception as e:
+    print(f"❌ Failed to connect to database: {e}")
+    sys.exit(1)
 
 with DatabaseService() as db:
     stats = db.get_stats()
@@ -43,23 +157,29 @@ with DatabaseService() as db:
     
     print('\nSample file records:')
     print('=' * 30)
-    files = db.get_media_files_by_directory(Path('media'))[:3]
+    files = db.get_media_files_by_directory(media_dir)[:3]
     for file in files:
         print(f'{file.filename} (score: {file.score}, type: {file.file_type})')
         
-        # Show keywords for this file
         keywords = db.get_keywords_for_file(Path(file.file_path))
         if keywords:
             kw_list = [kw.keyword for kw in keywords]
             print(f'  Keywords: {kw_list}')
         print()
-"
-echo ""
+EOF
+        echo ""
+        ;;
+    * ) echo "Skipped Step 3."; exit 0;;
+esac
 
 echo "🌐 Step 4: Start the web application (will use the same database)"
 echo "----------------------------------------------------------------"
 echo "You can now run:"
-echo "  python run.py --dir ./media --enable-database --port 7862"
+if [[ -n "$DATABASE_URL" ]]; then
+    echo "  DATABASE_URL=\"$DATABASE_URL\" python run.py --dir \"$MEDIA_DIR\" --enable-database --port 7862"
+else
+    echo "  python run.py --dir \"$MEDIA_DIR\" --enable-database --port 7862"
+fi
 echo ""
 echo "Then visit: http://127.0.0.1:7862"
 echo ""
@@ -68,3 +188,4 @@ echo "You can search for files using the /api/search/files endpoint or the web i
 echo ""
 echo "✅ Mining workflow complete!"
 echo "Your archive data is now available for the Media Scoring application."
+echo "========================================================="

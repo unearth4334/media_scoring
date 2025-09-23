@@ -139,7 +139,6 @@ media_scoring/
 │
 ├── .scores/                    # 📊 Auto-created: score files and logs
 │   ├── file1.mp4.json
-│   ├── media.db               # SQLite database (when enabled)
 │   └── .log/video_scorer.log
 │
 └── workflows/                  # 🔄 Auto-created: workflow JSON outputs
@@ -230,7 +229,7 @@ python tools/mine_data.py /path/to/archive --enable-database
 ```
 $ ./scripts/mine_archive.sh images /media/photos
 [INFO] Mining images from: /media/photos
-[INFO] Database initialized with URL: sqlite:///media/photos/.scores/media.db
+[INFO] Database initialized with URL: postgresql://media_user:password@localhost:5432/media_scoring
 [INFO] Found 156 files matching pattern
 [INFO] Processing files with database storage enabled
 [INFO] Processing file 50/156: portrait_050.png
