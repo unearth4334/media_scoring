@@ -25,6 +25,35 @@ router = APIRouter()
 def serve_media(name: str):
     """Serve media files."""
     state = get_state()
+    
+    # Try database first if enabled
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                # Find the media file by filename in database
+                from ..database.models import MediaFile
+                media_file = db.session.query(MediaFile).filter(
+                    MediaFile.filename == name
+                ).first()
+                
+                if media_file:
+                    target = Path(media_file.file_path).resolve()
+                    if target.exists() and target.is_file():
+                        ext = target.suffix.lower()
+                        if ext == ".mp4":
+                            mime = "video/mp4"
+                        elif ext == ".png":
+                            mime = "image/png"
+                        elif ext in {".jpg", ".jpeg"}:
+                            mime = "image/jpeg"
+                        else:
+                            mime = "application/octet-stream"
+                        
+                        return FileResponse(target, media_type=mime)
+        except Exception as e:
+            state.logger.error(f"Database media serving failed: {e}")
+    
+    # Fallback to original behavior - serve from current video directory
     target = (state.video_dir / name).resolve()
     
     # Security: ensure the resolved path is within video directory

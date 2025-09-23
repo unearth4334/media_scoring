@@ -27,14 +27,33 @@ def list_videos():
     """Return list of media files with scores and configuration."""
     state = get_state()
     
-    # Return list of entries with current score
+    # Use database if enabled, otherwise fallback to file system
     items = []
-    for p in state.file_list:
-        items.append({
-            "name": p.name,
-            "url": f"/media/{p.name}",
-            "score": read_score(p) if read_score(p) is not None else 0
-        })
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                media_files = db.get_all_media_files()
+                for media_file in media_files:
+                    # Extract just the filename from the full path
+                    file_path = Path(media_file.file_path)
+                    relative_path = file_path.name  # Just the filename for URL
+                    
+                    items.append({
+                        "name": media_file.filename,
+                        "url": f"/media/{relative_path}",
+                        "score": media_file.score or 0,
+                        "path": media_file.file_path,  # Full path for file serving
+                        "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                        "file_type": media_file.file_type,
+                        "extension": media_file.extension
+                    })
+        except Exception as e:
+            state.logger.error(f"Failed to load media files from database: {e}")
+            # Fallback to file system behavior
+            items = _get_files_from_filesystem(state)
+    else:
+        # Original file system behavior
+        items = _get_files_from_filesystem(state)
     
     return {
         "dir": str(state.video_dir), 
@@ -42,8 +61,101 @@ def list_videos():
         "videos": items,
         "thumbnails_enabled": state.settings.generate_thumbnails,
         "thumbnail_height": state.settings.thumbnail_height,
-        "toggle_extensions": state.settings.toggle_extensions
+        "toggle_extensions": state.settings.toggle_extensions,
+        "database_enabled": state.database_enabled
     }
+
+
+@router.post("/filter")
+async def filter_videos(req: Request):
+    """Filter media files based on criteria."""
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality is disabled")
+    
+    data = await req.json()
+    
+    # Extract filter parameters
+    min_score = data.get("min_score")
+    max_score = data.get("max_score") 
+    file_types = data.get("file_types")
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+    
+    # Convert date strings to datetime objects if provided
+    from datetime import datetime
+    start_date_obj = None
+    end_date_obj = None
+    
+    if start_date:
+        try:
+            start_date_obj = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+        except ValueError:
+            pass
+    
+    if end_date:
+        try:
+            end_date_obj = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+        except ValueError:
+            pass
+    
+    try:
+        with state.get_database_service() as db:
+            media_files = db.get_all_media_files(
+                min_score=min_score,
+                max_score=max_score,
+                file_types=file_types,
+                start_date=start_date_obj,
+                end_date=end_date_obj
+            )
+            
+            items = []
+            for media_file in media_files:
+                file_path = Path(media_file.file_path)
+                relative_path = file_path.name
+                
+                items.append({
+                    "name": media_file.filename,
+                    "url": f"/media/{relative_path}",
+                    "score": media_file.score or 0,
+                    "path": media_file.file_path,
+                    "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                    "file_type": media_file.file_type,
+                    "extension": media_file.extension
+                })
+            
+            return {
+                "videos": items,
+                "count": len(items),
+                "filters_applied": {
+                    "min_score": min_score,
+                    "max_score": max_score,
+                    "file_types": file_types,
+                    "start_date": start_date,
+                    "end_date": end_date
+                }
+            }
+    
+    except Exception as e:
+        state.logger.error(f"Filter failed: {e}")
+        raise HTTPException(500, f"Filter failed: {str(e)}")
+
+
+def _get_files_from_filesystem(state):
+    """Get media files from file system (original behavior)."""
+    items = []
+    for p in state.file_list:
+        items.append({
+            "name": p.name,
+            "url": f"/media/{p.name}",
+            "score": read_score(p) if read_score(p) is not None else 0,
+            "path": str(p),  # Full path
+            "created_at": None,  # Not available from filesystem
+            "file_type": "video" if p.suffix.lower() == ".mp4" else "image",
+            "extension": p.suffix.lower()
+        })
+    return items
 
 
 @router.post("/scan")
