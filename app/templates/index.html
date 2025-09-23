@@ -16,40 +16,120 @@
       <h1>🎬 Video/Image Scorer (FastAPI)</h1>
       <div class="pill">Keys: ←/→ navigate • Space play/pause (video) • 1–5 rate • R reject • C clear • Esc exit maximized</div>
     </header>
-    <div class="toolbar-rows">
-      <div class="row">
-        <button id="dir_up" class="nav-btn" title="Go up one directory">
-        </button>
-        <div class="dir-dropdown-container">
-          <button id="dir_browse" class="nav-btn" title="Browse directories">
-          </button>
-          <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
+    <div class="pill-bar-container">
+      <div class="pill-bar" id="pill-bar">
+        <!-- Search pill -->
+        <div class="pill pill-search" id="pill-search" data-pill="search">
+          <span class="pill-label">Search</span>
+          <span class="pill-value" id="search-value"></span>
         </div>
-        <div class="dir-input-container" style="position: relative;">
-          <input id="dir" type="text" style="min-width:200px; max-width:400px; width:400px; padding-right:30px;" placeholder="/path/to/folder"/>
-          <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories">
-          </button>
-          <div id="dir_siblings_dropdown" class="dropdown-menu" style="display: none;"></div>
+        
+        <!-- Sort by pill -->
+        <div class="pill pill-sort" id="pill-sort" data-pill="sort">
+          <span class="pill-label">Sort by</span>
+          <span class="pill-value" id="sort-value">Name</span>
         </div>
-        <div id="toggle_buttons" class="toggle-container"></div>
-        <input id="pattern" type="text" style="min-width:180px" placeholder="glob pattern (e.g. *.mp4|*.png|*.jpg)" />
-        <button id="pat_help" class="helpbtn">?</button>
-        <button id="load" class="refresh-btn" title="Load/Refresh">
-        </button>
-        <div id="dir_display" class="filename"></div>
+        
+        <!-- Directory pill -->
+        <div class="pill pill-directory" id="pill-directory" data-pill="directory">
+          <span class="pill-label">Directory</span>
+          <span class="pill-value" id="directory-value">media</span>
+        </div>
+        
+        <!-- File type pill -->
+        <div class="pill pill-filetype" id="pill-filetype" data-pill="filetype">
+          <span class="pill-label">File Type</span>
+          <span class="pill-value" id="filetype-value">All</span>
+        </div>
+        
+        <!-- Rating pill -->
+        <div class="pill pill-rating" id="pill-rating" data-pill="rating">
+          <span class="pill-label">Rating</span>
+          <span class="pill-value" id="rating-value">All</span>
+        </div>
       </div>
-      <div class="row">
-        <label for="min_filter">Rating ≥</label>
-        <select id="min_filter">
-          <option value="none" selected>No filter</option>
-          <option value="unrated">Unrated</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-        </select>
-        <div id="filter_info" class="filename"></div>
+      
+      <!-- Pill editors container -->
+      <div class="pill-editors" id="pill-editors">
+        <!-- Search editor -->
+        <div class="pill-editor" id="editor-search" data-editor="search">
+          <div class="editor-content">
+            <input type="text" id="search-input" placeholder="Search by filename..." />
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="search-apply">Apply</button>
+              <button class="editor-btn editor-clear" id="search-clear">Clear</button>
+              <button class="editor-btn editor-close" id="search-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Sort editor -->
+        <div class="pill-editor" id="editor-sort" data-editor="sort">
+          <div class="editor-content">
+            <select id="sort-select">
+              <option value="name">Name</option>
+              <option value="date">Date Modified</option>
+              <option value="size">File Size</option>
+              <option value="rating">Rating</option>
+            </select>
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="sort-apply">Apply</button>
+              <button class="editor-btn editor-close" id="sort-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Directory editor -->
+        <div class="pill-editor" id="editor-directory" data-editor="directory">
+          <div class="editor-content">
+            <input type="text" id="directory-input" placeholder="/path/to/folder" />
+            <button id="dir-browse-btn" class="editor-btn">Browse</button>
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="directory-apply">Apply</button>
+              <button class="editor-btn editor-close" id="directory-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- File type editor -->
+        <div class="pill-editor" id="editor-filetype" data-editor="filetype">
+          <div class="editor-content">
+            <div class="filetype-checkboxes">
+              <label><input type="checkbox" value="jpg" checked> JPG</label>
+              <label><input type="checkbox" value="png" checked> PNG</label>
+              <label><input type="checkbox" value="mp4" checked> MP4</label>
+            </div>
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="filetype-apply">Apply</button>
+              <button class="editor-btn editor-clear" id="filetype-clear">Clear All</button>
+              <button class="editor-btn editor-close" id="filetype-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Rating editor -->
+        <div class="pill-editor" id="editor-rating" data-editor="rating">
+          <div class="editor-content">
+            <select id="rating-select">
+              <option value="none">All ratings</option>
+              <option value="unrated">Unrated only</option>
+              <option value="1">★1 and above</option>
+              <option value="2">★2 and above</option>
+              <option value="3">★3 and above</option>
+              <option value="4">★4 and above</option>
+              <option value="5">★5 only</option>
+            </select>
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="rating-apply">Apply</button>
+              <button class="editor-btn editor-clear" id="rating-clear">Clear</button>
+              <button class="editor-btn editor-close" id="rating-close">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Controls row (moved from old toolbar) -->
+      <div class="controls-row">
         <div class="controls">
           <button id="prev">Prev</button>
           <button id="next">Next</button>
@@ -65,6 +145,31 @@
           <button id="download_btn" title="Download current">
           </button>
         </div>
+        <div class="filter-info" id="filter_info"></div>
+      </div>
+      
+      <!-- Hidden elements for backward compatibility -->
+      <div style="display: none;">
+        <input id="dir" type="text" />
+        <input id="pattern" type="text" />
+        <select id="min_filter">
+          <option value="none" selected>No filter</option>
+          <option value="unrated">Unrated</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+        <button id="load" class="refresh-btn" title="Load/Refresh"></button>
+        <button id="pat_help" class="helpbtn">?</button>
+        <button id="dir_up" class="nav-btn" title="Go up one directory"></button>
+        <button id="dir_browse" class="nav-btn" title="Browse directories"></button>
+        <button id="dir_siblings" class="dir-triangle-btn" title="Browse sibling directories"></button>
+        <div id="dir_dropdown" class="dropdown-menu" style="display: none;"></div>
+        <div id="dir_siblings_dropdown" class="dropdown-menu" style="display: none;"></div>
+        <div id="toggle_buttons" class="toggle-container"></div>
+        <div id="dir_display" class="filename"></div>
       </div>
     </div>
   </div>
@@ -110,6 +215,7 @@
     </section>
   </main>
 <script src="/static/js/svg-icons.js"></script>
+<script src="/static/js/pill-bar.js"></script>
 <script src="/static/js/app.js"></script>
 <script>
 // Populate static SVG icons after DOM loads
