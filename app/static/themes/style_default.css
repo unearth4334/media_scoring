@@ -223,10 +223,10 @@ input[type="text"] {
 }
 
 /* Help button keeps same footprint but can look like a pill if desired */
-.helpbtn { /* inherits base */ }
+/* .helpbtn inherits from .button-base */
 
 /* Refresh is often icon-only; base padding is fine */
-.refresh-btn { /* inherits base */ }
+/* .refresh-btn inherits from .button-base */
 
 /* Thumbnail toggle: checkbox + icon inside base frame */
 .thumbnail-toggle {

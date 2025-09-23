@@ -220,8 +220,7 @@ input[type="text"] {
 }
 
 /* Help/Refresh keep base footprint */
-.helpbtn {}
-.refresh-btn {}
+/* .helpbtn and .refresh-btn inherit from .button-base */
 
 /* Thumbnail toggle: checkbox + icon inside base frame */
 .thumbnail-toggle {
