@@ -6,6 +6,7 @@ This document explains how to configure PostgreSQL database connections for the 
 
 The application **requires PostgreSQL** as its database backend. SQLite support has been removed to ensure consistent performance and reliability across all deployments.
 
+
 ## Configuration Priority
 
 Database configuration follows this priority order (highest to lowest):
@@ -13,7 +14,6 @@ Database configuration follows this priority order (highest to lowest):
 1. **CLI Arguments** (`--database-url`)
 2. **Environment Variables** (`DATABASE_URL` or `MEDIA_DB_URL`)
 3. **Configuration File** (`config/config.yml`)
-4. **ERROR** - No fallback (PostgreSQL URL is required)
 
 ## Environment Variables
 
@@ -83,14 +83,12 @@ python run.py --dir /media
 ```bash
 # Test with PostgreSQL
 DATABASE_URL="postgresql://test:test@localhost/test_db" python tools/mine_data.py /test_media --dry-run
-
-# Test with another PostgreSQL instance
-python tools/mine_data.py /test_media --database-url "postgresql://user:pass@testhost/testdb" --dry-run
 ```
 
 ## Troubleshooting
 
 ### Common Issues
+
 
 1. **Application fails to start**
    - Ensure `DATABASE_URL` or `MEDIA_DB_URL` is set with a valid PostgreSQL URL
@@ -98,13 +96,16 @@ python tools/mine_data.py /test_media --database-url "postgresql://user:pass@tes
    - Use `--database-url` CLI argument if environment variables aren't working
 
 2. **Connection refused errors**
+
    - Verify PostgreSQL server is running and accessible
    - Check hostname, port, username, and password in the URL
    - Ensure firewall allows connections to the database port
 
+
 3. **Invalid database URL error**
    - Only PostgreSQL URLs are supported (must start with `postgresql://`)
    - SQLite and other database types are not supported
+
 
 ### Debugging Database Configuration
 
@@ -127,6 +128,7 @@ python tools/mine_data.py /media --enable-database --verbose
 - Avoid putting credentials in command line arguments (visible in process lists)
 - Use connection pooling and SSL for production PostgreSQL connections
 - Regularly rotate database passwords and credentials
+
 
 ## Setting Up PostgreSQL
 
