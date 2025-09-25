@@ -627,7 +627,7 @@ async function loadVideos(){
   thumbnailHeight = data.thumbnail_height || 64;
   toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
   
-  // Store database flag globally for pill bar to use
+  // Store database flag globally for search toolbar to use
   window.databaseEnabled = data.database_enabled || false;
   
   document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
@@ -719,9 +719,9 @@ document.getElementById("load").addEventListener("click", () => {
   setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 
-// Refresh content button - refreshes based on current pill bar filters
+// Refresh content button - refreshes based on current search toolbar filters
 document.getElementById("refresh-content").addEventListener("click", () => {
-  // Check if applyCurrentFilters is available from pill-bar.js
+  // Check if applyCurrentFilters is available from search-toolbar.js
   if (typeof applyCurrentFilters === 'function') {
     applyCurrentFilters();
   } else {
