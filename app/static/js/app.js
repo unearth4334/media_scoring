@@ -365,9 +365,20 @@ function renderScoreBar(score){
   const bar = document.getElementById("scorebar");
   let html = `<div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">`;
   html += `<div style="display:flex; gap:8px; align-items:center;">`;
+  
+  // Make reject icon clickable
+  html += `<button id="scorebar-reject" class="scorebar-icon-btn" title="Reject media" style="background:none; border:none; padding:0; cursor:pointer;">`;
   html += svgReject(score === -1);
+  html += `</button>`;
+  
+  // Make star icons clickable  
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
-  for (let i=0;i<5;i++) html += svgStar(i<stars);
+  for (let i=0;i<5;i++) {
+    html += `<button id="scorebar-star-${i+1}" class="scorebar-icon-btn" data-star="${i+1}" title="Rate ${i+1} star${i > 0 ? 's' : ''}" style="background:none; border:none; padding:0; cursor:pointer;">`;
+    html += svgStar(i<stars);
+    html += `</button>`;
+  }
+  
   html += `</div>`;
   html += `<div style="display:flex; gap:8px; align-items:center;">`;
   html += `<button id="media-download-btn" class="maximize-btn" title="Download current media" disabled>`;
@@ -380,10 +391,28 @@ function renderScoreBar(score){
   html += `</div>`;
   bar.innerHTML = html;
   
-  // Attach event listener to the new buttons
+  // Attach event listeners to the new buttons
   const maximizeBtn = document.getElementById('maximize-btn');
   if (maximizeBtn) {
     maximizeBtn.addEventListener('click', toggleMaximize);
+  }
+  
+  // Attach event listener to clickable reject icon
+  const rejectBtn = document.getElementById('scorebar-reject');
+  if (rejectBtn) {
+    rejectBtn.addEventListener('click', () => {
+      postScore(-1);
+    });
+  }
+  
+  // Attach event listeners to clickable star icons
+  for (let i = 1; i <= 5; i++) {
+    const starBtn = document.getElementById(`scorebar-star-${i}`);
+    if (starBtn) {
+      starBtn.addEventListener('click', () => {
+        postScore(i);
+      });
+    }
   }
 }
 function scoreBadge(s){

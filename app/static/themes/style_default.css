@@ -364,6 +364,26 @@ aside#sidebar {
 
 .scorebar { margin-top: 8px; }
 
+/* Scorebar icon buttons - clickable reject and star icons */
+.scorebar-icon-btn {
+  background: transparent; 
+  border: none; 
+  padding: 0; 
+  cursor: pointer; 
+  border-radius: 4px;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+  opacity: 0.9;
+}
+
+.scorebar-icon-btn:hover {
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+.scorebar-icon-btn:active {
+  transform: scale(0.95);
+}
+
 /* EXCLUDED: maximize button kept as-is */
 .maximize-btn {
   background: transparent; border: 1px solid #777; border-radius: 4px; color: #eee; cursor: pointer; padding: 4px;
