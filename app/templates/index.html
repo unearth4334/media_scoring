@@ -18,6 +18,10 @@
     </header>
     <div class="pill-bar-container">
       <div class="pill-bar" id="pill-bar">
+        <!-- Refresh button (moved to top) -->
+        <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
+        </button>
+
         <!-- Search pill -->
         <div class="pill pill-search" id="pill-search" data-pill="search">
           <span class="pill-label">Search</span>
@@ -49,14 +53,10 @@
         </div>
         
         <!-- Creation date pill -->
-        <div class="pill pill-date" id="pill-date" data-pill="date">
+        <div class="pill pill-date" id="pill-date" data-pill="date"></div>
           <span class="pill-label">Creation Date</span>
           <span class="pill-value" id="date-value">All</span>
         </div>
-        
-        <!-- Refresh button -->
-        <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
-        </button>
       </div>
       
       <!-- Pill editors container -->

@@ -226,7 +226,16 @@ input[type="text"] {
 .helpbtn { /* inherits base */ }
 
 /* Refresh is often icon-only; base padding is fine */
-.refresh-btn { /* inherits base */ }
+.refresh-btn { 
+  /* inherits base */
+  background: #1e88e5;
+  border-color: #1976d2;
+  color: #fff;
+}
+.refresh-btn:hover {
+  background: #1565c0;
+  border-color: #1565c0;
+}
 
 /* Thumbnail toggle: checkbox + icon inside base frame */
 .thumbnail-toggle {
@@ -457,19 +466,25 @@ aside#sidebar {
 }
 
 .pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 12px;
-  background: var(--btn-bg);
+  height: var(--btn-h);
+  min-width: 32px;
+  padding: 0 var(--btn-xpad);
+  box-sizing: border-box;
+  border-radius: var(--btn-radius);
   border: 1px solid var(--btn-border);
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 12px;
+  background: var(--btn-bg);
   color: var(--btn-text);
+  font-size: var(--btn-font-size);
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  transition: all 0.2s ease;
   white-space: nowrap;
-  min-width: max-content;
 }
 
 .pill:hover {
