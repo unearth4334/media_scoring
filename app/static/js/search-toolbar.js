@@ -245,7 +245,13 @@ function applySearchToolbarFilter(pillType) {
       searchToolbarFilters.rating = newValue;
       // Update min filter for backend compatibility
       document.getElementById('min_filter').value = newValue;
-      minFilter = newValue === 'none' ? null : (newValue === 'unrated' ? 'unrated' : parseInt(newValue));
+      if (newValue === 'none') {
+        minFilter = null;
+      } else if (newValue === 'unrated') {
+        minFilter = 'unrated';
+      } else {
+        minFilter = parseInt(newValue);
+      }
       break;
       
     case 'date':
