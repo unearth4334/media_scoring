@@ -718,6 +718,17 @@ document.getElementById("load").addEventListener("click", () => {
   // Resize directory input after refresh
   setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
+
+// Refresh content button - refreshes based on current pill bar filters
+document.getElementById("refresh-content").addEventListener("click", () => {
+  // Check if applyCurrentFilters is available from pill-bar.js
+  if (typeof applyCurrentFilters === 'function') {
+    applyCurrentFilters();
+  } else {
+    console.warn('applyCurrentFilters function not available');
+  }
+});
+
 document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
   if (val === 'none') {
