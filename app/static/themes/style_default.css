@@ -237,6 +237,18 @@ input[type="text"] {
   border-color: #1565c0;
 }
 
+/* Mobile-specific refresh button improvements to match pill styling */
+@media (max-width: 768px) {
+  .refresh-btn {
+    min-height: 44px; /* Match pill touch target size */
+    min-width: 44px;
+    padding: 8px 16px; /* Match pill padding */
+    border-width: 2px; /* Match pill border thickness */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Match pill shadow */
+    flex-shrink: 0; /* Prevent shrinking in horizontal scroll */
+  }
+}
+
 /* Thumbnail toggle: checkbox + icon inside base frame */
 .thumbnail-toggle {
   background: transparent; /* outline vibe; remove if you want filled look */
