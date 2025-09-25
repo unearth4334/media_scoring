@@ -223,7 +223,53 @@ input[type="text"] {
 
 /* Help/Refresh keep base footprint */
 .helpbtn {}
-.refresh-btn {}
+
+/* Refresh button - redesigned to match pill styling (Pastelcore) */
+.refresh-btn { 
+  /* Override button-base with pill-style design */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  min-width: 56px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid rgba(168, 194, 232, 0.4);
+  background: linear-gradient(135deg, #a8c2e8 0%, #8fa7cc 100%);
+  backdrop-filter: blur(8px);
+  color: #4a5a7a;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(168, 194, 232, 0.3), 0 1px 3px rgba(125, 90, 120, 0.1);
+}
+
+.refresh-btn:hover {
+  background: linear-gradient(135deg, #9bb1d6 0%, #7d9abb 100%);
+  border-color: rgba(155, 177, 214, 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(168, 194, 232, 0.4), 0 2px 6px rgba(125, 90, 120, 0.15);
+}
+
+.refresh-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(168, 194, 232, 0.3), 0 1px 2px rgba(125, 90, 120, 0.1);
+}
+
+/* Icon sizing for refresh button */
+.refresh-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+}
 
 /* Thumbnail toggle: checkbox + icon inside base frame */
 .thumbnail-toggle {
@@ -411,17 +457,19 @@ aside#sidebar {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* =========================================================
-   PILL BAR SYSTEM (Pastelcore Theme)
+   PILL BAR SYSTEM (Pastelcore Theme) - REDESIGNED
    --------------------------------------------------------- */
 .pill-bar-container {
-  padding: 12px 50px;
+  padding: 16px 50px;
+  background: rgba(245, 240, 245, 0.05);
+  border-bottom: 1px solid rgba(212, 184, 201, 0.2);
 }
 
 .pill-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 0;
   align-items: center;
 }
 
@@ -486,19 +534,28 @@ aside#sidebar {
 }
 
 .pill {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: #f5f0f5;                /* pastel background */
-  border: 1px solid #d4b8c9;         /* pastel border */
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;
+  min-width: 40px;
+  padding: 0 14px;
+  box-sizing: border-box;
+  border-radius: 16px;
+  border: 1px solid rgba(212, 184, 201, 0.4);
+  background: rgba(245, 240, 245, 0.9);
+  backdrop-filter: blur(8px);
+  color: #7d5a78;
   font-size: 12px;
-  color: #7d5a78;                     /* pastel text */
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
-  min-width: max-content;
+  box-shadow: 0 1px 3px rgba(125, 90, 120, 0.1), 0 1px 2px rgba(125, 90, 120, 0.06);
 }
 
 /* Mobile-specific pill improvements for pastelcore */

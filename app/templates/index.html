@@ -20,6 +20,7 @@
       <div class="pill-bar" id="pill-bar">
         <!-- Refresh button (moved to top) -->
         <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
+          <span class="refresh-text">Refresh</span>
         </button>
 
         <!-- Search pill -->
@@ -257,6 +258,13 @@
 <script>
 // Populate static SVG icons after DOM loads
 document.addEventListener('DOMContentLoaded', function() {
+  // Helper function to create SVG element from string
+  function createSVGElement(svgString) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(svgString, 'image/svg+xml');
+    return doc.documentElement;
+  }
+  
   // Directory navigation icons
   const dirUpBtn = document.getElementById('dir_up');
   if (dirUpBtn) dirUpBtn.innerHTML = svgDirectoryUp();
@@ -272,7 +280,14 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Refresh content button
   const refreshContentBtn = document.getElementById('refresh-content');
-  if (refreshContentBtn) refreshContentBtn.innerHTML = svgRefresh();
+  if (refreshContentBtn) {
+    const refreshText = refreshContentBtn.querySelector('.refresh-text');
+    if (refreshText) {
+      refreshContentBtn.insertBefore(createSVGElement(svgRefresh()), refreshText);
+    } else {
+      refreshContentBtn.innerHTML = svgRefresh() + ' Refresh';
+    }
+  }
   
   // Download button
   const downloadBtn = document.getElementById('download_btn');
