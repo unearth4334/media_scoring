@@ -621,23 +621,31 @@ aside#sidebar {
 /* Mobile: full width inline panel */
 @media (max-width: 768px) {
   .pill-editor {
-    width: 100%;
-    margin-top: 12px;
+    width: calc(100vw - 32px); /* Full viewport width minus margins */
+    max-width: calc(100% - 16px); /* Ensure it fits within container with margin */
+    margin: 12px 8px 0 8px; /* Add side margins for breathing room */
     border-radius: 12px; /* More rounded corners for mobile */
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+    box-sizing: border-box; /* Ensure padding is included in width calculation */
   }
   
   .editor-content {
     padding: 20px; /* More generous padding */
+    box-sizing: border-box; /* Ensure padding doesn't cause overflow */
   }
   
   .editor-content input,
   .editor-content select {
+    width: 100%;
     min-height: 44px; /* Touch-friendly input height */
     padding: 12px 16px;
     font-size: 16px; /* Prevents zoom on iOS */
     border-radius: 8px;
     margin-bottom: 16px;
+    box-sizing: border-box; /* Include padding in width calculation */
+    /* Handle text overflow for long content */
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   
   .editor-actions {
