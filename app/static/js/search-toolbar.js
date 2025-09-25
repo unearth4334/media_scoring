@@ -1,6 +1,6 @@
 /**
  * Search Toolbar Functionality
- * Handles the new pill-based filtering interface
+ * Handles the search toolbar filtering interface
  */
 
 // Search toolbar state
