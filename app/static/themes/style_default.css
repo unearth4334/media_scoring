@@ -225,16 +225,51 @@ input[type="text"] {
 /* Help button keeps same footprint but can look like a pill if desired */
 .helpbtn { /* inherits base */ }
 
-/* Refresh is often icon-only; base padding is fine */
+/* Refresh button - redesigned to match pill styling */
 .refresh-btn { 
-  /* inherits base */
-  background: #1e88e5;
-  border-color: #1976d2;
+  /* Override button-base with pill-style design */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 32px;                    /* Match pill height */
+  min-width: 56px;                 /* Wider for prominence */
+  padding: 0 16px;
+  box-sizing: border-box;
+  border-radius: 16px;             /* Match pill radius */
+  border: 1px solid rgba(30, 136, 229, 0.3);
+  background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+  backdrop-filter: blur(8px);
   color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.3), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
+
 .refresh-btn:hover {
-  background: #1565c0;
-  border-color: #1565c0;
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  border-color: rgba(21, 101, 192, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(30, 136, 229, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.refresh-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 4px rgba(30, 136, 229, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Icon sizing for refresh button */
+.refresh-btn svg {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
 }
 
 /* Thumbnail toggle: checkbox + icon inside base frame */
@@ -421,17 +456,19 @@ aside#sidebar {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* =========================================================
-   PILL BAR SYSTEM
+   PILL BAR SYSTEM - REDESIGNED
    --------------------------------------------------------- */
 .pill-bar-container {
-  padding: 12px 50px;
+  padding: 16px 50px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .pill-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 0;
   align-items: center;
 }
 
@@ -444,33 +481,33 @@ aside#sidebar {
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     padding-bottom: 8px;
-    gap: 12px; /* Increased gap for better touch targets */
+    gap: 16px; /* Increased gap for better touch targets */
     padding-left: 4px;
     padding-right: 4px;
   }
   
   .pill-bar::-webkit-scrollbar {
-    height: 6px; /* Slightly thicker for better visibility */
+    height: 4px; /* Thinner scrollbar for cleaner look */
   }
   
   .pill-bar::-webkit-scrollbar-track {
-    background: rgba(51, 51, 51, 0.3);
-    border-radius: 3px;
+    background: rgba(51, 51, 51, 0.2);
+    border-radius: 2px;
   }
   
   .pill-bar::-webkit-scrollbar-thumb {
-    background: #00ffff;
-    border-radius: 3px;
+    background: rgba(0, 255, 255, 0.4);
+    border-radius: 2px;
     opacity: 0.7;
   }
   
   .pill-bar::-webkit-scrollbar-thumb:hover {
-    background: #4CAF50;
+    background: rgba(76, 175, 80, 0.6);
     opacity: 1;
   }
   
   .pill-bar-container {
-    padding: 12px 16px;
+    padding: 16px 20px;
     position: relative;
   }
   
@@ -478,11 +515,11 @@ aside#sidebar {
   .pill-bar-container::after {
     content: '';
     position: absolute;
-    right: 16px;
+    right: 20px;
     top: 50%;
     transform: translateY(-50%);
-    width: 8px;
-    height: 8px;
+    width: 6px;
+    height: 6px;
     background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3));
     border-radius: 50%;
     pointer-events: none;
@@ -499,33 +536,37 @@ aside#sidebar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  height: var(--btn-h);
-  min-width: 32px;
-  padding: 0 var(--btn-xpad);
+  gap: 8px;
+  height: 32px;                    /* Slightly taller than button base for prominence */
+  min-width: 40px;
+  padding: 0 14px;                 /* More refined padding */
   box-sizing: border-box;
-  border-radius: var(--btn-radius);
-  border: 1px solid var(--btn-border);
-  background: var(--btn-bg);
+  border-radius: 16px;             /* More rounded for sleeker look */
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(47, 47, 47, 0.8);
+  backdrop-filter: blur(8px);      /* Modern glass effect */
   color: var(--btn-text);
-  font-size: var(--btn-font-size);
+  font-size: 12px;
+  font-weight: 500;                /* Slightly bolder text */
   line-height: 1;
   cursor: pointer;
   user-select: none;
   text-align: center;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); /* Smoother easing */
   white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
 }
 
 /* Mobile-specific pill improvements */
 @media (max-width: 768px) {
   .pill {
     min-height: 44px; /* Larger touch target - Apple's recommended minimum */
-    min-width: 44px;
-    padding: 8px 16px; /* More generous padding */
+    min-width: 48px;
+    padding: 10px 18px; /* More generous padding */
     font-size: 14px; /* Slightly larger text for readability */
-    border-width: 2px; /* Thicker border for better definition */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    border-width: 1.5px; /* Refined border for better definition */
+    border-radius: 22px; /* Maintain proportional rounding */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
     flex-shrink: 0; /* Prevent shrinking in horizontal scroll */
   }
   
@@ -543,21 +584,25 @@ aside#sidebar {
 }
 
 .pill:hover {
-  background: var(--btn-bg-hover);
-  border-color: var(--btn-border-hover);
+  background: rgba(58, 58, 58, 0.9);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
-/* Enhanced active state for mobile */
+/* Enhanced active state for pills */
 .pill.active {
-  background: #4CAF50;
-  border-color: #45a049;
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+  border-color: rgba(76, 175, 80, 0.5);
   color: white;
+  box-shadow: 0 3px 12px rgba(76, 175, 80, 0.4), 0 2px 6px rgba(0, 0, 0, 0.2);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 768px) {
   .pill.active {
-    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
-    transform: translateY(-1px); /* Subtle lift effect */
+    box-shadow: 0 4px 16px rgba(76, 175, 80, 0.3), 0 2px 8px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px); /* Slightly more lift on mobile */
   }
 }
 
@@ -566,16 +611,18 @@ aside#sidebar {
 }
 
 .pill-value {
-  background: rgba(255,255,255,0.15);
-  padding: 2px 6px;
-  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 3px 8px;
+  border-radius: 12px;
   font-size: 11px;
+  font-weight: 600;
   min-width: 20px;
   text-align: center;
+  backdrop-filter: blur(4px);
 }
 
 .pill.active .pill-value {
-  background: rgba(255,255,255,0.25);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Special styling for search pill */
@@ -584,8 +631,9 @@ aside#sidebar {
 }
 
 .pill-search .pill-value:not(:empty) {
-  background: #ffa726;
-  color: #333;
+  background: linear-gradient(135deg, #ffa726 0%, #f57c00 100%);
+  color: #fff;
+  font-weight: 600;
 }
 
 /* Pill editors */
