@@ -589,6 +589,28 @@ aside#sidebar {
   color: #8b4513;
 }
 
+/* Modified pill styling - vibrant but soft colors for items that differ from defaults */
+.pill.pill-modified {
+  background: #b8e6b8;              /* soft green for modified state */
+  border-color: #7fbd7f;
+  color: #2d5a2d;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(127, 189, 127, 0.5);
+}
+
+.pill.pill-modified .pill-value {
+  background: #e6b8e6;               /* soft purple value background */
+  color: #5a2d5a;
+  font-weight: 600;
+  border: 1px solid #bd7fbd;
+}
+
+.pill.pill-modified:hover {
+  background: #a3d9a3;              /* slightly darker green on hover */
+  border-color: #6ba06b;
+  box-shadow: 0 0 16px rgba(127, 189, 127, 0.7);
+}
+
 /* Pill editors */
 .pill-editors {
   position: relative;

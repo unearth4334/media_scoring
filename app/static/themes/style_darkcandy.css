@@ -594,6 +594,34 @@ aside#sidebar {
   border-color: #00cccc;
 }
 
+/* Modified pill styling - vibrant colors for items that differ from defaults */
+.pill.pill-modified {
+  background: #ff69b4;              /* hot pink for modified state */
+  border-color: #ff1493;
+  color: #000000;
+  font-weight: 700;
+  box-shadow: 0 0 16px rgba(255, 105, 180, 0.8);
+  animation: pulse-glow 2s ease-in-out infinite alternate;
+}
+
+.pill.pill-modified .pill-value {
+  background: #00ffff;               /* bright cyan value background */
+  color: #000000;
+  font-weight: 700;
+  border: 2px solid #ff1493;
+}
+
+.pill.pill-modified:hover {
+  background: #ff1493;              /* deeper pink on hover */
+  border-color: #dc143c;
+  box-shadow: 0 0 20px rgba(255, 105, 180, 1.0);
+}
+
+@keyframes pulse-glow {
+  0% { box-shadow: 0 0 16px rgba(255, 105, 180, 0.8); }
+  100% { box-shadow: 0 0 24px rgba(255, 105, 180, 1.0); }
+}
+
 /* Pill editors */
 .pill-editors {
   position: relative;
