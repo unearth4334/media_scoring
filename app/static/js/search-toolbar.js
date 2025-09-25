@@ -155,30 +155,30 @@ function populateEditor(pillType) {
 
 function setupEditorActions() {
   // Search editor
-  document.getElementById('search-apply').addEventListener('click', () => applyFilter('search'));
+  document.getElementById('search-apply').addEventListener('click', () => applySearchToolbarFilter('search'));
   document.getElementById('search-clear').addEventListener('click', () => clearFilter('search'));
   document.getElementById('search-close').addEventListener('click', closePillEditor);
   
   // Sort editor  
-  document.getElementById('sort-apply').addEventListener('click', () => applyFilter('sort'));
+  document.getElementById('sort-apply').addEventListener('click', () => applySearchToolbarFilter('sort'));
   document.getElementById('sort-close').addEventListener('click', closePillEditor);
   
   // Directory editor
-  document.getElementById('directory-apply').addEventListener('click', () => applyFilter('directory'));
+  document.getElementById('directory-apply').addEventListener('click', () => applySearchToolbarFilter('directory'));
   document.getElementById('directory-close').addEventListener('click', closePillEditor);
   
   // File type editor
-  document.getElementById('filetype-apply').addEventListener('click', () => applyFilter('filetype'));
+  document.getElementById('filetype-apply').addEventListener('click', () => applySearchToolbarFilter('filetype'));
   document.getElementById('filetype-clear').addEventListener('click', () => clearFilter('filetype'));
   document.getElementById('filetype-close').addEventListener('click', closePillEditor);
   
   // Rating editor
-  document.getElementById('rating-apply').addEventListener('click', () => applyFilter('rating'));
+  document.getElementById('rating-apply').addEventListener('click', () => applySearchToolbarFilter('rating'));
   document.getElementById('rating-clear').addEventListener('click', () => clearFilter('rating'));
   document.getElementById('rating-close').addEventListener('click', closePillEditor);
   
   // Date editor
-  document.getElementById('date-apply').addEventListener('click', () => applyFilter('date'));
+  document.getElementById('date-apply').addEventListener('click', () => applySearchToolbarFilter('date'));
   document.getElementById('date-clear').addEventListener('click', () => clearFilter('date'));
   document.getElementById('date-close').addEventListener('click', closePillEditor);
   
@@ -194,7 +194,7 @@ function setupEditorActions() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && activePillEditor) {
       e.preventDefault();
-      applyFilter(activePillEditor);
+      applySearchToolbarFilter(activePillEditor);
     } else if (e.key === 'Escape' && activePillEditor) {
       e.preventDefault();
       closePillEditor();
@@ -202,7 +202,7 @@ function setupEditorActions() {
   });
 }
 
-function applyFilter(pillType) {
+function applySearchToolbarFilter(pillType) {
   let newValue;
   
   switch (pillType) {
@@ -245,7 +245,7 @@ function applyFilter(pillType) {
       searchToolbarFilters.rating = newValue;
       // Update min filter for backend compatibility
       document.getElementById('min_filter').value = newValue;
-      minFilter = newValue === 'none' ? null : newValue;
+      minFilter = newValue === 'none' ? null : (newValue === 'unrated' ? 'unrated' : parseInt(newValue));
       break;
       
     case 'date':
@@ -554,19 +554,27 @@ async function applyDatabaseFilters() {
 }
 
 function applyClientSideFilters() {
-  // Apply search filter
+  // Start with all videos
+  let currentFiltered = [...videos];
+  
+  // Apply search filter first
   if (searchToolbarFilters.search) {
-    filtered = videos.filter(video => 
+    currentFiltered = currentFiltered.filter(video => 
       video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
     );
-  } else {
-    filtered = [...videos];
   }
   
-  // Apply rating filter using existing function
-  if (typeof applyFilter === 'function') {
-    applyFilter();
+  // Apply rating filter
+  if (minFilter !== null) {
+    if (minFilter === 'unrated') {
+      currentFiltered = currentFiltered.filter(v => !v.score || v.score === 0);
+    } else {
+      currentFiltered = currentFiltered.filter(v => (v.score||0) >= minFilter);
+    }
   }
+  
+  // Set the filtered results
+  filtered = currentFiltered;
   
   // Apply sort
   applySortFilter();
@@ -578,6 +586,29 @@ function applyClientSideFilters() {
   
   if (filtered.length > 0) {
     show(0);
+  } else {
+    show(-1);
+  }
+  
+  // Update filter info display
+  const info = document.getElementById('filter_info');
+  if (info) {
+    let filterParts = [];
+    
+    if (searchToolbarFilters.search) {
+      filterParts.push(`search: "${searchToolbarFilters.search}"`);
+    }
+    
+    if (minFilter !== null) {
+      if (minFilter === 'unrated') {
+        filterParts.push('unrated only');
+      } else {
+        filterParts.push(`rating ≥ ${minFilter}`);
+      }
+    }
+    
+    const filterLabel = filterParts.length > 0 ? filterParts.join(', ') : 'No filter';
+    info.textContent = `${filterLabel} — showing ${filtered.length}/${videos.length}`;
   }
 }
 
