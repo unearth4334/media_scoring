@@ -443,25 +443,55 @@ aside#sidebar {
     scroll-behavior: smooth;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
-    padding-bottom: 4px;
+    padding-bottom: 8px;
+    gap: 12px; /* Increased gap for better touch targets */
+    padding-left: 4px;
+    padding-right: 4px;
   }
   
   .pill-bar::-webkit-scrollbar {
-    height: 4px;
+    height: 6px; /* Slightly thicker for better visibility */
   }
   
   .pill-bar::-webkit-scrollbar-track {
-    background: #333;
-    border-radius: 2px;
+    background: rgba(51, 51, 51, 0.3);
+    border-radius: 3px;
   }
   
   .pill-bar::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 2px;
+    background: #00ffff;
+    border-radius: 3px;
+    opacity: 0.7;
+  }
+  
+  .pill-bar::-webkit-scrollbar-thumb:hover {
+    background: #4CAF50;
+    opacity: 1;
   }
   
   .pill-bar-container {
     padding: 12px 16px;
+    position: relative;
+  }
+  
+  /* Add scroll hint indicator */
+  .pill-bar-container::after {
+    content: '';
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.3));
+    border-radius: 50%;
+    pointer-events: none;
+    animation: scrollHint 2s ease-in-out infinite;
+  }
+  
+  @keyframes scrollHint {
+    0%, 100% { opacity: 0.3; }
+    50% { opacity: 0.8; }
   }
 }
 
@@ -487,15 +517,48 @@ aside#sidebar {
   white-space: nowrap;
 }
 
+/* Mobile-specific pill improvements */
+@media (max-width: 768px) {
+  .pill {
+    min-height: 44px; /* Larger touch target - Apple's recommended minimum */
+    min-width: 44px;
+    padding: 8px 16px; /* More generous padding */
+    font-size: 14px; /* Slightly larger text for readability */
+    border-width: 2px; /* Thicker border for better definition */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+    flex-shrink: 0; /* Prevent shrinking in horizontal scroll */
+  }
+  
+  .pill .pill-label {
+    font-weight: 600; /* Bolder text for mobile */
+  }
+  
+  .pill .pill-value {
+    font-size: 12px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 12px;
+    min-width: 24px;
+  }
+}
+
 .pill:hover {
   background: var(--btn-bg-hover);
   border-color: var(--btn-border-hover);
 }
 
+/* Enhanced active state for mobile */
 .pill.active {
   background: #4CAF50;
   border-color: #45a049;
   color: white;
+}
+
+@media (max-width: 768px) {
+  .pill.active {
+    box-shadow: 0 4px 8px rgba(76, 175, 80, 0.3);
+    transform: translateY(-1px); /* Subtle lift effect */
+  }
 }
 
 .pill-label {
@@ -559,7 +622,37 @@ aside#sidebar {
 @media (max-width: 768px) {
   .pill-editor {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 12px;
+    border-radius: 12px; /* More rounded corners for mobile */
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); /* Enhanced shadow */
+  }
+  
+  .editor-content {
+    padding: 20px; /* More generous padding */
+  }
+  
+  .editor-content input,
+  .editor-content select {
+    min-height: 44px; /* Touch-friendly input height */
+    padding: 12px 16px;
+    font-size: 16px; /* Prevents zoom on iOS */
+    border-radius: 8px;
+    margin-bottom: 16px;
+  }
+  
+  .editor-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  
+  .editor-btn {
+    min-height: 44px;
+    padding: 12px 20px;
+    font-size: 14px;
+    border-radius: 8px;
+    flex: 1;
+    min-width: 80px;
   }
 }
 
