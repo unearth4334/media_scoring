@@ -15,6 +15,46 @@ let searchToolbarFilters = {
   dateEnd: null
 };
 
+// Default filter values for comparison (to detect modifications)
+const defaultFilters = {
+  search: '',
+  sort: 'name',
+  directory: '',
+  filetype: ['jpg', 'png', 'mp4'],
+  rating: 'none',
+  dateStart: null,
+  dateEnd: null
+};
+
+// Check if a filter value has been modified from its default
+function isFilterModified(filterName) {
+  const current = searchToolbarFilters[filterName];
+  const defaultValue = defaultFilters[filterName];
+  
+  // Handle special cases for different data types
+  if (filterName === 'filetype') {
+    // Compare arrays - both must contain same elements in any order
+    if (!Array.isArray(current) || !Array.isArray(defaultValue)) return false;
+    if (current.length !== defaultValue.length) return true;
+    return !current.every(item => defaultValue.includes(item)) || 
+           !defaultValue.every(item => current.includes(item));
+  }
+  
+  if (filterName === 'dateStart' || filterName === 'dateEnd') {
+    // Null/empty comparison for dates
+    return (current !== null && current !== '') || (defaultValue !== null && defaultValue !== '');
+  }
+  
+  if (filterName === 'directory') {
+    // Directory is only modified if it's explicitly set and different from both empty and current dir
+    // We don't consider it modified if it just shows the current working directory
+    return current !== '' && current !== defaultValue && current !== currentDir && current !== (currentDir || 'media');
+  }
+  
+  // Standard comparison for other fields
+  return current !== defaultValue;
+}
+
 // Initialize search toolbar functionality
 function initializeSearchToolbar() {
   // Initialize pill values from current state
@@ -301,21 +341,25 @@ function clearFilter(pillType) {
 function updatePillValues() {
   // Search
   const searchValue = document.getElementById('search-value');
+  const searchPill = document.getElementById('pill-search');
   searchValue.textContent = searchToolbarFilters.search || '';
   
   // Sort
   const sortValue = document.getElementById('sort-value');
+  const sortPill = document.getElementById('pill-sort');
   const sortLabels = { name: 'Name', date: 'Date', size: 'Size', rating: 'Rating' };
   sortValue.textContent = sortLabels[searchToolbarFilters.sort] || 'Name';
   
   // Directory
   const dirValue = document.getElementById('directory-value');
+  const dirPill = document.getElementById('pill-directory');
   const displayDir = searchToolbarFilters.directory || currentDir || 'media';
   const shortDir = displayDir.split('/').pop() || displayDir;
   dirValue.textContent = shortDir;
   
   // File type
   const filetypeValue = document.getElementById('filetype-value');
+  const filetypePill = document.getElementById('pill-filetype');
   const types = searchToolbarFilters.filetype;
   if (types.length === 0) {
     filetypeValue.textContent = 'None';
@@ -327,6 +371,7 @@ function updatePillValues() {
   
   // Rating
   const ratingValue = document.getElementById('rating-value');
+  const ratingPill = document.getElementById('pill-rating');
   const ratingLabels = {
     'none': 'All',
     'unrated': 'Unrated',
@@ -340,6 +385,7 @@ function updatePillValues() {
   
   // Date
   const dateValue = document.getElementById('date-value');
+  const datePill = document.getElementById('pill-date');
   if (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) {
     let dateText = '';
     if (searchToolbarFilters.dateStart && searchToolbarFilters.dateEnd) {
@@ -353,6 +399,30 @@ function updatePillValues() {
   } else {
     dateValue.textContent = 'All';
   }
+  
+  // Apply modified state classes to pills
+  const pillsData = [
+    { pill: searchPill, filterName: 'search' },
+    { pill: sortPill, filterName: 'sort' },
+    { pill: dirPill, filterName: 'directory' },
+    { pill: filetypePill, filterName: 'filetype' },
+    { pill: ratingPill, filterName: 'rating' },
+    { pill: datePill, filterName: 'dateStart' } // Check if any date is set
+  ];
+  
+  pillsData.forEach(({ pill, filterName }) => {
+    if (pill) {
+      const isModified = filterName === 'dateStart' ? 
+        (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) : 
+        isFilterModified(filterName);
+        
+      if (isModified) {
+        pill.classList.add('pill-modified');
+      } else {
+        pill.classList.remove('pill-modified');
+      }
+    }
+  });
 }
 
 function applyCurrentFilters() {

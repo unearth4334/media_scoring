@@ -600,6 +600,28 @@ aside#sidebar {
   color: #333;
 }
 
+/* Modified pill styling - vibrant colors for items that differ from defaults */
+.pill.pill-modified {
+  background: #4CAF50;
+  border-color: #45a049;
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.pill.pill-modified .pill-value {
+  background: rgba(255, 255, 255, 0.3);
+  color: white;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.pill.pill-modified:hover {
+  background: #45a049;
+  border-color: #388e3c;
+  box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+}
+
 /* Pill editors */
 .pill-editors {
   position: relative;
