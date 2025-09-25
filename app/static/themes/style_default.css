@@ -303,7 +303,7 @@ input[type="text"] {
 .toolbar-container { transition: all 0.3s ease; overflow: visible; }
 .toolbar-container.collapsed { max-height: 0; opacity: 0; margin: 0; padding: 0; }
 .toolbar-container.collapsed header { margin: 0; padding: 0; }
-.toolbar-container.collapsed .pill-bar-container { display: none; }
+.toolbar-container.collapsed .search-toolbar-container { display: none; }
 
 body.toolbar-collapsed main {
   padding-top: 8px;
@@ -421,13 +421,13 @@ aside#sidebar {
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* =========================================================
-   PILL BAR SYSTEM
+   SEARCH TOOLBAR SYSTEM
    --------------------------------------------------------- */
-.pill-bar-container {
+.search-toolbar-container {
   padding: 12px 50px;
 }
 
-.pill-bar {
+.search-toolbar {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -437,7 +437,7 @@ aside#sidebar {
 
 /* Mobile: horizontal scroll instead of wrap */
 @media (max-width: 768px) {
-  .pill-bar {
+  .search-toolbar {
     flex-wrap: nowrap;
     overflow-x: auto;
     scroll-behavior: smooth;
@@ -449,33 +449,33 @@ aside#sidebar {
     padding-right: 4px;
   }
   
-  .pill-bar::-webkit-scrollbar {
+  .search-toolbar::-webkit-scrollbar {
     height: 6px; /* Slightly thicker for better visibility */
   }
   
-  .pill-bar::-webkit-scrollbar-track {
+  .search-toolbar::-webkit-scrollbar-track {
     background: rgba(51, 51, 51, 0.3);
     border-radius: 3px;
   }
   
-  .pill-bar::-webkit-scrollbar-thumb {
+  .search-toolbar::-webkit-scrollbar-thumb {
     background: #00ffff;
     border-radius: 3px;
     opacity: 0.7;
   }
   
-  .pill-bar::-webkit-scrollbar-thumb:hover {
+  .search-toolbar::-webkit-scrollbar-thumb:hover {
     background: #4CAF50;
     opacity: 1;
   }
   
-  .pill-bar-container {
+  .search-toolbar-container {
     padding: 12px 16px;
     position: relative;
   }
   
   /* Add scroll hint indicator */
-  .pill-bar-container::after {
+  .search-toolbar-container::after {
     content: '';
     position: absolute;
     right: 16px;

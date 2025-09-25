@@ -1,11 +1,11 @@
 /**
- * Pill Bar Functionality
+ * Search Toolbar Functionality
  * Handles the new pill-based filtering interface
  */
 
-// Pill bar state
+// Search toolbar state
 let activePillEditor = null;
-let pillBarFilters = {
+let searchToolbarFilters = {
   search: '',
   sort: 'name',
   directory: '',
@@ -15,8 +15,8 @@ let pillBarFilters = {
   dateEnd: null
 };
 
-// Initialize pill bar functionality
-function initializePillBar() {
+// Initialize search toolbar functionality
+function initializeSearchToolbar() {
   // Initialize pill values from current state
   updatePillValues();
   
@@ -121,7 +121,7 @@ function closePillEditor() {
 }
 
 function populateEditor(pillType) {
-  const filter = pillBarFilters[pillType];
+  const filter = searchToolbarFilters[pillType];
   
   switch (pillType) {
     case 'search':
@@ -147,8 +147,8 @@ function populateEditor(pillType) {
       break;
       
     case 'date':
-      document.getElementById('date-start').value = pillBarFilters.dateStart || '';
-      document.getElementById('date-end').value = pillBarFilters.dateEnd || '';
+      document.getElementById('date-start').value = searchToolbarFilters.dateStart || '';
+      document.getElementById('date-end').value = searchToolbarFilters.dateEnd || '';
       break;
   }
 }
@@ -208,17 +208,17 @@ function applyFilter(pillType) {
   switch (pillType) {
     case 'search':
       newValue = document.getElementById('search-input').value.trim();
-      pillBarFilters.search = newValue;
+      searchToolbarFilters.search = newValue;
       break;
       
     case 'sort':
       newValue = document.getElementById('sort-select').value;
-      pillBarFilters.sort = newValue;
+      searchToolbarFilters.sort = newValue;
       break;
       
     case 'directory':
       newValue = document.getElementById('directory-input').value.trim();
-      pillBarFilters.directory = newValue;
+      searchToolbarFilters.directory = newValue;
       // Update the backend directory
       if (newValue && newValue !== currentDir) {
         document.getElementById('dir').value = newValue;
@@ -233,7 +233,7 @@ function applyFilter(pillType) {
     case 'filetype':
       const selected = Array.from(document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]:checked'))
         .map(cb => cb.value);
-      pillBarFilters.filetype = selected;
+      searchToolbarFilters.filetype = selected;
       // Update pattern for backend compatibility
       const pattern = selected.map(ext => `*.${ext}`).join('|');
       document.getElementById('pattern').value = pattern;
@@ -242,15 +242,15 @@ function applyFilter(pillType) {
       
     case 'rating':
       newValue = document.getElementById('rating-select').value;
-      pillBarFilters.rating = newValue;
+      searchToolbarFilters.rating = newValue;
       // Update min filter for backend compatibility
       document.getElementById('min_filter').value = newValue;
       minFilter = newValue === 'none' ? null : newValue;
       break;
       
     case 'date':
-      pillBarFilters.dateStart = document.getElementById('date-start').value || null;
-      pillBarFilters.dateEnd = document.getElementById('date-end').value || null;
+      searchToolbarFilters.dateStart = document.getElementById('date-start').value || null;
+      searchToolbarFilters.dateEnd = document.getElementById('date-end').value || null;
       break;
   }
   
@@ -262,27 +262,27 @@ function applyFilter(pillType) {
 function clearFilter(pillType) {
   switch (pillType) {
     case 'search':
-      pillBarFilters.search = '';
+      searchToolbarFilters.search = '';
       document.getElementById('search-input').value = '';
       break;
       
     case 'filetype':
-      pillBarFilters.filetype = [];
+      searchToolbarFilters.filetype = [];
       document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
         cb.checked = false;
       });
       break;
       
     case 'rating':
-      pillBarFilters.rating = 'none';
+      searchToolbarFilters.rating = 'none';
       document.getElementById('rating-select').value = 'none';
       document.getElementById('min_filter').value = 'none';
       minFilter = null;
       break;
       
     case 'date':
-      pillBarFilters.dateStart = null;
-      pillBarFilters.dateEnd = null;
+      searchToolbarFilters.dateStart = null;
+      searchToolbarFilters.dateEnd = null;
       document.getElementById('date-start').value = '';
       document.getElementById('date-end').value = '';
       break;
@@ -295,22 +295,22 @@ function clearFilter(pillType) {
 function updatePillValues() {
   // Search
   const searchValue = document.getElementById('search-value');
-  searchValue.textContent = pillBarFilters.search || '';
+  searchValue.textContent = searchToolbarFilters.search || '';
   
   // Sort
   const sortValue = document.getElementById('sort-value');
   const sortLabels = { name: 'Name', date: 'Date', size: 'Size', rating: 'Rating' };
-  sortValue.textContent = sortLabels[pillBarFilters.sort] || 'Name';
+  sortValue.textContent = sortLabels[searchToolbarFilters.sort] || 'Name';
   
   // Directory
   const dirValue = document.getElementById('directory-value');
-  const displayDir = pillBarFilters.directory || currentDir || 'media';
+  const displayDir = searchToolbarFilters.directory || currentDir || 'media';
   const shortDir = displayDir.split('/').pop() || displayDir;
   dirValue.textContent = shortDir;
   
   // File type
   const filetypeValue = document.getElementById('filetype-value');
-  const types = pillBarFilters.filetype;
+  const types = searchToolbarFilters.filetype;
   if (types.length === 0) {
     filetypeValue.textContent = 'None';
   } else if (types.length === 3 && types.includes('jpg') && types.includes('png') && types.includes('mp4')) {
@@ -330,18 +330,18 @@ function updatePillValues() {
     '4': '★4+',
     '5': '★5'
   };
-  ratingValue.textContent = ratingLabels[pillBarFilters.rating] || 'All';
+  ratingValue.textContent = ratingLabels[searchToolbarFilters.rating] || 'All';
   
   // Date
   const dateValue = document.getElementById('date-value');
-  if (pillBarFilters.dateStart || pillBarFilters.dateEnd) {
+  if (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) {
     let dateText = '';
-    if (pillBarFilters.dateStart && pillBarFilters.dateEnd) {
-      dateText = `${pillBarFilters.dateStart} to ${pillBarFilters.dateEnd}`;
-    } else if (pillBarFilters.dateStart) {
-      dateText = `From ${pillBarFilters.dateStart}`;
-    } else if (pillBarFilters.dateEnd) {
-      dateText = `Until ${pillBarFilters.dateEnd}`;
+    if (searchToolbarFilters.dateStart && searchToolbarFilters.dateEnd) {
+      dateText = `${searchToolbarFilters.dateStart} to ${searchToolbarFilters.dateEnd}`;
+    } else if (searchToolbarFilters.dateStart) {
+      dateText = `From ${searchToolbarFilters.dateStart}`;
+    } else if (searchToolbarFilters.dateEnd) {
+      dateText = `Until ${searchToolbarFilters.dateEnd}`;
     }
     dateValue.textContent = dateText;
   } else {
@@ -351,9 +351,9 @@ function updatePillValues() {
 
 function applyCurrentFilters() {
   // Apply search filter
-  if (pillBarFilters.search) {
+  if (searchToolbarFilters.search) {
     filtered = videos.filter(video => 
-      video.name.toLowerCase().includes(pillBarFilters.search.toLowerCase())
+      video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
     );
   } else {
     filtered = [...videos];
@@ -380,7 +380,7 @@ function applyCurrentFilters() {
 }
 
 function applySortFilter() {
-  const sortBy = pillBarFilters.sort;
+  const sortBy = searchToolbarFilters.sort;
   
   filtered.sort((a, b) => {
     switch (sortBy) {
@@ -405,11 +405,11 @@ function applySortFilter() {
 function handleOutsideClick(event) {
   if (!activePillEditor) return;
   
-  // Check if click is inside pill bar or editor
-  const pillBar = document.querySelector('.pill-bar');
+  // Check if click is inside search toolbar or editor
+  const searchToolbar = document.querySelector('.search-toolbar');
   const activeEditor = document.querySelector('.pill-editor.active');
   
-  if (pillBar && !pillBar.contains(event.target) && 
+  if (searchToolbar && !searchToolbar.contains(event.target) && 
       (!activeEditor || !activeEditor.contains(event.target))) {
     closePillEditor();
   }
@@ -422,19 +422,19 @@ function syncBackwardCompatibility() {
   const minFilterSelect = document.getElementById('min_filter');
   
   if (dirInput.value) {
-    pillBarFilters.directory = dirInput.value;
+    searchToolbarFilters.directory = dirInput.value;
     currentDir = dirInput.value;
   }
   
   if (patternInput.value) {
     const pattern = patternInput.value;
     const extensions = pattern.split('|').map(p => p.replace('*.', '')).filter(Boolean);
-    pillBarFilters.filetype = extensions;
+    searchToolbarFilters.filetype = extensions;
     currentPattern = pattern;
   }
   
   if (minFilterSelect.value && minFilterSelect.value !== 'none') {
-    pillBarFilters.rating = minFilterSelect.value;
+    searchToolbarFilters.rating = minFilterSelect.value;
     minFilter = minFilterSelect.value;
   }
   
@@ -501,17 +501,17 @@ async function applyDatabaseFilters() {
   try {
     // Build filter request
     const filterRequest = {
-      file_types: pillBarFilters.filetype,
-      start_date: pillBarFilters.dateStart ? `${pillBarFilters.dateStart}T00:00:00Z` : null,
-      end_date: pillBarFilters.dateEnd ? `${pillBarFilters.dateEnd}T23:59:59Z` : null
+      file_types: searchToolbarFilters.filetype,
+      start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
+      end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null
     };
     
     // Add rating filters
-    if (pillBarFilters.rating !== 'none') {
-      if (pillBarFilters.rating === 'unrated') {
+    if (searchToolbarFilters.rating !== 'none') {
+      if (searchToolbarFilters.rating === 'unrated') {
         filterRequest.max_score = 0;
       } else {
-        filterRequest.min_score = parseInt(pillBarFilters.rating);
+        filterRequest.min_score = parseInt(searchToolbarFilters.rating);
       }
     }
     
@@ -526,9 +526,9 @@ async function applyDatabaseFilters() {
       videos = data.videos;
       
       // Apply search filter client-side
-      if (pillBarFilters.search) {
+      if (searchToolbarFilters.search) {
         filtered = videos.filter(video => 
-          video.name.toLowerCase().includes(pillBarFilters.search.toLowerCase())
+          video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
         );
       } else {
         filtered = [...videos];
@@ -555,9 +555,9 @@ async function applyDatabaseFilters() {
 
 function applyClientSideFilters() {
   // Apply search filter
-  if (pillBarFilters.search) {
+  if (searchToolbarFilters.search) {
     filtered = videos.filter(video => 
-      video.name.toLowerCase().includes(pillBarFilters.search.toLowerCase())
+      video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
     );
   } else {
     filtered = [...videos];
@@ -584,5 +584,5 @@ function applyClientSideFilters() {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   // Small delay to ensure other scripts have initialized
-  setTimeout(initializePillBar, 100);
+  setTimeout(initializeSearchToolbar, 100);
 });
