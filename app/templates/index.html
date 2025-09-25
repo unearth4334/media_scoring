@@ -53,6 +53,10 @@
           <span class="pill-label">Creation Date</span>
           <span class="pill-value" id="date-value">All</span>
         </div>
+        
+        <!-- Refresh button -->
+        <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
+        </button>
       </div>
       
       <!-- Pill editors container -->
@@ -265,6 +269,10 @@ document.addEventListener('DOMContentLoaded', function() {
   
   const loadBtn = document.getElementById('load');
   if (loadBtn) loadBtn.innerHTML = svgRefresh();
+  
+  // Refresh content button
+  const refreshContentBtn = document.getElementById('refresh-content');
+  if (refreshContentBtn) refreshContentBtn.innerHTML = svgRefresh();
   
   // Download button
   const downloadBtn = document.getElementById('download_btn');
