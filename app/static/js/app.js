@@ -371,6 +371,11 @@ function renderScoreBar(score){
   html += svgReject(score === -1);
   html += `</button>`;
   
+  // Add clear button (vertical pipe)
+  html += `<button id="scorebar-clear" class="scorebar-icon-btn" title="Clear score (no rating)" style="background:none; border:none; padding:0; cursor:pointer;">`;
+  html += svgClear(score === 0);
+  html += `</button>`;
+  
   // Make star icons clickable  
   const stars = (score === -1) ? 0 : Math.max(0, score||0);
   for (let i=0;i<5;i++) {
@@ -402,6 +407,14 @@ function renderScoreBar(score){
   if (rejectBtn) {
     rejectBtn.addEventListener('click', () => {
       postScore(-1);
+    });
+  }
+  
+  // Attach event listener to clickable clear icon
+  const clearBtn = document.getElementById('scorebar-clear');
+  if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+      postScore(0);
     });
   }
   
