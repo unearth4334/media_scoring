@@ -20,6 +20,7 @@ class ApplicationState:
         self.logger: logging.Logger = logging.getLogger("video_scorer_fastapi")
         
         # Initialize database if enabled
+        self.database_requested = settings.enable_database  # Track if user requested database
         self.database_enabled = settings.enable_database
         if self.database_enabled:
             try:

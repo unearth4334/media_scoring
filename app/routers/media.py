@@ -29,30 +29,13 @@ def list_videos():
     
     # Use database if enabled, otherwise fallback to file system
     items = []
-    if state.database_enabled:
-        try:
-            with state.get_database_service() as db:
-                media_files = db.get_all_media_files()
-                for media_file in media_files:
-                    # Extract just the filename from the full path
-                    file_path = Path(media_file.file_path)
-                    relative_path = file_path.name  # Just the filename for URL
-                    
-                    items.append({
-                        "name": media_file.filename,
-                        "url": f"/media/{relative_path}",
-                        "score": media_file.score or 0,
-                        "path": media_file.file_path,  # Full path for file serving
-                        "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
-                        "file_type": media_file.file_type,
-                        "extension": media_file.extension
-                    })
-        except Exception as e:
-            state.logger.error(f"Failed to load media files from database: {e}")
-            # Fallback to file system behavior
-            items = _get_files_from_filesystem(state)
+    if state.database_requested:
+        # When database was requested by user, return empty list by default
+        # Media should only be retrieved via /api/filter endpoint with specific criteria
+        # This matches the acceptance criteria: "default state should be that no media is shown"
+        items = []
     else:
-        # Original file system behavior
+        # Original file system behavior - load all files
         items = _get_files_from_filesystem(state)
     
     return {
