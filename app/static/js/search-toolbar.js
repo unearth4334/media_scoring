@@ -7,7 +7,6 @@
 let activePillEditor = null;
 let searchToolbarFilters = {
   sort: 'name',
-  directory: '',
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
@@ -17,7 +16,6 @@ let searchToolbarFilters = {
 // Default filter values for comparison (to detect modifications)
 const defaultFilters = {
   sort: 'name',
-  directory: '',
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
@@ -41,12 +39,6 @@ function isFilterModified(filterName) {
   if (filterName === 'dateStart' || filterName === 'dateEnd') {
     // Null/empty comparison for dates
     return (current !== null && current !== '') || (defaultValue !== null && defaultValue !== '');
-  }
-  
-  if (filterName === 'directory') {
-    // Directory is only modified if it's explicitly set and different from both empty and current dir
-    // We don't consider it modified if it just shows the current working directory
-    return current !== '' && current !== defaultValue && current !== currentDir && current !== (currentDir || 'media');
   }
   
   // Standard comparison for other fields
@@ -166,10 +158,6 @@ function populateEditor(pillType) {
       document.getElementById('sort-select').value = filter;
       break;
       
-    case 'directory':
-      document.getElementById('directory-input').value = filter || currentDir;
-      break;
-      
     case 'filetype':
       document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
         cb.checked = filter.includes(cb.value);
@@ -191,10 +179,6 @@ function setupEditorActions() {
   // Sort editor  
   document.getElementById('sort-apply').addEventListener('click', () => applySearchToolbarFilter('sort'));
   document.getElementById('sort-close').addEventListener('click', closePillEditor);
-  
-  // Directory editor
-  document.getElementById('directory-apply').addEventListener('click', () => applySearchToolbarFilter('directory'));
-  document.getElementById('directory-close').addEventListener('click', closePillEditor);
   
   // File type editor
   document.getElementById('filetype-apply').addEventListener('click', () => applySearchToolbarFilter('filetype'));
@@ -238,20 +222,6 @@ function applySearchToolbarFilter(pillType) {
     case 'sort':
       newValue = document.getElementById('sort-select').value;
       searchToolbarFilters.sort = newValue;
-      break;
-      
-    case 'directory':
-      newValue = document.getElementById('directory-input').value.trim();
-      searchToolbarFilters.directory = newValue;
-      // Update the backend directory
-      if (newValue && newValue !== currentDir) {
-        document.getElementById('dir').value = newValue;
-        // Trigger the load button to refresh the directory
-        const loadBtn = document.getElementById('load');
-        if (loadBtn) {
-          loadBtn.click();
-        }
-      }
       break;
       
     case 'filetype':
@@ -324,13 +294,6 @@ function updatePillValues() {
   const sortLabels = { name: 'Name', date: 'Date', size: 'Size', rating: 'Rating' };
   sortValue.textContent = sortLabels[searchToolbarFilters.sort] || 'Name';
   
-  // Directory
-  const dirValue = document.getElementById('directory-value');
-  const dirPill = document.getElementById('pill-directory');
-  const displayDir = searchToolbarFilters.directory || currentDir || 'media';
-  const shortDir = displayDir.split('/').pop() || displayDir;
-  dirValue.textContent = shortDir;
-  
   // File type
   const filetypeValue = document.getElementById('filetype-value');
   const filetypePill = document.getElementById('pill-filetype');
@@ -377,7 +340,6 @@ function updatePillValues() {
   // Apply modified state classes to pills
   const pillsData = [
     { pill: sortPill, filterName: 'sort' },
-    { pill: dirPill, filterName: 'directory' },
     { pill: filetypePill, filterName: 'filetype' },
     { pill: ratingPill, filterName: 'rating' },
     { pill: datePill, filterName: 'dateStart' } // Check if any date is set
@@ -463,11 +425,6 @@ function syncBackwardCompatibility() {
   const dirInput = document.getElementById('dir');
   const patternInput = document.getElementById('pattern');
   const minFilterSelect = document.getElementById('min_filter');
-  
-  if (dirInput.value) {
-    searchToolbarFilters.directory = dirInput.value;
-    currentDir = dirInput.value;
-  }
   
   if (patternInput.value) {
     const pattern = patternInput.value;
