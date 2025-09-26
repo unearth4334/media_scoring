@@ -927,10 +927,18 @@ document.addEventListener('click', (e) => {
   }
 });
 
-document.getElementById('prev').addEventListener('click', () => { show(idx-1); });
-document.getElementById('next').addEventListener('click', () => { show(idx+1); });
-document.getElementById("reject").addEventListener("click", () => { postScore(-1); });
-document.getElementById("clear").addEventListener("click", () => { postScore(0); });
+// Add event listeners to removed control buttons only if they exist
+const prevBtn = document.getElementById('prev');
+if (prevBtn) prevBtn.addEventListener('click', () => { show(idx-1); });
+
+const nextBtn = document.getElementById('next');
+if (nextBtn) nextBtn.addEventListener('click', () => { show(idx+1); });
+
+const rejectBtn = document.getElementById("reject");
+if (rejectBtn) rejectBtn.addEventListener("click", () => { postScore(-1); });
+
+const clearBtn = document.getElementById("clear");
+if (clearBtn) clearBtn.addEventListener("click", () => { postScore(0); });
 document.querySelectorAll("[data-star]").forEach(btn => {
   btn.addEventListener("click", () => {
     const n = parseInt(btn.getAttribute("data-star"));
@@ -1027,7 +1035,11 @@ async function exportFiltered(){
     hideProgress();
   }
 }
-document.getElementById("extract_one").addEventListener("click", extractCurrent);
-document.getElementById("extract_filtered").addEventListener("click", extractFiltered);
+// Add event listeners to extraction buttons only if they exist
+const extractOneBtn = document.getElementById("extract_one");
+if (extractOneBtn) extractOneBtn.addEventListener("click", extractCurrent);
+
+const extractFilteredBtn = document.getElementById("extract_filtered");
+if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);

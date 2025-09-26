@@ -838,8 +838,8 @@ aside#sidebar {
   border-color: var(--btn-border-hover);
 }
 
-/* Controls row styling */
-.controls-row {
+/* Info bar styling (formerly controls-row) */
+.info-bar {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
@@ -855,7 +855,7 @@ aside#sidebar {
 }
 
 @media (max-width: 768px) {
-  .controls-row {
+  .info-bar {
     flex-direction: column;
     align-items: stretch;
     gap: 8px;
