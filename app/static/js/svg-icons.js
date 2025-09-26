@@ -37,6 +37,19 @@ function svgStar(filled) {
 }
 
 /**
+ * Clear button icon - vertical pipe
+ * @param {boolean} selected - Whether the clear state is active
+ * @returns {string} SVG markup
+ */
+function svgClear(selected) {
+  const lineColor = selected ? "var(--star-fill-selected)" : "var(--star-stroke-color)";
+  return `
+<svg width="40" height="40" viewBox="0 0 40 40">
+  <line x1="20" y1="8" x2="20" y2="32" stroke="${lineColor}" stroke-width="4" stroke-linecap="round"/>
+</svg>`;
+}
+
+/**
  * Maximize media icon - expand corners
  * @returns {string} SVG markup
  */
