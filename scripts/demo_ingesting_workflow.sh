@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =========================================================
-# Media Archive Data Mining & Web App Integration Example
+# Media Archive Data Ingesting & Web App Integration Example
 # =========================================================
 #
 # Usage:
@@ -19,12 +19,12 @@
 #
 # Requirements:
 #   - A Python virtual environment in ".venv" alongside this script.
-#   - The "mine_archive.sh" helper script in the same directory.
+#   - The "ingest_archive.sh" helper script in the same directory.
 #   - For PostgreSQL: A running PostgreSQL server and valid connection URL.
 #
 # Workflow Steps:
 #   1. Test the archive (dry run) with results saved in ./results
-#   2. Mine the archive data into PostgreSQL database
+#   2. Ingest the archive data into PostgreSQL database
 #   3. Query the database and display statistics + sample records
 #   4. Instructions to launch the web application
 #
@@ -33,18 +33,18 @@
 ## Resolve script directory regardless of caller's CWD
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/../.venv"
-MINER="$SCRIPT_DIR/mine_archive.sh"
+INGESTER="$SCRIPT_DIR/ingest_archive.sh"
 
 ## Parse CLI arguments
 MEDIA_DIR=""
 DATABASE_URL=""
-MINING_ARGS=()
+INGESTING_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --database-url)
             DATABASE_URL="$2"
-            MINING_ARGS+=("--database-url" "$2")
+            INGESTING_ARGS+=("--database-url" "$2")
             shift 2
             ;;
         --help|-h)
@@ -94,17 +94,17 @@ read -p "📁 Step 1: Test the archive with dry run. Continue? (y/n): " yn
 case $yn in
     [Yy]* ) 
         echo "---------------------------------------"
-        "$MINER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results" "${MINING_ARGS[@]}"
+        "$INGESTER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results" "${INGESTING_ARGS[@]}"
         echo ""
         ;;
     * ) echo "Skipped Step 1."; exit 0;;
 esac
 
-read -p "💾 Step 2: Mine the archive data into database. Continue? (y/n): " yn
+read -p "💾 Step 2: Ingest the archive data into database. Continue? (y/n): " yn
 case $yn in
     [Yy]* ) 
         echo "---------------------------------------------"
-        "$MINER" mine "$MEDIA_DIR" "${MINING_ARGS[@]}"
+        "$INGESTER" ingest "$MEDIA_DIR" "${INGESTING_ARGS[@]}"
         echo ""
         ;;
     * ) echo "Skipped Step 2."; exit 0;;
@@ -129,7 +129,7 @@ if database_url:
     print(f"Using provided database URL: {database_url}")
     db_url = database_url
 else:
-    # Check environment variables for database URL (like the mining tool does)
+    # Check environment variables for database URL (like the ingesting tool does)
     env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
     if env_db_url:
         print(f"Using database URL from environment: {env_db_url}")
@@ -140,7 +140,7 @@ else:
         print("PostgreSQL database is required for this workflow.")
         sys.exit(1)
 
-# Connect to the database created by the mining tool
+# Connect to the database created by the ingesting tool
 try:
     init_database(db_url)
     print(f"✅ Connected to database successfully")
@@ -183,7 +183,7 @@ fi
 echo ""
 echo "Then visit: http://127.0.0.1:7862"
 echo ""
-echo "The web application will use the metadata and keywords extracted by the mining tool!"
+echo "The web application will use the metadata and keywords extracted by the ingesting tool!"
 echo "You can search for files using the /api/search/files endpoint or the web interface."
 echo ""
 echo "✅ Mining workflow complete!"

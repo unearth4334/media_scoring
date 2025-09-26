@@ -18,9 +18,9 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
   - Control which files are shown (`*.mp4`, `*.png|*.jpg`, etc.)
   - Help button `?` shows quick syntax guide
 
-### Data Mining
+### Data Ingesting
 - **Archive Processing**: Extract metadata from existing media archives
-- **Standalone CLI Tool**: `tools/mine_data.py` for batch processing without web server
+- **Standalone CLI Tool**: `tools/ingest_data.py` for batch processing without web server
 - **Database Integration**: Store extracted metadata, keywords, and scores
 - **Flexible Patterns**: Process specific file types with glob patterns
 - **Progress Reporting**: Detailed statistics and progress tracking
@@ -112,7 +112,7 @@ media_scoring/
 │   └── validate-docker-setup.sh # Docker setup validation
 │
 ├── tools/                      # 🛠️ CLI tools and utilities
-│   ├── mine_data.py            # Data mining and extraction tool
+│   ├── ingest_data.py            # Data ingesting and extraction tool
 │   ├── schema_cli.py           # Database schema management CLI
 │   ├── extract_comfyui_workflow.py # ComfyUI workflow extraction
 │   └── read_config.py          # Configuration file reader utility
@@ -120,19 +120,19 @@ media_scoring/
 ├── tests/                      # 🧪 Test files
 │   ├── test_database.py        # Database functionality tests
 │   ├── test_full_integration.py # Full integration tests
-│   ├── test_mining_tool.py     # Data mining tool tests
+│   ├── test_ingesting_tool.py     # Data ingesting tool tests
 │   ├── test_prompt_parser.py   # Prompt parsing tests
 │   └── test_schema.py          # Database schema tests
 │
 ├── docs/                       # 📚 Documentation
 │   ├── DATABASE.md             # Database design documentation
 │   ├── DEVELOPMENT.md          # Development setup guide
-│   ├── MINING_TOOL.md          # Data mining tool documentation
+│   ├── INGESTING_TOOL.md          # Data ingesting tool documentation
 │   └── SCHEMA.md               # Database schema specification
 │
 ├── examples/                   # 📋 Example files and demos
 │   ├── schema_example.py       # Database schema usage examples
-│   └── demo_mining_results.html # Sample mining results display
+│   └── demo_ingesting_results.html # Sample ingesting results display
 │
 ├── media/                      # 📁 Sample media files (for development)
 ├── migrations/                 # 🗄️ Database migration files
@@ -198,22 +198,22 @@ scripts\run_video_scorer.bat "D:\media" 9000 0.0.0.0 "*.mp4|*.jpg" style_default
 
 ---
 
-## 🗂️ Data Mining Tool *(NEW)*
+## 🗂️ Data Ingesting Tool *(NEW)*
 
 Extract metadata from existing media archives and populate the database without running the web server.
 
 ### Quick Start
 ```bash
 # Test archive scanning (dry run)
-python tools/mine_data.py /path/to/archive
+python tools/ingest_data.py /path/to/archive
 
 # Mine data and store in database
-python tools/mine_data.py /path/to/archive --enable-database
+python tools/ingest_data.py /path/to/archive --enable-database
 
 # Use convenient wrapper script
-./scripts/mine_archive.sh quick /path/to/archive
-./scripts/mine_archive.sh images /path/to/photos
-./scripts/mine_archive.sh videos /path/to/videos
+./scripts/ingest_archive.sh quick /path/to/archive
+./scripts/ingest_archive.sh images /path/to/photos
+./scripts/ingest_archive.sh videos /path/to/videos
 ```
 
 ### Key Features
@@ -227,8 +227,8 @@ python tools/mine_data.py /path/to/archive --enable-database
 
 ### Example Output
 ```
-$ ./scripts/mine_archive.sh images /media/photos
-[INFO] Mining images from: /media/photos
+$ ./scripts/ingest_archive.sh images /media/photos
+[INFO] Ingesting images from: /media/photos
 [INFO] Database initialized with URL: postgresql://media_user:password@localhost:5432/media_scoring
 [INFO] Found 156 files matching pattern
 [INFO] Processing files with database storage enabled
@@ -245,10 +245,10 @@ $ ./scripts/mine_archive.sh images /media/photos
 [INFO] Scores imported: 23
 [INFO] Errors encountered: 0
 [INFO] Processing completed successfully!
-[SUCCESS] Mining completed successfully!
+[SUCCESS] Ingesting completed successfully!
 ```
 
-See **[MINING_TOOL.md](MINING_TOOL.md)** for complete documentation.
+See **[INGESTING_TOOL.md](INGESTING_TOOL.md)** for complete documentation.
 
 ---
 

@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# Wrapper script for the data mining tool
-# Makes it easier to use the mining tool with common options
+# Wrapper script for the data ingesting tool
+# Makes it easier to use the ingesting tool with common options
 
 # --- Resolve paths robustly ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Repo root is one level above scripts/
 REPO_ROOT="$(realpath "$SCRIPT_DIR/..")"
 VENV_DIR="$REPO_ROOT/.venv"
-MINE_SCRIPT="$REPO_ROOT/tools/mine_data.py"
+INGEST_SCRIPT="$REPO_ROOT/tools/ingest_data.py"
 REQ_FILE="$REPO_ROOT/requirements.txt"
 
 # Colors for output
@@ -24,17 +24,17 @@ print_error()   { echo -e "${RED}[ERROR]${NC} $1"; }
 print_success() { echo -e "${GREEN}[SUCCESS]${NC} $1"; }
 
 show_help() {
-    echo "Media Archive Data Mining Tool"
+    echo "Media Archive Data Ingesting Tool"
     echo "=============================="
     echo ""
     echo "Usage: $0 <command> <directory> [options]"
     echo ""
     echo "Commands:"
     echo "  test <dir>       - Test directory scanning (dry run)"
-    echo "  mine <dir>       - Mine data and store in database"
-    echo "  quick <dir>      - Quick mine with default settings"
-    echo "  images <dir>     - Mine only images (*.jpg|*.png|*.jpeg)"
-    echo "  videos <dir>     - Mine only videos (*.mp4)"
+    echo "  ingest <dir>     - Ingest data and store in database"
+    echo "  quick <dir>      - Quick ingest with default settings"
+    echo "  images <dir>     - Ingest only images (*.jpg|*.png|*.jpeg)"
+    echo "  videos <dir>     - Ingest only videos (*.mp4)"
     echo "  help             - Show this help"
     echo ""
     echo "Options:"
@@ -44,7 +44,7 @@ show_help() {
     echo ""
     echo "Examples:"
     echo "  $0 test /media/archive1"
-    echo "  $0 mine /media/archive1 --verbose"
+    echo "  $0 ingest /media/archive1 --verbose"
     echo "  $0 images /media/photos"
     echo "  $0 videos /media/videos --database-url postgresql://user:pass@host/db"
     echo ""
@@ -75,9 +75,9 @@ check_environment() {
     # Choose interpreter
     PY="$(resolve_python)"
 
-    # Validate mining script path
-    if [[ ! -f "$MINE_SCRIPT" ]]; then
-        print_error "Mining script not found: $MINE_SCRIPT"
+    # Validate ingesting script path
+    if [[ ! -f "$INGEST_SCRIPT" ]]; then
+        print_error "Ingesting script not found: $INGEST_SCRIPT"
         exit 1
     fi
 
@@ -100,21 +100,21 @@ PYCODE
         exit 1
     fi
 
-    # Export for run_mining_tool
+    # Export for run_ingesting_tool
     export PYTHON_CMD="$PY"
     export PYTHONPATH="$REPO_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 }
 
-run_mining_tool() {
+run_ingesting_tool() {
     local args=("$@")
     local PY="${PYTHON_CMD:-$(resolve_python)}"
-    print_status "Running: $PY $MINE_SCRIPT ${args[*]}"
-    "$PY" "$MINE_SCRIPT" "${args[@]}"
+    print_status "Running: $PY $INGEST_SCRIPT ${args[*]}"
+    "$PY" "$INGEST_SCRIPT" "${args[@]}"
     local exit_code=$?
     if [[ $exit_code -eq 0 ]]; then
-        print_success "Mining completed successfully!"
+        print_success "Ingesting completed successfully!"
     else
-        print_error "Mining failed with exit code $exit_code"
+        print_error "Ingesting failed with exit code $exit_code"
     fi
     return $exit_code
 }
@@ -158,18 +158,31 @@ case "$COMMAND" in
         done
         print_status "Testing directory scan for: $DIRECTORY"
         check_environment
-        run_mining_tool "$(realpath "$DIRECTORY")" --dry-run --verbose "${EXTRA_ARGS[@]}"
+        run_ingesting_tool "$(realpath "$DIRECTORY")" --dry-run --verbose "${EXTRA_ARGS[@]}"
         ;;
-    mine)
+    ingest)
         if [[ $# -eq 0 ]]; then
-            print_error "Directory required for mine command"
-            echo "Usage: $0 mine <directory>"
+            print_error "Directory required for ingest command"
+            echo "Usage: $0 ingest <directory>"
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
-        print_status "Mining data from: $DIRECTORY"
+        print_status "Ingesting data from: $DIRECTORY"
         check_environment
-        run_mining_tool "$DIRECTORY" --enable-database "$@"
+        run_ingesting_tool "$DIRECTORY" --enable-database "$@"
+        ;;
+    mine)
+        # Backward compatibility - redirect to ingest
+        if [[ $# -eq 0 ]]; then
+            print_error "Directory required for mine command"
+            echo "Usage: $0 mine <directory> (Note: 'mine' is deprecated, use 'ingest')"
+            exit 1
+        fi
+        DIRECTORY="$(realpath "$1")"; shift
+        print_warning "The 'mine' command is deprecated. Please use 'ingest' instead."
+        print_status "Ingesting data from: $DIRECTORY"
+        check_environment
+        run_ingesting_tool "$DIRECTORY" --enable-database "$@"
         ;;
     quick)
         if [[ $# -eq 0 ]]; then
@@ -178,9 +191,9 @@ case "$COMMAND" in
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
-        print_status "Quick mining from: $DIRECTORY"
+        print_status "Quick ingesting from: $DIRECTORY"
         check_environment
-        run_mining_tool "$DIRECTORY" --enable-database --pattern "*.mp4|*.png|*.jpg|*.jpeg" "$@"
+        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4|*.png|*.jpg|*.jpeg" "$@"
         ;;
     images)
         if [[ $# -eq 0 ]]; then
@@ -189,9 +202,9 @@ case "$COMMAND" in
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
-        print_status "Mining images from: $DIRECTORY"
+        print_status "Ingesting images from: $DIRECTORY"
         check_environment
-        run_mining_tool "$DIRECTORY" --enable-database --pattern "*.jpg|*.png|*.jpeg" "$@"
+        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.jpg|*.png|*.jpeg" "$@"
         ;;
     videos)
         if [[ $# -eq 0 ]]; then
@@ -200,9 +213,9 @@ case "$COMMAND" in
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
-        print_status "Mining videos from: $DIRECTORY"
+        print_status "Ingesting videos from: $DIRECTORY"
         check_environment
-        run_mining_tool "$DIRECTORY" --enable-database --pattern "*.mp4" "$@"
+        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4" "$@"
         ;;
     *)
         print_error "Unknown command: $COMMAND"

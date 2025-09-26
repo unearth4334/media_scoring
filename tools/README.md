@@ -4,18 +4,18 @@ This directory contains CLI tools and utilities for the media scoring applicatio
 
 ## Tool Files
 
-- `mine_data.py` - Data mining and extraction tool
+- `ingest_data.py` - Data ingesting and extraction tool
 - `schema_cli.py` - Database schema management CLI
 - `extract_comfyui_workflow.py` - ComfyUI workflow extraction
 - `read_config.py` - Configuration file reader utility
 
 ## Usage
 
-### Data Mining Tool
+### Data Ingesting Tool
 Extract metadata from existing media archives:
 ```bash
-python tools/mine_data.py --help
-python tools/mine_data.py /path/to/archive --pattern "*.png|*.jpg"
+python tools/ingest_data.py --help
+python tools/ingest_data.py /path/to/archive --pattern "*.png|*.jpg"
 ```
 
 ### Schema CLI

@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Data Mining Tool for Media Archives
+Data Ingesting Tool for Media Archives
 
 This tool scans directories of media files and extracts metadata, scores, and keywords
 into the database for the Media Scoring application. It can be used to process existing
 archives of media files without running the web server.
 
 Usage:
-    python mine_data.py /path/to/archive --pattern "*.mp4|*.png|*.jpg"
-    python mine_data.py /path/to/archive --enable-database --pattern "*.jpg"
+    python ingest_data.py /path/to/archive --pattern "*.mp4|*.png|*.jpg"
+    python ingest_data.py /path/to/archive --enable-database --pattern "*.jpg"
 """
 
 import argparse
@@ -29,8 +29,8 @@ from app.services.files import discover_files, read_score, get_scores_dir_for
 from app.services.metadata import extract_metadata, extract_keywords_from_metadata
 
 
-class DataMiner:
-    """Main class for mining data from media archives."""
+class DataIngester:
+    """Main class for ingesting data from media archives."""
     
     def __init__(self, settings: Settings, logger: logging.Logger, test_output_dir: Optional[Path] = None):
         self.settings = settings
@@ -47,9 +47,9 @@ class DataMiner:
         # Store detailed data for export when in test mode
         self.collected_data = [] if test_output_dir else None
     
-    def mine_directory(self, directory: Path, pattern: str = "*.mp4|*.png|*.jpg") -> Dict:
+    def ingest_directory(self, directory: Path, pattern: str = "*.mp4|*.png|*.jpg") -> Dict:
         """Mine data from a single directory."""
-        self.logger.info(f"Starting to mine directory: {directory}")
+        self.logger.info(f"Starting to ingest directory: {directory}")
         self.logger.info(f"Using pattern: {pattern}")
         
         if not directory.exists():
@@ -242,7 +242,7 @@ class DataMiner:
         import subprocess
         import tempfile
         
-        # For the mining script, we'll generate thumbnails directly without using the app state
+        # For the ingesting script, we'll generate thumbnails directly without using the app state
         # since the thumbnail service requires the application state to be initialized
         
         # Define thumbnail path manually
@@ -457,7 +457,7 @@ class DataMiner:
             html_content = self._generate_html_report()
             
             # Write to file
-            output_file = self.test_output_dir / "mining_test_results.html"
+            output_file = self.test_output_dir / "ingesting_test_results.html"
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(html_content)
             
@@ -485,7 +485,7 @@ class DataMiner:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Data Mining Test Results</title>
+    <title>Data Ingesting Test Results</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -823,7 +823,7 @@ class DataMiner:
 </head>
 <body>
     <div class="header">
-        <h1>🔍 Data Mining Test Results</h1>
+        <h1>🔍 Data Ingesting Test Results</h1>
         <p>Generated on {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
         <p>Source Directory: <code>{self.settings.dir}</code></p>
         <p>File Pattern: <code>{self.settings.pattern}</code></p>
@@ -1153,7 +1153,7 @@ class DataMiner:
         <h2>🚀 Next Steps</h2>
         <ol>
             <li><strong>Review the extracted data above</strong> to ensure it meets your expectations</li>
-            <li><strong>Run with database enabled:</strong> <code>python mine_data.py {self.settings.dir} --enable-database</code></li>
+            <li><strong>Run with database enabled:</strong> <code>python ingest_data.py {self.settings.dir} --enable-database</code></li>
             <li><strong>Start the web interface:</strong> <code>python run.py --dir {self.settings.dir} --enable-database</code></li>
             <li><strong>Search and manage your media</strong> via the web interface at <code>http://localhost:7862</code></li>
         </ol>
@@ -1258,8 +1258,8 @@ class DataMiner:
 
 
 def setup_logging(verbose: bool = False) -> logging.Logger:
-    """Setup logging for the data mining tool."""
-    logger = logging.getLogger("data_miner")
+    """Setup logging for the data ingesting tool."""
+    logger = logging.getLogger("data_ingester")
     logger.setLevel(logging.DEBUG if verbose else logging.INFO)
     
     # Remove existing handlers
@@ -1282,18 +1282,18 @@ def setup_logging(verbose: bool = False) -> logging.Logger:
 
 
 def main():
-    """Main entry point for the data mining tool."""
+    """Main entry point for the data ingesting tool."""
     parser = argparse.ArgumentParser(
         description="Mine data from media archives for the Media Scoring application",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python mine_data.py /media/archive1
-  python mine_data.py /media/archive1 --pattern "*.mp4|*.png"
-  python mine_data.py /media/archive1 --enable-database
-  python mine_data.py /media/archive1 --database-url "postgresql://user:pass@host/db"
-  python mine_data.py /media/archive1 --verbose --dry-run
-  python mine_data.py /media/archive1 --dry-run --test-output-dir /tmp/results
+  python ingest_data.py /media/archive1
+  python ingest_data.py /media/archive1 --pattern "*.mp4|*.png"
+  python ingest_data.py /media/archive1 --enable-database
+  python ingest_data.py /media/archive1 --database-url "postgresql://user:pass@host/db"
+  python ingest_data.py /media/archive1 --verbose --dry-run
+  python ingest_data.py /media/archive1 --dry-run --test-output-dir /tmp/results
 
 Environment Variables:
   DATABASE_URL or MEDIA_DB_URL - PostgreSQL connection URL (e.g., postgresql://user:pass@host/db)
@@ -1305,7 +1305,7 @@ Environment Variables:
     parser.add_argument(
         "directory",
         type=Path,
-        help="Directory containing media files to mine"
+        help="Directory containing media files to ingest"
     )
     
     # Optional arguments
@@ -1381,7 +1381,7 @@ Environment Variables:
         sys.exit(1)
     
     # Report configuration
-    logger.info("Data Mining Tool for Media Archives")
+    logger.info("Data Ingesting Tool for Media Archives")
     logger.info("=" * 40)
     logger.info(f"Source directory: {args.directory}")
     logger.info(f"File pattern: {args.pattern}")
@@ -1396,11 +1396,11 @@ Environment Variables:
         if args.test_output_dir:
             logger.info(f"Test results will be exported to: {args.test_output_dir}")
     
-    # Run the data mining
+    # Run the data ingesting
     try:
         start_time = time.time()
-        miner = DataMiner(settings, logger, args.test_output_dir)
-        stats = miner.mine_directory(args.directory, args.pattern)
+        ingester = DataIngester(settings, logger, args.test_output_dir)
+        stats = ingester.ingest_directory(args.directory, args.pattern)
         elapsed_time = time.time() - start_time
         
         logger.info(f"Total processing time: {elapsed_time:.2f} seconds")
@@ -1410,7 +1410,7 @@ Environment Variables:
             sys.exit(1)
             
     except Exception as e:
-        logger.error(f"Data mining failed: {e}")
+        logger.error(f"Data ingesting failed: {e}")
         if args.verbose:
             import traceback
             traceback.print_exc()
