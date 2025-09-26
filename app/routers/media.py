@@ -120,7 +120,38 @@ async def filter_videos(req: Request):
     
     except Exception as e:
         state.logger.error(f"Filter failed: {e}")
-        raise HTTPException(500, f"Filter failed: {str(e)}")
+        # Fallback to filesystem if database fails
+        state.logger.info("Falling back to filesystem due to database error")
+        
+        # Get files from filesystem and apply client-side filtering
+        filesystem_items = _get_files_from_filesystem(state)
+        
+        # Apply basic filtering to filesystem results
+        filtered_items = filesystem_items
+        
+        # Apply score filters if specified
+        if min_score is not None:
+            filtered_items = [item for item in filtered_items if (item.get('score') or 0) >= min_score]
+        if max_score is not None:
+            filtered_items = [item for item in filtered_items if (item.get('score') or 0) <= max_score]
+        
+        # Apply file type filters if specified
+        if file_types:
+            file_exts = [f".{ext}" if not ext.startswith('.') else ext for ext in file_types]
+            filtered_items = [item for item in filtered_items if item.get('extension') in file_exts]
+        
+        return {
+            "videos": filtered_items,
+            "count": len(filtered_items),
+            "filters_applied": {
+                "min_score": min_score,
+                "max_score": max_score,
+                "file_types": file_types,
+                "start_date": start_date,
+                "end_date": end_date
+            },
+            "fallback_used": True  # Indicate that filesystem fallback was used
+        }
 
 
 def _get_files_from_filesystem(state):
