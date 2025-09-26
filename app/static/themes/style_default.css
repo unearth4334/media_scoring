@@ -873,3 +873,84 @@ aside#sidebar {
     display: none;
   }
 }
+
+/* Mobile: make sidebar mobile-friendly */
+@media (max-width: 768px) {
+  /* Change layout to stack vertically */
+  .layout {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  /* Make sidebar full width and positioned below toolbar */
+  aside#sidebar {
+    width: 100%;
+    max-width: none;
+    max-height: 40vh; /* Limit height to leave room for main content */
+    order: -1; /* Ensure sidebar appears first (below toolbar) */
+    margin: 0;
+    border-radius: 8px; /* Slightly less rounded for mobile */
+    transition: all 0.3s ease;
+    overflow: visible; /* Allow controls to scroll horizontally */
+  }
+  
+  /* Hide sidebar when toolbar is collapsed */
+  body.toolbar-collapsed aside#sidebar {
+    display: none;
+  }
+  
+  /* Make sidebar controls scroll horizontally like search toolbar */
+  #sidebar_controls {
+    border-bottom: none;
+    margin-bottom: 8px;
+    padding: 8px;
+  }
+  
+  #sidebar_controls .button-row {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    padding-bottom: 8px;
+    scrollbar-width: thin;
+  }
+  
+  #sidebar_controls .button-row::-webkit-scrollbar {
+    height: 6px;
+  }
+  
+  #sidebar_controls .button-row::-webkit-scrollbar-track {
+    background: rgba(51, 51, 51, 0.3);
+    border-radius: 3px;
+  }
+  
+  #sidebar_controls .button-row::-webkit-scrollbar-thumb {
+    background: #00ffff;
+    border-radius: 3px;
+    opacity: 0.7;
+  }
+  
+  #sidebar_controls .button-row::-webkit-scrollbar-thumb:hover {
+    background: #4CAF50;
+    opacity: 1;
+  }
+  
+  /* Improve touch targets for mobile */
+  #sidebar_controls button,
+  #sidebar_controls .thumbnail-toggle {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 16px;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  
+  /* Ensure main content gets remaining space */
+  #right {
+    flex: 1;
+    min-height: 0;
+  }
+}
