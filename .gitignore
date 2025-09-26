@@ -68,6 +68,9 @@ media/test_*.jpg
 .scores/
 workflows/
 
+# Database logs - keep directory structure but ignore log files
+app/.logs/*.log
+
 # Docker
 docker-compose.override.yml.bak
 
