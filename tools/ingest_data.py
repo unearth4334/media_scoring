@@ -48,7 +48,7 @@ class DataIngester:
         self.collected_data = [] if test_output_dir else None
     
     def ingest_directory(self, directory: Path, pattern: str = "*.mp4|*.png|*.jpg") -> Dict:
-        """Mine data from a single directory."""
+        """Ingest data from a single directory."""
         self.logger.info(f"Starting to ingest directory: {directory}")
         self.logger.info(f"Using pattern: {pattern}")
         
@@ -1242,7 +1242,7 @@ class DataIngester:
     def _report_final_stats(self) -> None:
         """Report final processing statistics."""
         self.logger.info("=" * 50)
-        self.logger.info("DATA MINING COMPLETED")
+        self.logger.info("DATA INGESTING COMPLETED")
         self.logger.info("=" * 50)
         self.logger.info(f"Total files found: {self.stats['total_files']}")
         self.logger.info(f"Files processed: {self.stats['processed_files']}")
@@ -1284,7 +1284,7 @@ def setup_logging(verbose: bool = False) -> logging.Logger:
 def main():
     """Main entry point for the data ingesting tool."""
     parser = argparse.ArgumentParser(
-        description="Mine data from media archives for the Media Scoring application",
+        description="Ingest data from media archives for the Media Scoring application",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

@@ -37,7 +37,7 @@ def test_basic_functionality():
     print("Testing basic functionality...")
     
     # Test dry run
-    result = run_command("python ingest_data.py ./media --dry-run")
+    result = run_command("python tools/ingest_data.py ./media --dry-run")
     assert result.returncode == 0
     assert "Processing completed successfully!" in result.stdout
     assert "Files processed: 6" in result.stdout
@@ -45,7 +45,7 @@ def test_basic_functionality():
     print("✓ Basic dry run test passed")
     
     # Test with database
-    result = run_command("python ingest_data.py ./media --enable-database")
+    result = run_command("python tools/ingest_data.py ./media --enable-database")
     assert result.returncode == 0
     assert "Processing completed successfully!" in result.stdout
     
@@ -67,12 +67,12 @@ def test_pattern_filtering():
         (temp_path / "test4.txt").touch()
         
         # Test images only
-        result = run_command(f"python ingest_data.py {temp_dir} --pattern '*.jpg|*.png' --dry-run")
+        result = run_command(f"python tools/ingest_data.py {temp_dir} --pattern '*.jpg|*.png' --dry-run")
         assert result.returncode == 0
         assert "Total files found: 2" in result.stdout
         
         # Test videos only
-        result = run_command(f"python ingest_data.py {temp_dir} --pattern '*.mp4' --dry-run")
+        result = run_command(f"python tools/ingest_data.py {temp_dir} --pattern '*.mp4' --dry-run")
         assert result.returncode == 0
         assert "Total files found: 1" in result.stdout
         
@@ -84,12 +84,12 @@ def test_error_handling():
     print("Testing error handling...")
     
     # Test non-existent directory
-    result = run_command("python ingest_data.py /nonexistent/directory", check=False)
+    result = run_command("python tools/ingest_data.py /nonexistent/directory", check=False)
     assert result.returncode != 0
     assert "Directory does not exist" in result.stdout
     
     # Test file instead of directory
-    result = run_command("python ingest_data.py ./ingest_data.py", check=False)
+    result = run_command("python tools/ingest_data.py ./ingest_data.py", check=False)
     assert result.returncode != 0
     assert "Path is not a directory" in result.stdout
     
@@ -118,7 +118,7 @@ def test_database_integration():
         env = os.environ.copy()
         env['DATABASE_URL'] = db_url
         result = subprocess.run(
-            f"python ingest_data.py {temp_dir} --enable-database",
+            f"python tools/ingest_data.py {temp_dir} --enable-database",
             shell=True, capture_output=True, text=True, env=env
         )
         assert result.returncode == 0
@@ -138,12 +138,12 @@ def test_wrapper_script():
     print("Testing wrapper script...")
     
     # Test help command
-    result = run_command("./ingest_archive.sh help")
+    result = run_command("./scripts/ingest_archive.sh help")
     assert result.returncode == 0
-    assert "Media Archive Data Mining Tool" in result.stdout
+    assert "Media Archive Data Ingesting Tool" in result.stdout
     
     # Test the test command
-    result = run_command("./ingest_archive.sh test ./media")
+    result = run_command("./scripts/ingest_archive.sh test ./media")
     assert result.returncode == 0
     # Check for either the colored or plain version of the success message
     output = result.stdout
@@ -186,7 +186,7 @@ def test_sidecar_import():
         env = os.environ.copy()
         env['DATABASE_URL'] = db_url
         result = subprocess.run(
-            f"python ingest_data.py {temp_dir} --enable-database",
+            f"python tools/ingest_data.py {temp_dir} --enable-database",
             shell=True, capture_output=True, text=True, env=env
         )
         assert result.returncode == 0
@@ -217,7 +217,7 @@ def test_html_export():
         output_dir = temp_path / "output"
         
         # Run ingesting with HTML export
-        result = run_command(f"python ingest_data.py {temp_dir} --dry-run --test-output-dir {output_dir}")
+        result = run_command(f"python tools/ingest_data.py {temp_dir} --dry-run --test-output-dir {output_dir}")
         assert result.returncode == 0
         assert "Test results exported to" in result.stdout
         
@@ -244,7 +244,7 @@ def test_html_export_error_handling():
         output_dir = Path(temp_dir) / "output"
         
         # Should fail when trying to use export with database mode
-        result = run_command(f"python ingest_data.py {temp_dir} --enable-database --test-output-dir {output_dir}", check=False)
+        result = run_command(f"python tools/ingest_data.py {temp_dir} --enable-database --test-output-dir {output_dir}", check=False)
         assert result.returncode != 0
         assert "--test-output-dir can only be used in dry-run mode" in result.stdout
         
