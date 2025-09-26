@@ -1,0 +1,3 @@
+# This file ensures the .logs directory is tracked by git
+# Database interaction logs will be created here with daily rotation
+# Log files follow the pattern: database_interactions_YYYY-MM-DD.log

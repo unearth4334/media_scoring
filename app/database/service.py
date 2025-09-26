@@ -12,6 +12,7 @@ from sqlalchemy import func, or_, and_, desc, asc
 from .engine import get_session
 from .models import MediaFile, MediaMetadata, MediaKeyword, MediaThumbnail
 from ..utils.hashing import compute_media_file_id, compute_perceptual_hash
+from .db_logger import log_db_operation, _db_logger
 
 logger = logging.getLogger(__name__)
 
@@ -24,18 +25,23 @@ class DatabaseService:
     
     def __enter__(self):
         self.session = get_session()
+        _db_logger.log_transaction("SESSION_START", "Database session opened")
         return self
         
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.session:
             if exc_type:
+                _db_logger.log_transaction("ROLLBACK", f"Session rolled back due to error: {exc_val}")
                 self.session.rollback()
             else:
+                _db_logger.log_transaction("COMMIT", "Session committed successfully")
                 self.session.commit()
+            _db_logger.log_transaction("SESSION_END", "Database session closed")
             self.session.close()
     
     # Media File Operations
     
+    @log_db_operation("get_or_create_media_file")
     def get_or_create_media_file(self, file_path: Path) -> MediaFile:
         """Get existing media file or create new one."""
         file_path_str = str(file_path.resolve())
@@ -74,6 +80,7 @@ class DatabaseService:
         logger.info(f"Created new media file record: {file_path.name}")
         return media_file
     
+    @log_db_operation("update_media_file_score")
     def update_media_file_score(self, file_path: Path, score: int) -> bool:
         """Update the score for a media file."""
         media_file = self.get_or_create_media_file(file_path)
@@ -81,6 +88,7 @@ class DatabaseService:
         media_file.updated_at = datetime.utcnow()
         return True
     
+    @log_db_operation("get_media_file_score")
     def get_media_file_score(self, file_path: Path) -> Optional[int]:
         """Get the score for a media file."""
         file_path_str = str(file_path.resolve())
@@ -89,12 +97,14 @@ class DatabaseService:
         ).first()
         return media_file.score if media_file else None
     
+    @log_db_operation("get_media_files_by_directory")
     def get_media_files_by_directory(self, directory: Path) -> List[MediaFile]:
         """Get all media files in a directory."""
         return self.session.query(MediaFile).filter(
             MediaFile.directory == str(directory)
         ).order_by(MediaFile.filename).all()
     
+    @log_db_operation("get_media_files_by_score")
     def get_media_files_by_score(self, min_score: Optional[int] = None, 
                                  max_score: Optional[int] = None) -> List[MediaFile]:
         """Get media files filtered by score range."""
@@ -107,6 +117,7 @@ class DatabaseService:
             
         return query.order_by(desc(MediaFile.score), MediaFile.filename).all()
     
+    @log_db_operation("get_all_media_files")
     def get_all_media_files(self, 
                            min_score: Optional[int] = None,
                            max_score: Optional[int] = None,
@@ -143,6 +154,7 @@ class DatabaseService:
     
     # Metadata Operations
     
+    @log_db_operation("store_media_metadata")
     def store_media_metadata(self, file_path: Path, metadata: Dict) -> MediaMetadata:
         """Store or update metadata for a media file."""
         media_file = self.get_or_create_media_file(file_path)
@@ -215,6 +227,7 @@ class DatabaseService:
             
         return metadata_obj
     
+    @log_db_operation("get_media_metadata")
     def get_media_metadata(self, file_path: Path) -> Optional[MediaMetadata]:
         """Get metadata for a media file."""
         file_path_str = str(file_path.resolve())
@@ -225,6 +238,7 @@ class DatabaseService:
     
     # Keyword Operations
     
+    @log_db_operation("add_keywords")
     def add_keywords(self, file_path: Path, keywords: List[str], 
                      keyword_type: str = 'user', source: str = 'manual') -> List[MediaKeyword]:
         """Add keywords to a media file."""
@@ -255,6 +269,7 @@ class DatabaseService:
         
         return keyword_objects
     
+    @log_db_operation("search_by_keywords")
     def search_by_keywords(self, keywords: List[str], 
                           match_all: bool = False) -> List[MediaFile]:
         """Search media files by keywords."""
@@ -281,6 +296,7 @@ class DatabaseService:
         
         return query.distinct().order_by(desc(MediaFile.score), MediaFile.filename).all()
     
+    @log_db_operation("get_keywords_for_file")
     def get_keywords_for_file(self, file_path: Path) -> List[MediaKeyword]:
         """Get all keywords for a media file."""
         file_path_str = str(file_path.resolve())
@@ -289,6 +305,7 @@ class DatabaseService:
             MediaFile.file_path == file_path_str
         ).order_by(MediaKeyword.keyword_type, MediaKeyword.keyword).all()
     
+    @log_db_operation("get_all_keywords")
     def get_all_keywords(self, keyword_type: Optional[str] = None) -> List[str]:
         """Get all unique keywords, optionally filtered by type."""
         query = self.session.query(MediaKeyword.keyword).distinct()
@@ -300,6 +317,7 @@ class DatabaseService:
     
     # Thumbnail Operations
     
+    @log_db_operation("store_thumbnail")
     def store_thumbnail(self, file_path: Path, size: str, 
                        thumbnail_data: Optional[str] = None,
                        thumbnail_file_path: Optional[Path] = None,
@@ -330,6 +348,7 @@ class DatabaseService:
         
         return thumbnail
     
+    @log_db_operation("get_thumbnail")
     def get_thumbnail(self, file_path: Path, size: str) -> Optional[MediaThumbnail]:
         """Get thumbnail for a media file."""
         file_path_str = str(file_path.resolve())
@@ -371,6 +390,7 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Failed to update hashes for {file_path}: {e}")
     
+    @log_db_operation("update_media_file_hashes")
     def update_media_file_hashes(self, file_path: Path) -> bool:
         """Public method to update hashes for an existing media file."""
         try:
@@ -385,6 +405,7 @@ class DatabaseService:
             logger.error(f"Failed to update hashes for {file_path}: {e}")
             return False
     
+    @log_db_operation("find_similar_files_by_hash")
     def find_similar_files_by_hash(self, target_hash: str, threshold: int = 5) -> List[MediaFile]:
         """Find files with similar perceptual hashes."""
         try:
@@ -415,6 +436,7 @@ class DatabaseService:
             logger.error(f"Error finding similar files: {e}")
             return []
     
+    @log_db_operation("get_stats")
     def get_stats(self) -> Dict:
         """Get database statistics."""
         return {
@@ -427,6 +449,7 @@ class DatabaseService:
             'files_with_thumbnails': self.session.query(MediaFile).join(MediaThumbnail).count(),
         }
     
+    @log_db_operation("cleanup_orphaned_records")
     def cleanup_orphaned_records(self) -> Dict[str, int]:
         """Clean up orphaned records and return count of cleaned items."""
         counts = {}
