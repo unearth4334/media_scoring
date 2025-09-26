@@ -53,6 +53,9 @@ function initializeSearchToolbar() {
   // Add click handlers to pills
   document.querySelectorAll('.pill').forEach(pill => {
     pill.addEventListener('click', handlePillClick);
+    
+    // Add touch event handlers for mobile devices
+    pill.addEventListener('touchend', handlePillTouch);
   });
   
   // Add editor action handlers
@@ -60,6 +63,7 @@ function initializeSearchToolbar() {
   
   // Close editors when clicking outside
   document.addEventListener('click', handleOutsideClick);
+  document.addEventListener('touchend', handleOutsideTouch);
   
   // Initialize backward compatibility
   syncBackwardCompatibility();
@@ -67,6 +71,23 @@ function initializeSearchToolbar() {
 
 function handlePillClick(event) {
   event.stopPropagation();
+  const pill = event.currentTarget;
+  const pillType = pill.dataset.pill;
+  
+  if (activePillEditor === pillType) {
+    closePillEditor();
+    return;
+  }
+  
+  closePillEditor();
+  openPillEditor(pillType, pill);
+}
+
+function handlePillTouch(event) {
+  // Prevent the default click event from firing after touch
+  event.preventDefault();
+  event.stopPropagation();
+  
   const pill = event.currentTarget;
   const pillType = pill.dataset.pill;
   
@@ -411,6 +432,19 @@ function handleOutsideClick(event) {
   if (!activePillEditor) return;
   
   // Check if click is inside search toolbar or editor
+  const searchToolbar = document.querySelector('.search-toolbar');
+  const activeEditor = document.querySelector('.pill-editor.active');
+  
+  if (searchToolbar && !searchToolbar.contains(event.target) && 
+      (!activeEditor || !activeEditor.contains(event.target))) {
+    closePillEditor();
+  }
+}
+
+function handleOutsideTouch(event) {
+  if (!activePillEditor) return;
+  
+  // Check if touch is inside search toolbar or editor
   const searchToolbar = document.querySelector('.search-toolbar');
   const activeEditor = document.querySelector('.pill-editor.active');
   
