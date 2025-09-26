@@ -29,11 +29,9 @@ def list_videos():
     
     # Use database if enabled, otherwise fallback to file system
     items = []
-    if state.database_requested:
-        # When database was requested by user, return empty list by default
-        # Media should only be retrieved via /api/filter endpoint with specific criteria
-        # This matches the acceptance criteria: "default state should be that no media is shown"
-        items = []
+    if state.database_enabled:
+        # Get all media files from database
+        items = _get_files_from_database(state)
     else:
         # Original file system behavior - load all files
         items = _get_files_from_filesystem(state)
@@ -138,6 +136,34 @@ def _get_files_from_filesystem(state):
             "file_type": "video" if p.suffix.lower() == ".mp4" else "image",
             "extension": p.suffix.lower()
         })
+    return items
+
+
+def _get_files_from_database(state):
+    """Get media files from database."""
+    items = []
+    try:
+        with state.get_database_service() as db:
+            media_files = db.get_all_media_files()
+            
+            for media_file in media_files:
+                file_path = Path(media_file.file_path)
+                relative_path = file_path.name
+                
+                items.append({
+                    "name": media_file.filename,
+                    "url": f"/media/{relative_path}",
+                    "score": media_file.score or 0,
+                    "path": media_file.file_path,
+                    "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                    "file_type": media_file.file_type,
+                    "extension": media_file.extension
+                })
+    except Exception as e:
+        state.logger.error(f"Failed to get media files from database: {e}")
+        # Fallback to filesystem if database fails
+        items = _get_files_from_filesystem(state)
+    
     return items
 
 
