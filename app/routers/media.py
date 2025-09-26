@@ -52,8 +52,35 @@ async def filter_videos(req: Request):
     """Filter media files based on criteria."""
     state = get_state()
     
+    # Check if database service is available
     if not state.database_enabled:
-        raise HTTPException(503, "Database functionality is disabled")
+        # Fall back to client-side filtering of filesystem data if database is not available
+        state.logger.info("Database not available for filtering, falling back to filesystem with client-side filtering")
+        data = await req.json()
+        
+        # Extract filter parameters
+        min_score = data.get("min_score")
+        max_score = data.get("max_score") 
+        file_types = data.get("file_types")
+        start_date = data.get("start_date")
+        end_date = data.get("end_date")
+        
+        # Get filesystem data and apply filters
+        items = _get_files_from_filesystem(state)
+        items = _apply_filters_to_items(items, min_score, max_score, file_types, None, None)  # Skip date filtering for filesystem
+        
+        return {
+            "videos": items,
+            "count": len(items),
+            "filters_applied": {
+                "min_score": min_score,
+                "max_score": max_score,
+                "file_types": file_types,
+                "start_date": start_date,
+                "end_date": end_date
+            },
+            "fallback_mode": "filesystem"
+        }
     
     data = await req.json()
     
@@ -83,6 +110,9 @@ async def filter_videos(req: Request):
     
     try:
         with state.get_database_service() as db:
+            if db is None:
+                raise Exception("Database service not available")
+                
             media_files = db.get_all_media_files(
                 min_score=min_score,
                 max_score=max_score,
@@ -91,20 +121,28 @@ async def filter_videos(req: Request):
                 end_date=end_date_obj
             )
             
-            items = []
-            for media_file in media_files:
-                file_path = Path(media_file.file_path)
-                relative_path = file_path.name
-                
-                items.append({
-                    "name": media_file.filename,
-                    "url": f"/media/{relative_path}",
-                    "score": media_file.score or 0,
-                    "path": media_file.file_path,
-                    "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
-                    "file_type": media_file.file_type,
-                    "extension": media_file.extension
-                })
+            # If database returns empty results but filters are permissive (should show all media),
+            # fall back to filesystem data. This handles the case where database is enabled but empty.
+            if not media_files and _are_filters_permissive(min_score, max_score, file_types, start_date_obj, end_date_obj):
+                state.logger.info("Database returned no results with permissive filters, falling back to filesystem")
+                items = _get_files_from_filesystem(state)
+                # Apply filters client-side on filesystem data
+                items = _apply_filters_to_items(items, min_score, max_score, file_types, start_date_obj, end_date_obj)
+            else:
+                items = []
+                for media_file in media_files:
+                    file_path = Path(media_file.file_path)
+                    relative_path = file_path.name
+                    
+                    items.append({
+                        "name": media_file.filename,
+                        "url": f"/media/{relative_path}",
+                        "score": media_file.score or 0,
+                        "path": media_file.file_path,
+                        "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                        "file_type": media_file.file_type,
+                        "extension": media_file.extension
+                    })
             
             return {
                 "videos": items,
@@ -119,8 +157,23 @@ async def filter_videos(req: Request):
             }
     
     except Exception as e:
-        state.logger.error(f"Filter failed: {e}")
-        raise HTTPException(500, f"Filter failed: {str(e)}")
+        state.logger.error(f"Database filter failed: {e}")
+        # Fall back to filesystem filtering
+        items = _get_files_from_filesystem(state)
+        items = _apply_filters_to_items(items, min_score, max_score, file_types, start_date_obj, end_date_obj)
+        
+        return {
+            "videos": items,
+            "count": len(items),
+            "filters_applied": {
+                "min_score": min_score,
+                "max_score": max_score,
+                "file_types": file_types,
+                "start_date": start_date,
+                "end_date": end_date
+            },
+            "fallback_mode": "filesystem_error"
+        }
 
 
 def _get_files_from_filesystem(state):
@@ -165,6 +218,51 @@ def _get_files_from_database(state):
         items = _get_files_from_filesystem(state)
     
     return items
+
+
+def _are_filters_permissive(min_score, max_score, file_types, start_date, end_date):
+    """Check if the current filters are permissive enough that they should return all available media."""
+    # No score filters or very permissive score filters
+    permissive_scores = (min_score is None or min_score <= 1) and max_score is None
+    
+    # No date filters
+    permissive_dates = start_date is None and end_date is None
+    
+    # File types include common extensions or are not restrictive
+    permissive_file_types = (
+        file_types is None or 
+        not file_types or  # Empty list
+        # Check if file_types includes common media extensions
+        any(ext in ['mp4', 'jpg', 'jpeg', 'png'] for ext in file_types)
+    )
+    
+    return permissive_scores and permissive_dates and permissive_file_types
+
+
+def _apply_filters_to_items(items, min_score, max_score, file_types, start_date, end_date):
+    """Apply filters to a list of media items (client-side filtering)."""
+    filtered_items = []
+    
+    for item in items:
+        # Apply score filters
+        score = item.get('score', 0)
+        if min_score is not None and score < min_score:
+            continue
+        if max_score is not None and score > max_score:
+            continue
+            
+        # Apply file type filters
+        if file_types:
+            item_ext = item.get('extension', '').lstrip('.')
+            if item_ext not in file_types:
+                continue
+        
+        # Note: Date filtering not implemented for filesystem items as they don't have created_at
+        # This is acceptable since the main use case is showing all files when database is empty
+        
+        filtered_items.append(item)
+    
+    return filtered_items
 
 
 @router.post("/scan")
