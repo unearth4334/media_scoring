@@ -14,7 +14,7 @@ database_path: null             # Custom database path (default: .scores/media.d
 
 # Database logging settings
 enable_database_logging: true   # Enable detailed logging of all database interactions
-database_log_dir: /app/logs      # Directory for database interaction logs (daily rotation)
+database_log_dir: /app/.logs      # Directory for database interaction logs (daily rotation)
 database_log_level: INFO        # Log level for database operations (DEBUG, INFO, WARNING, ERROR)
 
 # Schema management settings

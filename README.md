@@ -61,7 +61,7 @@ Designed for datasets from **ComfyUI / Stable Diffusion pipelines** but useful i
 - Buttons:
   - Extract workflow JSON for **current file**
   - Extract workflows for **all filtered files**
-- Output saved in `workflows/<filename>_workflow.json`
+- Output saved in `.workflows/<filename>_workflow.json`
 
 ### File Management
 - **Download button**: saves current file to your computer
@@ -141,7 +141,7 @@ media_scoring/
 │   ├── file1.mp4.json
 │   └── .log/video_scorer.log
 │
-└── workflows/                  # 🔄 Auto-created: workflow JSON outputs
+└── .workflows/                 # 🔄 Auto-created: workflow JSON outputs
     └── file1_workflow.json
 ```
 
@@ -336,7 +336,7 @@ Sample:
 2025-08-24 20:36:33 | INFO  | Logger initialized. dir=/mnt/media
 2025-08-24 20:37:01 | INFO  | SCORE file=clip1.mp4 score=5
 2025-08-24 20:37:15 | INFO  | KEY key=ArrowRight file=clip1.mp4
-2025-08-24 20:37:20 | INFO  | EXTRACT success file=clip1.mp4 out=workflows/clip1_workflow.json
+2025-08-24 20:37:20 | INFO  | EXTRACT success file=clip1.mp4 out=.workflows/clip1_workflow.json
 ```
 
 ---

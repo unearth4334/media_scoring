@@ -26,7 +26,7 @@ COPY . .
 RUN chmod +x scripts/docker-entrypoint.sh
 
 # Create media and logs directories
-RUN mkdir -p /media /app/logs
+RUN mkdir -p /media /app/.logs
 
 # Expose the default port
 EXPOSE 7862

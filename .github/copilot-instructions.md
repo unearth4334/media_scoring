@@ -149,7 +149,7 @@ docker run --rm -p 7862:7862 -v /path/to/media:/media media-scorer
 
 ### Auto-Generated Directories
 - `.scores/` - Score files and logs (created at runtime)
-- `workflows/` - Workflow extraction outputs (created at runtime)
+- `.workflows/` - Workflow extraction outputs (created at runtime)
 - `.thumbnails/` - Generated thumbnails (if enabled)
 
 ## Configuration
