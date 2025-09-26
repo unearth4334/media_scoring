@@ -953,4 +953,51 @@ aside#sidebar {
     flex: 1;
     min-height: 0;
   }
+  
+  /* Fix right media pane to fit within viewport */
+  .video-wrap {
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  
+  /* Make media content responsive */
+  .video-wrap video,
+  .video-wrap img {
+    max-width: 100% !important;
+    max-height: 50vh !important;
+    width: auto !important;  
+    height: auto !important;
+    object-fit: contain;
+  }
+  
+  /* Make scorebar responsive */
+  .scorebar {
+    max-width: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+  }
+  
+  .scorebar > div {
+    flex-wrap: wrap;
+    gap: 4px !important;
+    justify-content: space-between !important;
+  }
+  
+  /* Scale scorebar buttons for mobile */
+  .scorebar-icon-btn,
+  .maximize-btn {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 4px !important;
+    flex-shrink: 0;
+  }
+  
+  /* Ensure scorebar button groups wrap properly */
+  .scorebar > div > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+  }
 }

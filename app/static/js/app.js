@@ -220,6 +220,11 @@ document.addEventListener('click', (e)=>{
   }
 });
 
+// Helper function to detect mobile devices
+function isMobileDevice() {
+  return window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+}
+
 function toggleMaximize(){
   const videoWrap = document.querySelector('.video-wrap');
   const player = document.getElementById('player');
@@ -227,6 +232,20 @@ function toggleMaximize(){
   const maximizeBtn = document.getElementById('maximize-btn');
   
   if (!videoWrap || !maximizeBtn) return;
+  
+  // On mobile, open in new page instead of overlay
+  if (isMobileDevice() && !isMaximized) {
+    const currentVideo = videos[idx];
+    if (currentVideo) {
+      const mediaUrl = '/media/' + encodeURIComponent(currentVideo.name);
+      // Create a URL for the maximized view
+      const maximizedUrl = '/maximize/' + encodeURIComponent(currentVideo.name);
+      
+      // Navigate to the maximized view page
+      window.location.href = maximizedUrl;
+    }
+    return;
+  }
   
   isMaximized = !isMaximized;
   
