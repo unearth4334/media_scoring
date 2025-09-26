@@ -13,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from app.settings import Settings
-from tools.mine_data import DataMiner
+from tools.ingest_data import DataIngester
 
 
 def test_postgresql_config_required():
@@ -43,18 +43,18 @@ def test_postgresql_config_required():
                     print(f"❌ Wrong error message: {e}")
                     return False
                 
-            # Test DataMiner class should raise error
+            # Test DataIngester class should raise error
             import logging
             logger = logging.getLogger('test')
-            miner = DataMiner(settings, logger)
+            ingester = DataIngester(settings, logger)
             
             try:
-                miner_url = miner._get_database_url(temp_path)
-                print(f"❌ DataMiner should require PostgreSQL URL but got: {miner_url}")
+                ingester_url = ingester._get_database_url(temp_path)
+                print(f"❌ DataIngester should require PostgreSQL URL but got: {ingester_url}")
                 return False
             except ValueError as e:
                 if "PostgreSQL DATABASE_URL is required" in str(e):
-                    print("✅ DataMiner correctly requires PostgreSQL URL")
+                    print("✅ DataIngester correctly requires PostgreSQL URL")
                 else:
                     print(f"❌ Wrong error message: {e}")
                     return False
@@ -94,16 +94,16 @@ def test_postgresql_config_from_database_url():
                 print(f"❌ Settings failed: expected {test_url}, got {result_url}")
                 return False
                 
-            # Test DataMiner class
+            # Test DataIngester class
             import logging
             logger = logging.getLogger('test')
-            miner = DataMiner(settings, logger)
-            miner_url = miner._get_database_url(temp_path)
+            ingester = DataIngester(settings, logger)
+            ingester_url = ingester._get_database_url(temp_path)
             
-            if miner_url == test_url:
-                print("✅ DataMiner correctly uses DATABASE_URL")
+            if ingester_url == test_url:
+                print("✅ DataIngester correctly uses DATABASE_URL")
             else:
-                print(f"❌ DataMiner failed: expected {test_url}, got {miner_url}")
+                print(f"❌ DataIngester failed: expected {test_url}, got {ingester_url}")
                 return False
                 
     finally:
@@ -181,16 +181,16 @@ def test_postgresql_config_from_media_db_url():
                 print(f"❌ Settings failed: expected {test_url}, got {result_url}")
                 return False
                 
-            # Test DataMiner class
+            # Test DataIngester class
             import logging
             logger = logging.getLogger('test')
-            miner = DataMiner(settings, logger)
-            miner_url = miner._get_database_url(temp_path)
+            ingester = DataIngester(settings, logger)
+            ingester_url = ingester._get_database_url(temp_path)
             
-            if miner_url == test_url:
-                print("✅ DataMiner correctly uses MEDIA_DB_URL")
+            if ingester_url == test_url:
+                print("✅ DataIngester correctly uses MEDIA_DB_URL")
             else:
-                print(f"❌ DataMiner failed: expected {test_url}, got {miner_url}")
+                print(f"❌ DataIngester failed: expected {test_url}, got {ingester_url}")
                 return False
                 
     finally:
@@ -233,16 +233,16 @@ def test_database_url_precedence_over_media_db_url():
                 print(f"❌ Settings precedence failed: expected {primary_url}, got {result_url}")
                 return False
                 
-            # Test DataMiner class
+            # Test DataIngester class
             import logging
             logger = logging.getLogger('test')
-            miner = DataMiner(settings, logger)
-            miner_url = miner._get_database_url(temp_path)
+            ingester = DataIngester(settings, logger)
+            ingester_url = ingester._get_database_url(temp_path)
             
-            if miner_url == primary_url:
-                print("✅ DataMiner correctly prioritizes DATABASE_URL")
+            if ingester_url == primary_url:
+                print("✅ DataIngester correctly prioritizes DATABASE_URL")
             else:
-                print(f"❌ DataMiner precedence failed: expected {primary_url}, got {miner_url}")
+                print(f"❌ DataIngester precedence failed: expected {primary_url}, got {ingester_url}")
                 return False
                 
     finally:
@@ -285,16 +285,16 @@ def test_cli_args_override_env_vars():
                 print(f"❌ Settings CLI override failed: expected {cli_url}, got {result_url}")
                 return False
                 
-            # Test DataMiner class
+            # Test DataIngester class
             import logging
             logger = logging.getLogger('test')
-            miner = DataMiner(settings, logger)
-            miner_url = miner._get_database_url(temp_path)
+            ingester = DataIngester(settings, logger)
+            ingester_url = ingester._get_database_url(temp_path)
             
-            if miner_url == cli_url:
-                print("✅ DataMiner correctly prioritizes CLI argument over env var")
+            if ingester_url == cli_url:
+                print("✅ DataIngester correctly prioritizes CLI argument over env var")
             else:
-                print(f"❌ DataMiner CLI override failed: expected {cli_url}, got {miner_url}")
+                print(f"❌ DataIngester CLI override failed: expected {cli_url}, got {ingester_url}")
                 return False
                 
     finally:

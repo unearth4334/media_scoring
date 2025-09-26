@@ -6,7 +6,7 @@ This directory contains all test files for the media scoring application.
 
 - `test_database.py` - Database functionality tests
 - `test_full_integration.py` - Full integration tests
-- `test_mining_tool.py` - Data mining tool tests  
+- `test_ingesting_tool.py` - Data ingesting tool tests  
 - `test_prompt_parser.py` - Prompt parsing tests
 - `test_schema.py` - Database schema tests
 

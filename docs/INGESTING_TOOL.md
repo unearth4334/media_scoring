@@ -1,4 +1,4 @@
-# Data Mining Tool for Media Archives
+# Data Ingesting Tool for Media Archives
 
 This tool allows you to extract metadata, scores, and keywords from existing archives of media files and store them in the database for the Media Scoring application.
 
@@ -20,37 +20,37 @@ This tool allows you to extract metadata, scores, and keywords from existing arc
 
 ```bash
 # Dry run mode (no database writes) - good for testing
-python mine_data.py /path/to/archive
+python ingest_data.py /path/to/archive
 
 # Dry run with HTML export showing what would be stored in database
-python mine_data.py /path/to/archive --test-output-dir ./test_results
+python ingest_data.py /path/to/archive --test-output-dir ./test_results
 
 # With database storage enabled
-python mine_data.py /path/to/archive --enable-database
+python ingest_data.py /path/to/archive --enable-database
 
 # Specific file pattern
-python mine_data.py /path/to/archive --pattern "*.mp4|*.png"
+python ingest_data.py /path/to/archive --pattern "*.mp4|*.png"
 
 # Verbose output
-python mine_data.py /path/to/archive --verbose --enable-database
+python ingest_data.py /path/to/archive --verbose --enable-database
 ```
 
 ### Advanced Usage
 
 ```bash
 # Custom database path
-python mine_data.py /path/to/archive --enable-database --database-path /custom/path/media.db
+python ingest_data.py /path/to/archive --enable-database --database-path /custom/path/media.db
 
 # External database (PostgreSQL)
-python mine_data.py /path/to/archive --enable-database --database-url "postgresql://user:pass@host:5432/db"
+python ingest_data.py /path/to/archive --enable-database --database-url "postgresql://user:pass@host:5432/db"
 
 # Process only images
-python mine_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-database
+python ingest_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-database
 ```
 
 ## Command Line Options
 
-- `directory` - **Required**. Directory containing media files to mine
+- `directory` - **Required**. Directory containing media files to ingest
 - `--pattern` - File pattern to match (default: `*.mp4|*.png|*.jpg`)
 - `--enable-database` - Enable database storage (default: false for dry run)
 - `--database-path` - Custom database file path (default: `<directory>/.scores/media.db`)
@@ -83,7 +83,7 @@ python mine_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-dat
 2025-09-11 04:53:20 | INFO  | File pattern: *.mp4|*.png|*.jpg
 2025-09-11 04:53:20 | INFO  | Database enabled: False
 2025-09-11 04:53:20 | INFO  | Running in dry-run mode (no database storage)
-2025-09-11 04:53:20 | INFO  | Starting to mine directory: /media/archive
+2025-09-11 04:53:20 | INFO  | Starting to ingest directory: /media/archive
 2025-09-11 04:53:20 | INFO  | Found 156 files matching pattern
 2025-09-11 04:53:20 | INFO  | Processing files without database (dry run mode)
 2025-09-11 04:53:22 | INFO  | ==================================================
@@ -116,7 +116,7 @@ python mine_data.py /path/to/archive --pattern "*.jpg|*.png|*.jpeg" --enable-dat
 
 ## Integration with Media Scoring Application
 
-Once you've mined data from your archives:
+Once you've ingested data from your archives:
 
 1. **Start the web application** pointing to the same directory:
    ```bash
@@ -160,13 +160,13 @@ Once you've mined data from your archives:
 ### Getting Help
 
 ```bash
-python mine_data.py --help
+python ingest_data.py --help
 ```
 
 ### Debug Mode
 
 ```bash
-python mine_data.py /path/to/archive --verbose --dry-run
+python ingest_data.py /path/to/archive --verbose --dry-run
 ```
 
 ## Examples for Different Use Cases
@@ -174,29 +174,29 @@ python mine_data.py /path/to/archive --verbose --dry-run
 ### Archive of AI-generated Images
 ```bash
 # Mine PNG images with AI metadata
-python mine_data.py /archive/ai_images --pattern "*.png" --enable-database --verbose
+python ingest_data.py /archive/ai_images --pattern "*.png" --enable-database --verbose
 ```
 
 ### Video Archive
 ```bash
 # Mine MP4 videos
-python mine_data.py /archive/videos --pattern "*.mp4" --enable-database
+python ingest_data.py /archive/videos --pattern "*.mp4" --enable-database
 ```
 
 ### Mixed Media Archive
 ```bash
 # Mine all supported media types
-python mine_data.py /archive/mixed --enable-database
+python ingest_data.py /archive/mixed --enable-database
 ```
 
 ### Test Before Full Processing
 ```bash
 # Always test first with dry run
-python mine_data.py /large/archive --verbose --dry-run
+python ingest_data.py /large/archive --verbose --dry-run
 # Export results to see what would be collected
-python mine_data.py /large/archive --dry-run --test-output-dir ./test_results
+python ingest_data.py /large/archive --dry-run --test-output-dir ./test_results
 # Then run for real
-python mine_data.py /large/archive --enable-database
+python ingest_data.py /large/archive --enable-database
 ```
 
 ## HTML Export Feature
@@ -217,5 +217,5 @@ This is particularly useful for:
 Example output structure:
 ```
 test_results/
-└── mining_test_results.html  # Complete interactive report
+└── ingesting_test_results.html  # Complete interactive report
 ```
