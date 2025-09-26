@@ -818,3 +818,10 @@ aside#sidebar {
     flex-wrap: wrap;
   }
 }
+
+/* Mobile: hide header bar to save screen space */
+@media (max-width: 768px) {
+  header {
+    display: none;
+  }
+}
