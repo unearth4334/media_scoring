@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from ..state import get_state
 from ..services.thumbnails import (
@@ -19,6 +19,89 @@ except ImportError:
 
 
 router = APIRouter()
+
+
+@router.get("/maximize/{name:path}")
+def maximize_media(name: str):
+    """Serve maximized media view for mobile devices."""
+    state = get_state()
+    target = (state.video_dir / name).resolve()
+    
+    # Security: ensure the resolved path is within video directory
+    try:
+        target.relative_to(state.video_dir)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found")
+    
+    # Determine if it's a video or image
+    ext = target.suffix.lower()
+    is_video = ext == ".mp4"
+    media_url = f"/media/{name}"
+    
+    # Generate HTML for maximized view
+    html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Maximized View - {name}</title>
+    <style>
+        body {{ 
+            margin: 0; 
+            padding: 0; 
+            background: #000; 
+            display: flex; 
+            flex-direction: column; 
+            height: 100vh; 
+            font-family: system-ui, sans-serif; 
+        }}
+        .close-btn {{ 
+            position: fixed; 
+            top: 16px; 
+            right: 16px; 
+            width: 44px; 
+            height: 44px; 
+            background: rgba(0,0,0,0.7); 
+            color: white; 
+            border: 2px solid #fff; 
+            border-radius: 50%; 
+            font-size: 24px; 
+            font-weight: bold; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            z-index: 1000;
+            text-decoration: none;
+        }}
+        .close-btn:hover {{ background: rgba(255,255,255,0.2); }}
+        .media-container {{ 
+            flex: 1; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            padding: 16px; 
+            box-sizing: border-box; 
+        }}
+        video, img {{ 
+            max-width: 100%; 
+            max-height: 100%; 
+            object-fit: contain; 
+        }}
+    </style>
+</head>
+<body>
+    <a href="javascript:window.close(); history.back();" class="close-btn" title="Close" onclick="if(window.history.length > 1) history.back(); else window.close();">&times;</a>
+    <div class="media-container">
+        {'<video controls autoplay><source src="' + media_url + '" type="video/mp4"></video>' if is_video else '<img src="' + media_url + '" alt="' + name + '">'}
+    </div>
+</body>
+</html>"""
+    
+    return HTMLResponse(content=html_content)
 
 
 @router.get("/media/{name:path}")
