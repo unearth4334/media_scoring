@@ -600,26 +600,33 @@ aside#sidebar {
   color: #333;
 }
 
-/* Modified pill styling - vibrant colors for items that differ from defaults */
+/* Modified pill styling - vibrant outline and text, default background */
 .pill.pill-modified {
-  background: #4CAF50;
-  border-color: #45a049;
-  color: white;
+  background: var(--btn-bg);
+  border-color: #00ffff;
+  color: #00ffff;
   font-weight: 600;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+  box-shadow: 0 0 8px rgba(0,255,255,0.3);
 }
 
 .pill.pill-modified .pill-value {
-  background: rgba(255, 255, 255, 0.3);
-  color: white;
+  background: rgba(0,255,255,0.15);
+  color: #00ffff;
   font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.4);
+  border: 1px solid #00ffff;
 }
 
 .pill.pill-modified:hover {
-  background: #45a049;
-  border-color: #388e3c;
-  box-shadow: 0 0 12px rgba(76, 175, 80, 0.6);
+  background: var(--btn-bg-hover);
+  border-color: #4CAF50;
+  color: #4CAF50;
+  box-shadow: 0 0 12px rgba(76,175,80,0.4);
+}
+
+.pill.pill-modified:hover .pill-value {
+  color: #4CAF50;
+  border-color: #4CAF50;
+  background: rgba(76,175,80,0.15);
 }
 
 /* Pill editors */

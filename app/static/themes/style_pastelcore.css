@@ -589,26 +589,27 @@ aside#sidebar {
   color: #8b4513;
 }
 
-/* Modified pill styling - vibrant but soft colors for items that differ from defaults */
+/* Modified pill styling - vibrant text and outline, button background */
 .pill.pill-modified {
-  background: #b8e6b8;              /* soft green for modified state */
-  border-color: #7fbd7f;
-  color: #2d5a2d;
-  font-weight: 600;
-  box-shadow: 0 0 12px rgba(127, 189, 127, 0.5);
+  background: var(--btn-bg);           /* use button background */
+  border-color: #ff7b7b;               /* vibrant red outline */
+  color: #d12c2c;                      /* vibrant red text */
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(255, 123, 123, 0.25);
 }
 
 .pill.pill-modified .pill-value {
-  background: #e6b8e6;               /* soft purple value background */
-  color: #5a2d5a;
-  font-weight: 600;
-  border: 1px solid #bd7fbd;
+  background: #ffe0e0;                 /* soft red value background */
+  color: #d12c2c;
+  font-weight: 700;
+  border: 1px solid #ff7b7b;
 }
 
 .pill.pill-modified:hover {
-  background: #a3d9a3;              /* slightly darker green on hover */
-  border-color: #6ba06b;
-  box-shadow: 0 0 16px rgba(127, 189, 127, 0.7);
+  background: var(--btn-bg-hover);     /* button hover background */
+  border-color: #c41c1c;
+  color: #c41c1c;
+  box-shadow: 0 0 16px rgba(255, 123, 123, 0.4);
 }
 
 /* Pill editors */
