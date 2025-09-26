@@ -6,7 +6,6 @@
 // Search toolbar state
 let activePillEditor = null;
 let searchToolbarFilters = {
-  search: '',
   sort: 'name',
   directory: '',
   filetype: ['jpg', 'png', 'mp4'],
@@ -17,7 +16,6 @@ let searchToolbarFilters = {
 
 // Default filter values for comparison (to detect modifications)
 const defaultFilters = {
-  search: '',
   sort: 'name',
   directory: '',
   filetype: ['jpg', 'png', 'mp4'],
@@ -164,10 +162,6 @@ function populateEditor(pillType) {
   const filter = searchToolbarFilters[pillType];
   
   switch (pillType) {
-    case 'search':
-      document.getElementById('search-input').value = filter;
-      break;
-      
     case 'sort':
       document.getElementById('sort-select').value = filter;
       break;
@@ -194,11 +188,6 @@ function populateEditor(pillType) {
 }
 
 function setupEditorActions() {
-  // Search editor
-  document.getElementById('search-apply').addEventListener('click', () => applySearchToolbarFilter('search'));
-  document.getElementById('search-clear').addEventListener('click', () => clearFilter('search'));
-  document.getElementById('search-close').addEventListener('click', closePillEditor);
-  
   // Sort editor  
   document.getElementById('sort-apply').addEventListener('click', () => applySearchToolbarFilter('sort'));
   document.getElementById('sort-close').addEventListener('click', closePillEditor);
@@ -246,11 +235,6 @@ function applySearchToolbarFilter(pillType) {
   let newValue;
   
   switch (pillType) {
-    case 'search':
-      newValue = document.getElementById('search-input').value.trim();
-      searchToolbarFilters.search = newValue;
-      break;
-      
     case 'sort':
       newValue = document.getElementById('sort-select').value;
       searchToolbarFilters.sort = newValue;
@@ -307,11 +291,6 @@ function applySearchToolbarFilter(pillType) {
 
 function clearFilter(pillType) {
   switch (pillType) {
-    case 'search':
-      searchToolbarFilters.search = '';
-      document.getElementById('search-input').value = '';
-      break;
-      
     case 'filetype':
       searchToolbarFilters.filetype = [];
       document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
@@ -339,11 +318,6 @@ function clearFilter(pillType) {
 }
 
 function updatePillValues() {
-  // Search
-  const searchValue = document.getElementById('search-value');
-  const searchPill = document.getElementById('pill-search');
-  searchValue.textContent = searchToolbarFilters.search || '';
-  
   // Sort
   const sortValue = document.getElementById('sort-value');
   const sortPill = document.getElementById('pill-sort');
@@ -402,7 +376,6 @@ function updatePillValues() {
   
   // Apply modified state classes to pills
   const pillsData = [
-    { pill: searchPill, filterName: 'search' },
     { pill: sortPill, filterName: 'sort' },
     { pill: dirPill, filterName: 'directory' },
     { pill: filetypePill, filterName: 'filetype' },
@@ -426,14 +399,8 @@ function updatePillValues() {
 }
 
 function applyCurrentFilters() {
-  // Apply search filter
-  if (searchToolbarFilters.search) {
-    filtered = videos.filter(video => 
-      video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
-    );
-  } else {
-    filtered = [...videos];
-  }
+  // Start with all videos
+  filtered = [...videos];
   
   // Apply rating filter using existing function
   if (typeof applyFilter === 'function') {
@@ -633,13 +600,6 @@ function applyClientSideFilters() {
   // Start with all videos
   let currentFiltered = [...videos];
   
-  // Apply search filter first
-  if (searchToolbarFilters.search) {
-    currentFiltered = currentFiltered.filter(video => 
-      video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
-    );
-  }
-  
   // Apply rating filter
   if (minFilter !== null) {
     if (minFilter === 'unrated') {
@@ -670,10 +630,6 @@ function applyClientSideFilters() {
   const info = document.getElementById('filter_info');
   if (info) {
     let filterParts = [];
-    
-    if (searchToolbarFilters.search) {
-      filterParts.push(`search: "${searchToolbarFilters.search}"`);
-    }
     
     if (minFilter !== null) {
       if (minFilter === 'unrated') {
