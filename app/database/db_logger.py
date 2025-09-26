@@ -14,14 +14,14 @@ def get_database_log_config():
         settings = Settings.load_from_yaml()
         return {
             'enabled': getattr(settings, 'enable_database_logging', True),
-            'log_dir': getattr(settings, 'database_log_dir', '/app/.logs'),
+            'log_dir': getattr(settings, 'database_log_dir', '/app/logs'),
             'log_level': getattr(settings, 'database_log_level', 'INFO')
         }
     except Exception:
         # Fallback to defaults if settings not available
         return {
             'enabled': True,
-            'log_dir': '/app/.logs',
+            'log_dir': '/app/logs',
             'log_level': 'INFO'
         }
 
@@ -49,7 +49,7 @@ class DatabaseLogger:
         try:
             self.log_dir.mkdir(parents=True, exist_ok=True)
         except PermissionError:
-            # Fallback to user home directory if we can't write to /app/.logs
+            # Fallback to user home directory if we can't write to /app/logs
             fallback_dir = Path.home() / ".media_scoring" / "database_logs"
             fallback_dir.mkdir(parents=True, exist_ok=True)
             self.log_dir = fallback_dir

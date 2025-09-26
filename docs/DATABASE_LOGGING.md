@@ -9,7 +9,7 @@ The database logging system provides comprehensive tracking of all database oper
 - **Daily Log Rotation**: New log file created each day with format `database_interactions_YYYY-MM-DD.log`
 - **Detailed Operation Tracking**: All database operations, queries, transactions, and errors are logged
 - **Configurable Logging**: Enable/disable logging and set log levels via configuration
-- **Automatic Fallback**: Falls back to user home directory if `/app/.logs` is not writable
+- **Automatic Fallback**: Falls back to user home directory if `/app/logs` is not writable
 
 ## Configuration
 
@@ -18,14 +18,14 @@ Database logging is configured in `config/config.yml`:
 ```yaml
 # Database logging settings
 enable_database_logging: true   # Enable detailed logging of all database interactions
-database_log_dir: /app/.logs    # Directory for database interaction logs (daily rotation)
+database_log_dir: /app/logs     # Directory for database interaction logs (daily rotation)
 database_log_level: INFO        # Log level for database operations (DEBUG, INFO, WARNING, ERROR)
 ```
 
 ### Configuration Options
 
 - `enable_database_logging`: Boolean to enable/disable database logging (default: true)
-- `database_log_dir`: Directory path for log files (default: `/app/.logs`)
+- `database_log_dir`: Directory path for log files (default: `/app/logs`)
 - `database_log_level`: Logging level - DEBUG, INFO, WARNING, ERROR (default: INFO)
 
 ## Log Format
@@ -110,7 +110,7 @@ All public methods in `DatabaseService` are automatically logged:
 
 Database logs are stored in the following locations:
 
-1. **Primary Location**: `/app/.logs/`
+1. **Primary Location**: `/app/logs/`
 2. **Fallback Location**: `~/.media_scoring/database_logs/` (if primary is not writable)
 
 ### Log File Naming
@@ -143,7 +143,7 @@ The database logging system is designed to be lightweight:
 ### Log Files Not Created
 
 1. Check if database logging is enabled in configuration
-2. Verify write permissions to `/app/.logs` directory
+2. Verify write permissions to `/app/logs` directory
 3. Check fallback location: `~/.media_scoring/database_logs/`
 4. Review application startup logs for permission errors
 
@@ -159,9 +159,9 @@ If running in Docker or with different users:
 
 ```bash
 # Ensure proper permissions
-mkdir -p /app/.logs
-chmod 755 /app/.logs
-chown -R app_user:app_group /app/.logs
+mkdir -p /app/logs
+chmod 755 /app/logs
+chown -R app_user:app_group /app/logs
 ```
 
 ## Integration
