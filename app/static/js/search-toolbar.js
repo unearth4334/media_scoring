@@ -500,11 +500,26 @@ function applyCurrentFilters() {
 async function applyDatabaseFilters() {
   try {
     // Build filter request
-    const filterRequest = {
-      file_types: searchToolbarFilters.filetype,
-      start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
-      end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null
-    };
+    const filterRequest = {};
+    
+    // Only add file_types if it's not the default "All" case
+    // Don't filter by filetype when all default extensions are selected
+    const defaultExtensions = ['jpg', 'png', 'mp4'];
+    const isDefaultFiletype = Array.isArray(searchToolbarFilters.filetype) &&
+      searchToolbarFilters.filetype.length === defaultExtensions.length &&
+      searchToolbarFilters.filetype.every(ext => defaultExtensions.includes(ext));
+    
+    if (!isDefaultFiletype && searchToolbarFilters.filetype && searchToolbarFilters.filetype.length > 0) {
+      filterRequest.file_types = searchToolbarFilters.filetype;
+    }
+    
+    // Add date filters
+    if (searchToolbarFilters.dateStart) {
+      filterRequest.start_date = `${searchToolbarFilters.dateStart}T00:00:00Z`;
+    }
+    if (searchToolbarFilters.dateEnd) {
+      filterRequest.end_date = `${searchToolbarFilters.dateEnd}T23:59:59Z`;
+    }
     
     // Add rating filters
     if (searchToolbarFilters.rating !== 'none') {
