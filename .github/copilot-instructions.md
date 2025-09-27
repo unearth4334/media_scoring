@@ -126,9 +126,11 @@ docker-compose up -d
   - `/api/ingest` - Batch processing
 
 ### Container Access (Docker Testing)
-- **SSH Access**: `ssh root@10.0.78.66 -p 2222`
+- **Remote Host**: Container runs on QNAP NAS at `10.0.78.66`
+- **Access from Dev Terminal**: `ssh qnap` (then use Docker commands)
+- **Direct Container SSH**: `ssh root@10.0.78.66 -p 2222`
 - **Web Interface**: http://10.0.78.66:7862
-- **Container logs**: `docker logs media-scorer`
+- **Container logs**: `docker logs media-scorer` (run from QNAP host)
 - **Database logs**: Available in `/app/.logs/` inside container
 
 ## Validation
@@ -158,19 +160,23 @@ docker-compose up -d
 
 4. **Container Testing** (Docker environment):
    ```bash
-   # Access container via SSH
+   # Access QNAP host from dev terminal
+   ssh qnap
+   
+   # Check container status on QNAP host
+   docker ps -a
+   docker logs media-scorer
+   
+   # Access container directly via SSH
    ssh root@10.0.78.66 -p 2222
    
    # Check application status inside container
    ps aux | grep python
    
-   # View container logs
-   docker logs media-scorer
-   
-   # Test web interface
+   # Test web interface from dev terminal
    curl http://10.0.78.66:7862/api/videos
    
-   # Check database logs (if database enabled)
+   # Check database logs (inside container)
    ls -la /app/.logs/
    ```
 
