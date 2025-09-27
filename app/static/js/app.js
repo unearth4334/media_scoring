@@ -695,23 +695,41 @@ async function loadVideos(){
 async function postScore(score){
   const v = filtered[idx];
   if (!v) return;
-  await fetch('/api/score', {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ name: v.name, score: score })
-  });
-  const source = videos.find(x => x.name === v.name);
-  if (source) source.score = score;
-  v.score = score;
-  const curName = v.name;
-  applyFilter();
-  const newIndex = filtered.findIndex(x => x.name === curName);
-  if (newIndex >= 0) {
-    show(newIndex);
-  } else {
-    show(idx);
+  
+  try {
+    const response = await fetch('/api/score', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: v.name, score: score })
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to update score:', response.status, response.statusText);
+      return; // Don't update local state if API call failed
+    }
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error('Score update failed:', result);
+      return; // Don't update local state if API returned error
+    }
+    
+    // Only update local state if API call succeeded
+    const source = videos.find(x => x.name === v.name);
+    if (source) source.score = score;
+    v.score = score;
+    const curName = v.name;
+    applyFilter();
+    const newIndex = filtered.findIndex(x => x.name === curName);
+    if (newIndex >= 0) {
+      show(newIndex);
+    } else {
+      show(idx);
+    }
+    renderSidebar();
+  } catch (error) {
+    console.error('Network error updating score:', error);
   }
-  renderSidebar();
 }
 async function postKey(key){
   const v = filtered[idx];
@@ -751,13 +769,19 @@ document.getElementById("load").addEventListener("click", () => {
   setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 
-// Refresh content button - refreshes based on current search toolbar filters
-document.getElementById("refresh-content").addEventListener("click", () => {
-  // Check if applyCurrentFilters is available from search-toolbar.js
+// Refresh content button - reloads all data then applies current filters  
+document.getElementById("refresh-content").addEventListener("click", async () => {
+  // First, reload all videos from the server (like initial page load)
+  await loadVideos();
+  
+  // Then apply current filters if available
   if (typeof applyCurrentFilters === 'function') {
     applyCurrentFilters();
   } else {
-    console.warn('applyCurrentFilters function not available');
+    // Fallback to basic filtering if search toolbar not available
+    applyFilter();
+    renderSidebar();
+    show(0);
   }
 });
 

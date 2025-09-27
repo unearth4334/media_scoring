@@ -12,6 +12,7 @@ from ..state import get_state
 from ..services.files import read_score, write_score, switch_directory
 from ..services.thumbnails import start_thumbnail_generation
 from ..utils.png_chunks import read_png_parameters_text
+from ..database.models import MediaFile
 
 try:
     from PIL import Image
@@ -301,14 +302,48 @@ async def update_score(req: Request):
     data = await req.json()
     name = data.get("name")
     score = int(data.get("score", 0))
-    target = state.video_dir / name
     
-    if not target.exists() or target not in state.file_list:
-        raise HTTPException(404, "File not found")
+    # If database is enabled, find the file by its filename in the database
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    # Find the media file by filename
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        target = Path(media_file.file_path)
+                        state.logger.info(f"Found file in database: {target}")
+                    else:
+                        state.logger.error(f"File '{name}' not found in database")
+                        raise HTTPException(404, f"File '{name}' not found in database")
+            else:
+                raise HTTPException(503, "Database service not available")
+        except Exception as e:
+            state.logger.error(f"Database error when looking up file: {e}")
+            raise HTTPException(500, f"Database error: {str(e)}")
+    else:
+        # Original filesystem behavior
+        target = state.video_dir / name
+        if not target.exists() or target not in state.file_list:
+            raise HTTPException(404, "File not found")
     
-    write_score(target, score)
-    state.logger.info(f"SCORE file={name} score={score}")
-    return {"ok": True}
+    if not target.exists():
+        state.logger.error(f"File not found on filesystem: {target}")
+        raise HTTPException(404, f"File not found on filesystem: {target}")
+    
+    state.logger.info(f"Updating score: file={name} score={score} path={target}")
+    
+    try:
+        write_score(target, score)
+        state.logger.info(f"SCORE UPDATE SUCCESS: file={name} score={score} path={target}")
+        return {"ok": True}
+    except Exception as e:
+        state.logger.error(f"SCORE UPDATE FAILED: file={name} score={score} error={e}")
+        raise HTTPException(500, f"Failed to update score: {str(e)}")
 
 
 @router.post("/key")
