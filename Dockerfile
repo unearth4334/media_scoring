@@ -8,6 +8,7 @@ RUN apt-get update \
       curl \
       ca-certificates \
       openssh-server \
+      postgresql-client \
  && rm -rf /var/lib/apt/lists/*
 
 
