@@ -27,8 +27,8 @@ services:
       - ./config:/app/config
       - scores_data:/app/.scores
       - thumbnails_data:/app/.thumbnails
-      - workflows_data:/app/workflows
-      - logs_data:/app/logs
+      - workflows_data:/app/.workflows
+      - logs_data:/app/.logs
     environment:
       - PUID=${PUID}
       - PGID=${PGID}

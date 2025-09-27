@@ -219,9 +219,7 @@ input[type="text"] {
   height: 16px;
 }
 
-/* Help/Refresh keep base footprint */
-.helpbtn {}
-.refresh-btn {}
+/* Help/Refresh keep base footprint - inherits from button system above */
 
 /* Mobile-specific refresh button improvements to match pill styling */
 @media (max-width: 768px) {
@@ -557,11 +555,6 @@ aside#sidebar {
     box-shadow: 0 4px 8px rgba(255, 105, 180, 0.4);
     transform: translateY(-1px); /* Subtle lift effect */
   }
-}
-  background: #ff69b4;              /* hot pink active */
-  border-color: #ff1493;
-  color: #000000;
-  box-shadow: 0 0 12px rgba(255,105,180,0.5);
 }
 
 .pill-label {

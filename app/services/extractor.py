@@ -17,7 +17,7 @@ def get_extractor_script_path() -> Path:
 
 def ensure_workflows_dir(for_video: Path) -> Path:
     """Ensure workflows directory exists for video file."""
-    wf_dir = for_video.parent / "workflows"
+    wf_dir = for_video.parent / ".workflows"
     wf_dir.mkdir(parents=True, exist_ok=True)
     return wf_dir
 
@@ -25,7 +25,7 @@ def ensure_workflows_dir(for_video: Path) -> Path:
 def extract_workflow_for(video_path: Path) -> Dict[str, str]:
     """
     Run the external extractor for a single mp4 and write:
-    ./workflows/<filename_without_ext>_workflow.json
+    ./.workflows/<filename_without_ext>_workflow.json
     Returns a dict with status and paths.
     """
     state = get_state()
