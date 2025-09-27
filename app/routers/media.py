@@ -82,7 +82,11 @@ async def filter_videos(req: Request):
             pass
     
     try:
-        with state.get_database_service() as db:
+        db_service = state.get_database_service()
+        if db_service is None:
+            raise HTTPException(503, "Database service is not available")
+            
+        with db_service as db:
             media_files = db.get_all_media_files(
                 min_score=min_score,
                 max_score=max_score,
@@ -143,7 +147,12 @@ def _get_files_from_database(state):
     """Get media files from database."""
     items = []
     try:
-        with state.get_database_service() as db:
+        db_service = state.get_database_service()
+        if db_service is None:
+            state.logger.error("Database service is not available")
+            return _get_files_from_filesystem(state)
+            
+        with db_service as db:
             media_files = db.get_all_media_files()
             
             for media_file in media_files:

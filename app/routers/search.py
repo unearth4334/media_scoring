@@ -40,7 +40,11 @@ async def search_files(request: SearchRequest):
         raise HTTPException(503, "Database functionality is disabled")
     
     try:
-        with state.get_database_service() as db:
+        db_service = state.get_database_service()
+        if db_service is None:
+            raise HTTPException(503, "Database service is not available")
+            
+        with db_service as db:
             # Start with keyword search if keywords provided
             if request.keywords:
                 media_files = db.search_by_keywords(

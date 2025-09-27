@@ -25,11 +25,15 @@ class ApplicationState:
         if self.database_enabled:
             try:
                 db_url = settings.get_database_url()
+                self.logger.info(f"Attempting to initialize database with URL: {db_url}")
                 init_database(db_url)
-                self.logger.info(f"Database initialized with URL: {db_url}")
+                self.logger.info(f"Database initialized successfully")
             except Exception as e:
-                self.logger.error(f"Failed to initialize database: {e}")
+                self.logger.error(f"Failed to initialize database: {e}", exc_info=True)
+                self.logger.warning("Database functionality disabled due to initialization failure")
                 self.database_enabled = False
+        else:
+            self.logger.info("Database functionality is disabled in settings")
         
         # Thumbnail generation progress tracking
         self.thumbnail_progress = {
@@ -56,11 +60,12 @@ class ApplicationState:
     def get_database_service(self) -> Optional[DatabaseService]:
         """Get a database service instance if database is enabled."""
         if not self.database_enabled:
+            self.logger.warning("Database service requested but database is disabled")
             return None
         try:
             return DatabaseService()
         except Exception as e:
-            self.logger.error(f"Failed to create database service: {e}")
+            self.logger.error(f"Failed to create database service: {e}", exc_info=True)
             return None
 
 

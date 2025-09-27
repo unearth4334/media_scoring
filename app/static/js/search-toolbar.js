@@ -498,6 +498,8 @@ function applyCurrentFilters() {
 }
 
 async function applyDatabaseFilters() {
+  console.log('Applying database filters...', { databaseEnabled: window.databaseEnabled });
+  
   try {
     // Build filter request
     const filterRequest = {
@@ -505,6 +507,8 @@ async function applyDatabaseFilters() {
       start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
       end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null
     };
+    
+    console.log('Filter request:', filterRequest);
     
     // Add rating filters
     if (searchToolbarFilters.rating !== 'none') {
@@ -523,6 +527,7 @@ async function applyDatabaseFilters() {
     
     if (response.ok) {
       const data = await response.json();
+      console.log('Filter response received:', data);
       videos = data.videos;
       
       // Apply search filter client-side
@@ -533,6 +538,8 @@ async function applyDatabaseFilters() {
       } else {
         filtered = [...videos];
       }
+      
+      console.log('Filtered results:', filtered.length);
       
       // Apply sort
       applySortFilter();
@@ -545,6 +552,10 @@ async function applyDatabaseFilters() {
       if (filtered.length > 0) {
         show(0);
       }
+    } else {
+      console.error('Filter request failed:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
     }
   } catch (error) {
     console.error('Database filter failed:', error);
