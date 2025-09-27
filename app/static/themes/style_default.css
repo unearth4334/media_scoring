@@ -222,8 +222,7 @@ input[type="text"] {
   height: 16px;
 }
 
-/* Help button keeps same footprint but can look like a pill if desired */
-.helpbtn { /* inherits base */ }
+/* Help button keeps same footprint but can look like a pill if desired - inherits from button system above */
 
 /* Refresh is often icon-only; base padding is fine */
 .refresh-btn { 
