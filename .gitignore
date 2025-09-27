@@ -75,3 +75,5 @@ app/.logs/*.log
 docker-compose.override.yml.bak
 
 results/
+
+authorized_keys

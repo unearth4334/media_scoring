@@ -7,6 +7,7 @@ RUN apt-get update \
       ffmpeg \
       curl \
       ca-certificates \
+      openssh-server \
  && rm -rf /var/lib/apt/lists/*
 
 
@@ -28,8 +29,19 @@ RUN chmod +x scripts/docker-entrypoint.sh
 # Create media and logs directories
 RUN mkdir -p /media /app/.logs
 
-# Expose the default port
-EXPOSE 7862
+# Configure SSH server
+RUN mkdir -p /var/run/sshd /root/.ssh \
+ && chmod 700 /root/.ssh \
+ && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+ && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config \
+ && sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+
+# Copy authorized keys for root SSH access
+COPY authorized_keys /root/.ssh/authorized_keys
+RUN chmod 600 /root/.ssh/authorized_keys
+
+# Expose the default ports
+EXPOSE 7862 22
 
 # Set default environment variables
 ENV PUID=0

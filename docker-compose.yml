@@ -22,6 +22,7 @@ services:
     container_name: media-scorer
     ports:
       - "${HOST_PORT:-7862}:${HOST_PORT:-7862}"
+      - "${SSH_PORT:-2222}:22"
     volumes:
       - "${HOST_MEDIA_PATH}:/media"
       - ./config:/app/config

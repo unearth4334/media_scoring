@@ -125,6 +125,12 @@ docker-compose up -d
   - `/api/search` - Database search
   - `/api/ingest` - Batch processing
 
+### Container Access (Docker Testing)
+- **SSH Access**: `ssh root@10.0.78.66 -p 2222`
+- **Web Interface**: http://10.0.78.66:7862
+- **Container logs**: `docker logs media-scorer`
+- **Database logs**: Available in `/app/.logs/` inside container
+
 ## Validation
 
 ### Manual Testing Requirements
@@ -149,6 +155,24 @@ docker-compose up -d
    - Modify config.yml with different settings
    - Restart application and verify changes take effect
    - Test different media patterns (*.mp4, *.jpg, *.png)
+
+4. **Container Testing** (Docker environment):
+   ```bash
+   # Access container via SSH
+   ssh root@10.0.78.66 -p 2222
+   
+   # Check application status inside container
+   ps aux | grep python
+   
+   # View container logs
+   docker logs media-scorer
+   
+   # Test web interface
+   curl http://10.0.78.66:7862/api/videos
+   
+   # Check database logs (if database enabled)
+   ls -la /app/.logs/
+   ```
 
 ### Expected Behavior
 - Application starts in ~5 seconds and displays media from configured directory

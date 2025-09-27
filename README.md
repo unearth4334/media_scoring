@@ -307,9 +307,20 @@ For containerized deployment (recommended for NAS/server hosting):
    docker-compose up -d
    ```
 
-4. **Access**: Open browser to `http://your-server-ip:7862`
+4. **Access**: 
+   - Web interface: `http://your-server-ip:7862`
+   - SSH access: `ssh root@your-server-ip -p 2222` (using keys from `authorized_keys`)
 
 📖 **See [DOCKER.md](DOCKER.md) for complete Docker deployment guide including QNAP NAS setup.**
+
+#### SSH Container Access
+
+The Docker container includes SSH server for remote access:
+
+- **Default SSH port**: 2222 (configurable via `SSH_PORT` in `.env`)
+- **Authentication**: SSH key-based (no password)
+- **Keys**: Add your public keys to `authorized_keys` file before building
+- **Access**: `ssh root@container-host -p 2222`
 
 ---
 

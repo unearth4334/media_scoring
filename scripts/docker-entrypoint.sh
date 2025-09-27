@@ -84,6 +84,10 @@ if [ -n "$DATABASE_URL" ]; then
     echo "Using external database: $DATABASE_URL"
 fi
 
+# Start SSH daemon in the background
+echo "Starting SSH daemon..."
+/usr/sbin/sshd -D &
+
 echo "Starting Media Scorer with:"
 echo "  DIR: $DIR"
 echo "  PORT: $PORT" 
