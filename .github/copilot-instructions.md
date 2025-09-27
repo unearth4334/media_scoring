@@ -127,11 +127,16 @@ docker-compose up -d
 
 ### Container Access (Docker Testing)
 - **Remote Host**: Container runs on QNAP NAS at `10.0.78.66`
-- **Access from Dev Terminal**: `ssh qnap` (then use Docker commands)
+- **Access from Dev Terminal**: `ssh qnap` (then use Docker commands with proper PATH)
 - **Direct Container SSH**: `ssh root@10.0.78.66 -p 2222`
 - **Web Interface**: http://10.0.78.66:7862
-- **Container logs**: `docker logs media-scorer` (run from QNAP host)
+- **Container logs**: `docker logs media-scorer` (run from QNAP host with PATH setup)
 - **Database logs**: Available in `/app/.logs/` inside container
+
+**Note**: QNAP requires proper PATH setup for Docker commands:
+```bash
+export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/sbin
+```
 
 ## Validation
 
@@ -163,9 +168,12 @@ docker-compose up -d
    # Access QNAP host from dev terminal
    ssh qnap
    
-   # Check container status on QNAP host
-   docker ps -a
-   docker logs media-scorer
+   # Check container status on QNAP host (with proper PATH setup)
+   ssh qnap 'export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/sbin; cd /share/Container/media_scoring && docker ps -a'
+   ssh qnap 'export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/sbin; cd /share/Container/media_scoring && docker logs media-scorer'
+   
+   # Alternative: Run docker commands directly with PATH
+   ssh qnap 'export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/sbin; docker ps'
    
    # Access container directly via SSH
    ssh root@10.0.78.66 -p 2222
