@@ -304,12 +304,29 @@ For containerized deployment (recommended for NAS/server hosting):
 
 3. **Deploy with Docker Compose**:
    ```bash
+   # Option 1: Direct Docker Compose
    docker-compose up -d
+   
+   # Option 2: Using launch script (for QNAP/remote deployment)
+   ./launch.sh up --build
    ```
 
 4. **Access**: 
    - Web interface: `http://your-server-ip:7862`
    - SSH access: `ssh root@your-server-ip -p 2222` (using keys from `authorized_keys`)
+
+#### Container Management Script
+
+For easy QNAP deployment, use the `launch.sh` script:
+
+```bash
+./launch.sh up --build     # Start with fresh build
+./launch.sh down           # Stop containers
+./launch.sh restart        # Restart containers  
+./launch.sh status         # Check container status
+./launch.sh logs          # View container logs
+./launch.sh destroy       # Stop and remove all volumes (DESTRUCTIVE)
+```
 
 📖 **See [DOCKER.md](DOCKER.md) for complete Docker deployment guide including QNAP NAS setup.**
 

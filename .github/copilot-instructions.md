@@ -117,6 +117,17 @@ docker-compose up -d
 # Access at http://localhost:7862
 ```
 
+#### Option 7: QNAP Launch Script (Recommended for Remote Testing)
+```bash
+# Easy container management on QNAP NAS
+./launch.sh up --build     # Start with fresh build
+./launch.sh down           # Stop containers  
+./launch.sh restart        # Restart containers
+./launch.sh status         # Check status
+./launch.sh logs          # View logs
+./launch.sh destroy       # Nuclear option - removes all data
+```
+
 ### Application Access
 - **Web Interface**: http://127.0.0.1:7862
 - **API Documentation**: http://127.0.0.1:7862/docs (Swagger UI)
@@ -250,6 +261,7 @@ export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/s
 ├── Dockerfile                 # Docker configuration
 ├── docker-compose.yml         # Docker Compose setup
 ├── docker-entrypoint.sh       # Docker entry script
+├── launch.sh                  # QNAP container management script
 │
 ├── app/                       # Main application directory  
 │   ├── database/              # Database models and services
