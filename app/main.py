@@ -113,6 +113,8 @@ def cli_main():
         overrides['enable_database'] = False
     if args.database_url is not None:
         overrides['database_url'] = args.database_url
+        # Auto-enable database when URL is provided
+        overrides['enable_database'] = True
     
     # Create new settings with overrides
     try:
