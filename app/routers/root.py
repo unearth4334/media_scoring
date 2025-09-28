@@ -25,13 +25,44 @@ router = APIRouter()
 def maximize_media(name: str):
     """Serve maximized media view for mobile devices."""
     state = get_state()
-    target = (state.video_dir / name).resolve()
     
-    # Security: ensure the resolved path is within video directory
-    try:
-        target.relative_to(state.video_dir)
-    except Exception:
-        raise HTTPException(403, "Forbidden path")
+    # Try database first if enabled
+    target = None
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                # Find the media file by filename in database
+                from ..database.models import MediaFile
+                media_file = db.session.query(MediaFile).filter(
+                    MediaFile.filename == name
+                ).first()
+                
+                if media_file:
+                    # Translate database path (host path) to container path
+                    db_path = media_file.file_path
+                    
+                    # Check if we need to translate from host path to container path
+                    if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                        # Replace host path prefix with container path
+                        if db_path.startswith(state.settings.user_path_prefix):
+                            container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                            target = Path(container_path).resolve()
+                        else:
+                            target = Path(db_path).resolve()
+                    else:
+                        target = Path(db_path).resolve()
+        except Exception as e:
+            state.logger.error(f"Database lookup failed for maximize: {e}")
+    
+    # Fallback to original behavior if database lookup failed or not enabled
+    if not target:
+        target = (state.video_dir / name).resolve()
+        
+        # Security: ensure the resolved path is within video directory
+        try:
+            target.relative_to(state.video_dir)
+        except Exception:
+            raise HTTPException(403, "Forbidden path")
     
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "File not found")
@@ -120,7 +151,20 @@ def serve_media(name: str):
                 ).first()
                 
                 if media_file:
-                    target = Path(media_file.file_path).resolve()
+                    # Translate database path (host path) to container path
+                    db_path = media_file.file_path
+                    
+                    # Check if we need to translate from host path to container path
+                    if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                        # Replace host path prefix with container path
+                        if db_path.startswith(state.settings.user_path_prefix):
+                            container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                            target = Path(container_path).resolve()
+                        else:
+                            target = Path(db_path).resolve()
+                    else:
+                        target = Path(db_path).resolve()
+                    
                     if target.exists() and target.is_file():
                         ext = target.suffix.lower()
                         if ext == ".mp4":
@@ -165,12 +209,43 @@ def serve_media(name: str):
 def download_media(name: str):
     """Download a media file."""
     state = get_state()
-    target = (state.video_dir / name).resolve()
     
-    try:
-        target.relative_to(state.video_dir)
-    except Exception:
-        raise HTTPException(403, "Forbidden path")
+    # Try database first if enabled
+    target = None
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                # Find the media file by filename in database
+                from ..database.models import MediaFile
+                media_file = db.session.query(MediaFile).filter(
+                    MediaFile.filename == name
+                ).first()
+                
+                if media_file:
+                    # Translate database path (host path) to container path
+                    db_path = media_file.file_path
+                    
+                    # Check if we need to translate from host path to container path
+                    if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                        # Replace host path prefix with container path
+                        if db_path.startswith(state.settings.user_path_prefix):
+                            container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                            target = Path(container_path).resolve()
+                        else:
+                            target = Path(db_path).resolve()
+                    else:
+                        target = Path(db_path).resolve()
+        except Exception as e:
+            state.logger.error(f"Database lookup failed for download: {e}")
+    
+    # Fallback to original behavior if database lookup failed or not enabled
+    if not target:
+        target = (state.video_dir / name).resolve()
+        
+        try:
+            target.relative_to(state.video_dir)
+        except Exception:
+            raise HTTPException(403, "Forbidden path")
     
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "File not found")
