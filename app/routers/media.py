@@ -304,6 +304,10 @@ async def update_score(req: Request):
     name = data.get("name")
     score = int(data.get("score", 0))
     
+    # Initialize variables for database mode
+    media_file = None
+    db_path = None
+    
     # If database is enabled, find the file by its filename in the database
     if state.database_enabled:
         try:
@@ -316,8 +320,21 @@ async def update_score(req: Request):
                     ).first()
                     
                     if media_file:
-                        target = Path(media_file.file_path)
-                        state.logger.info(f"Found file in database: {target}")
+                        # Translate database path (host path) to container path
+                        db_path = media_file.file_path
+                        
+                        # Check if we need to translate from host path to container path
+                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                            # Replace host path prefix with container path
+                            if db_path.startswith(state.settings.user_path_prefix):
+                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                target = Path(container_path)
+                            else:
+                                target = Path(db_path)
+                        else:
+                            target = Path(db_path)
+                        
+                        state.logger.info(f"Found file in database: {db_path} -> {target}")
                     else:
                         state.logger.error(f"File '{name}' not found in database")
                         raise HTTPException(404, f"File '{name}' not found in database")
@@ -339,8 +356,17 @@ async def update_score(req: Request):
     state.logger.info(f"Updating score: file={name} score={score} path={target}")
     
     try:
-        write_score(target, score)
-        state.logger.info(f"SCORE UPDATE SUCCESS: file={name} score={score} path={target}")
+        # For database mode, we need to pass the original database path to write_score
+        # so the database update uses the correct path for lookup
+        if state.database_enabled and media_file:
+            # Use the original database path for write_score to avoid duplicates
+            score_path = Path(db_path)
+        else:
+            # Use the translated/filesystem path for non-database mode
+            score_path = target
+            
+        write_score(score_path, score)
+        state.logger.info(f"SCORE UPDATE SUCCESS: file={name} score={score} path={target} db_path={score_path}")
         return {"ok": True}
     except Exception as e:
         state.logger.error(f"SCORE UPDATE FAILED: file={name} score={score} error={e}")
