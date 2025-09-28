@@ -5,17 +5,17 @@
 # =========================================================
 #
 # Usage:
-#   ./workflow.sh <media_dir> [--database-url <url>]
+#   ./injest.sh <media_dir> [--database-url <url>]
 #       Run the full interactive workflow using the given media directory.
 #       Optionally specify a PostgreSQL database URL for use outside containers.
 #
-#   ./workflow.sh --help
+#   ./injest.sh --help
 #       Show this usage information.
 #
 # Examples:
-#   ./workflow.sh ./media
-#   ./workflow.sh /absolute/path/to/media
-#   ./workflow.sh ./media --database-url "postgresql://user:pass@host/db"
+#   ./injest.sh ./media
+#   ./injest.sh /absolute/path/to/media
+#   ./injest.sh ./media --database-url "postgresql://user:pass@host/db"
 #
 # Requirements:
 #   - A Python virtual environment in ".venv" alongside this script.
@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -*)
             echo "❌ Error: Unknown option: $1"
-            echo "Run './workflow.sh --help' for usage."
+            echo "Run './injest.sh --help' for usage."
             exit 1
             ;;
         *)
@@ -61,7 +61,7 @@ while [[ $# -gt 0 ]]; do
                 MEDIA_DIR="$1"
             else
                 echo "❌ Error: Multiple directories specified: '$MEDIA_DIR' and '$1'"
-                echo "Run './workflow.sh --help' for usage."
+                echo "Run './injest.sh --help' for usage."
                 exit 1
             fi
             shift
@@ -72,7 +72,7 @@ done
 # Require media dir as CLI argument
 if [[ -z "$MEDIA_DIR" ]]; then
     echo "❌ Error: Missing required argument <media_dir>"
-    echo "Run './workflow.sh --help' for usage."
+    echo "Run './injest.sh --help' for usage."
     exit 1
 fi
 
