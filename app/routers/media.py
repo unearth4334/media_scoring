@@ -44,7 +44,8 @@ def list_videos():
         "thumbnails_enabled": state.settings.generate_thumbnails,
         "thumbnail_height": state.settings.thumbnail_height,
         "toggle_extensions": state.settings.toggle_extensions,
-        "database_enabled": state.database_enabled
+        "database_enabled": state.database_enabled,
+        "user_path_prefix": state.settings.user_path_prefix
     }
 
 

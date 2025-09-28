@@ -31,6 +31,9 @@ class Settings(BaseModel):
     # Directory sorting
     directory_sort_desc: bool = Field(default=True, description="Sort directory dropdown in descending order")
     
+    # Path mapping for clipboard functionality
+    user_path_prefix: Optional[str] = Field(default=None, description="User's local mount path for NAS (replaces /media when copying paths)")
+    
     # Database settings
     enable_database: bool = Field(default=True, description="Enable database storage for metadata and search")
     database_url: Optional[str] = Field(default=None, description="PostgreSQL database URL (required for database functionality)")

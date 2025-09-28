@@ -8,6 +8,9 @@ thumbnail_height: 64          # Height in pixels for thumbnail previews
 toggle_extensions: ["jpg", "png", "mp4"]  # File extensions for toggle buttons (default active extensions)
 directory_sort_desc: true     # Sort directory dropdown in descending order (true) or ascending (false)
 
+# Path mapping for clipboard functionality
+user_path_prefix: "/mnt/qnap-sd/SecretFolder"  # User's local mount path for NAS (replaces /media when copying paths)
+
 # Database settings for metadata storage and search functionality
 enable_database: false          # Enable database storage for metadata and search features
 database_path: null             # Custom database path (default: .scores/media.db in media directory)

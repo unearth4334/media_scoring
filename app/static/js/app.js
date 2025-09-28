@@ -40,9 +40,24 @@ let thumbnailHeight = 64;
 let isMaximized = false;
 let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
+let userPathPrefix = null; // User's local mount path for NAS (for clipboard path translation)
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
+
+// Path translation function for clipboard
+function translatePathForUser(containerPath) {
+  if (!containerPath || !userPathPrefix) {
+    return containerPath; // No translation needed/possible
+  }
+  
+  // Replace container path prefix "/media" with user path prefix
+  if (containerPath.startsWith("/media/")) {
+    return userPathPrefix + containerPath.substring(6); // Remove "/media" and prepend user prefix
+  }
+  
+  return containerPath; // Return as-is if no translation needed
+}
 
 // Progress status management functions
 function showProgress(message) {
@@ -562,16 +577,17 @@ function show(i){
   clipboardBtn.innerHTML = svgClipboard();
   clipboardBtn.style.display = 'inline-block';
   clipboardBtn.onclick = () => {
-    const fullPath = currentDir + '/' + v.name;
+    const containerPath = v.path || (currentDir + '/' + v.name);
+    const userPath = translatePathForUser(containerPath);
     if (!navigator.clipboard) {
       const ta = document.createElement('textarea');
-      ta.value = fullPath;
+      ta.value = userPath;
       document.body.appendChild(ta);
       ta.select();
       document.execCommand('copy');
       document.body.removeChild(ta);
     } else {
-      navigator.clipboard.writeText(fullPath).catch(() => {});
+      navigator.clipboard.writeText(userPath).catch(() => {});
     }
   };
   
@@ -658,6 +674,7 @@ async function loadVideos(){
   thumbnailsEnabled = data.thumbnails_enabled || false;
   thumbnailHeight = data.thumbnail_height || 64;
   toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
+  userPathPrefix = data.user_path_prefix || null;
   
   // Store database flag globally for search toolbar to use
   window.databaseEnabled = data.database_enabled || false;

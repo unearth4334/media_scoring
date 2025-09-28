@@ -24,10 +24,11 @@ def main():
     thumbnail_height = int(cfg.get('thumbnail_height', 64))
     toggle_extensions = cfg.get('toggle_extensions', ['jpg', 'png', 'mp4'])
     directory_sort_desc = bool(cfg.get('directory_sort_desc', True))
+    user_path_prefix = cfg.get('user_path_prefix')
     if args.format == 'json':
-        print(json.dumps({'dir': dir_, 'port': port, 'host': host, 'pattern': pattern, 'style': style, 'generate_thumbnails': generate_thumbnails, 'thumbnail_height': thumbnail_height, 'toggle_extensions': toggle_extensions, 'directory_sort_desc': directory_sort_desc})); return
+        print(json.dumps({'dir': dir_, 'port': port, 'host': host, 'pattern': pattern, 'style': style, 'generate_thumbnails': generate_thumbnails, 'thumbnail_height': thumbnail_height, 'toggle_extensions': toggle_extensions, 'directory_sort_desc': directory_sort_desc, 'user_path_prefix': user_path_prefix})); return
     if args.format == 'sh':
-        print(f'DIR={json.dumps(dir_)}'); print(f'PORT={port}'); print(f'HOST={json.dumps(host)}'); print(f'PATTERN={json.dumps(pattern)}'); print(f'STYLE={json.dumps(style)}'); print(f'GENERATE_THUMBNAILS={json.dumps(generate_thumbnails)}'); print(f'THUMBNAIL_HEIGHT={thumbnail_height}'); print(f'TOGGLE_EXTENSIONS={json.dumps(json.dumps(toggle_extensions))}'); print(f'DIRECTORY_SORT_DESC={json.dumps(directory_sort_desc)}'); return
+        print(f'DIR={json.dumps(dir_)}'); print(f'PORT={port}'); print(f'HOST={json.dumps(host)}'); print(f'PATTERN={json.dumps(pattern)}'); print(f'STYLE={json.dumps(style)}'); print(f'GENERATE_THUMBNAILS={json.dumps(generate_thumbnails)}'); print(f'THUMBNAIL_HEIGHT={thumbnail_height}'); print(f'TOGGLE_EXTENSIONS={json.dumps(json.dumps(toggle_extensions))}'); print(f'DIRECTORY_SORT_DESC={json.dumps(directory_sort_desc)}'); print(f'USER_PATH_PREFIX={json.dumps(user_path_prefix)}'); return
     if args.format == 'ps':
         print(f'$Dir = {json.dumps(dir_)}'); print(f'$Port = {port}'); print(f'$Host = {json.dumps(host)}'); print(f'$Pattern = {json.dumps(pattern)}'); print(f'$Style = {json.dumps(style)}'); print(f'$GenerateThumbnails = {json.dumps(generate_thumbnails)}'); print(f'$ThumbnailHeight = {thumbnail_height}'); print(f'$ToggleExtensions = {json.dumps(json.dumps(toggle_extensions))}'); print(f'$DirectorySortDesc = {json.dumps(directory_sort_desc)}'); return
     if args.format == 'bat':
