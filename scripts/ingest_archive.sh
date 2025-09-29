@@ -3,6 +3,8 @@
 # Wrapper script for the data ingesting tool
 # Makes it easier to use the ingesting tool with common options
 
+set -euo pipefail
+
 # --- Resolve paths robustly ---
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Repo root is one level above scripts/
@@ -41,6 +43,7 @@ show_help() {
     echo "  --pattern <pat>     - File pattern (e.g., '*.mp4|*.png')"
     echo "  --database-url <url> - PostgreSQL database URL (e.g., postgresql://user:pass@host/db)"
     echo "  --verbose           - Enable verbose output"
+    echo "  --no-view           - (debug) bypass filtered symlink view"
     echo ""
     echo "Examples:"
     echo "  $0 test /media/archive1"
@@ -119,6 +122,70 @@ run_ingesting_tool() {
     return $exit_code
 }
 
+# --- Helpers to build a filtered symlink view that excludes caches/hidden ---
+
+# Extracts a --pattern "*.ext|*.ext2|..." from argv and prints it; empty if none
+extract_pattern_from_args() {
+    local p=""
+    local a
+    for a in "$@"; do
+        if [[ "$a" == --pattern ]]; then
+            # next token is the value
+            shift
+            p="${1:-}"
+            echo "$p"
+            return
+        fi
+        shift || true
+    done
+    echo ""
+}
+
+# Converts shell-style pattern list to a find -iregex (e.g., "*.mp4|*.png" -> ".*\.\(mp4\|png\)$")
+pattern_to_find_iregex() {
+    local pat="$1"
+    [[ -z "$pat" ]] && { echo ""; return; }
+    # strip "*." from each, split on |
+    local cleaned="${pat//\*\./}"        # "*.mp4|*.png" -> "mp4|png"
+    cleaned="${cleaned//|/\\|}"          # "mp4|png" -> "mp4\|png"
+    echo ".*\\.\\(${cleaned}\\)$"
+}
+
+# Build filtered symlink view under a temp dir; prints the temp path
+# Skips hidden dirs (.*), and explicitly .thumbnails and .scores; optional -iregex to limit extensions
+build_filtered_view() {
+    local src="$1"; shift
+    local iregex="$1"; shift || true
+
+    local tmp
+    tmp="$(mktemp -d -t ingestview.XXXXXX)"
+
+    print_status "Creating filtered symlink view (hidden/.thumbnails/.scores excluded) ..."
+    # Build find args array to avoid word-splitting trouble
+    local -a find_tail
+    if [[ -n "$iregex" ]]; then
+        find_tail=(-type f -iregex "$iregex")
+    else
+        # Default: common media types if no pattern passed
+        find_tail=(-type f -iregex '.*\.\(png\|jpg\|jpeg\|webp\|gif\|bmp\|tiff\|mp4\|mov\|mkv\|avi\)$')
+    fi
+
+    # Collect files and create parallel symlink tree
+    while IFS= read -r -d '' f; do
+        # rel path from src
+        rel="${f#"$src"/}"
+        mkdir -p "$tmp/$(dirname -- "$rel")"
+        ln -s "$f" "$tmp/$rel"
+    done < <(
+        find "$src" \
+            -type d \( -name '.*' -o -name '.thumbnails' -o -name '.scores' \) -prune -false -o \
+            "${find_tail[@]}" \
+            -print0 2>/dev/null
+    )
+
+    echo "$tmp"
+}
+
 # ---- CLI parsing ----
 if [[ $# -eq 0 ]]; then
     show_help
@@ -132,14 +199,16 @@ case "$COMMAND" in
         show_help
         exit 0
         ;;
+
     test)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for test command"
-            echo "Usage: $0 test <directory> [--test-output-dir <dir>]"
+            echo "Usage: $0 test <directory> [--test-output-dir <dir>] [--no-view]"
             exit 1
         fi
         DIRECTORY="$1"; shift
         EXTRA_ARGS=()
+        NO_VIEW=0
         while [[ $# -gt 0 ]]; do
             case "$1" in
                 --test-output-dir)
@@ -151,26 +220,55 @@ case "$COMMAND" in
                         exit 1
                     fi
                     ;;
+                --no-view)
+                    NO_VIEW=1; shift ;;
                 *)
-                    EXTRA_ARGS+=("$1"); shift
-                    ;;
+                    EXTRA_ARGS+=("$1"); shift ;;
             esac
         done
+        DIRECTORY="$(realpath "$DIRECTORY")"
         print_status "Testing directory scan for: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$(realpath "$DIRECTORY")" --dry-run --verbose "${EXTRA_ARGS[@]}"
+        if [[ $NO_VIEW -eq 1 ]]; then
+            run_ingesting_tool "$DIRECTORY" --dry-run --verbose "${EXTRA_ARGS[@]}"
+        else
+            local_pattern="$(extract_pattern_from_args "${EXTRA_ARGS[@]}")"
+            local_regex="$(pattern_to_find_iregex "$local_pattern")"
+            VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+            trap 'rm -rf "$VIEW_DIR"' EXIT
+            run_ingesting_tool "$VIEW_DIR" --dry-run --verbose "${EXTRA_ARGS[@]}"
+        fi
         ;;
+
     ingest)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for ingest command"
-            echo "Usage: $0 ingest <directory>"
+            echo "Usage: $0 ingest <directory> [options] [--no-view]"
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
+        NO_VIEW=0
+        # pass-through args; strip --no-view if present
+        PASS_ARGS=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --no-view) NO_VIEW=1; shift ;;
+                *) PASS_ARGS+=("$1"); shift ;;
+            esac
+        done
         print_status "Ingesting data from: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$DIRECTORY" --enable-database "$@"
+        if [[ $NO_VIEW -eq 1 ]]; then
+            run_ingesting_tool "$DIRECTORY" --enable-database "${PASS_ARGS[@]}"
+        else
+            local_pattern="$(extract_pattern_from_args "${PASS_ARGS[@]}")"
+            local_regex="$(pattern_to_find_iregex "$local_pattern")"
+            VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+            trap 'rm -rf "$VIEW_DIR"' EXIT
+            run_ingesting_tool "$VIEW_DIR" --enable-database "${PASS_ARGS[@]}"
+        fi
         ;;
+
     mine)
         # Backward compatibility - redirect to ingest
         if [[ $# -eq 0 ]]; then
@@ -182,41 +280,94 @@ case "$COMMAND" in
         print_warning "The 'mine' command is deprecated. Please use 'ingest' instead."
         print_status "Ingesting data from: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$DIRECTORY" --enable-database "$@"
+        local_pattern="$(extract_pattern_from_args "$@")"
+        local_regex="$(pattern_to_find_iregex "$local_pattern")"
+        VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+        trap 'rm -rf "$VIEW_DIR"' EXIT
+        run_ingesting_tool "$VIEW_DIR" --enable-database "$@"
         ;;
+
     quick)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for quick command"
-            echo "Usage: $0 quick <directory>"
+            echo "Usage: $0 quick <directory> [--no-view]"
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
+        NO_VIEW=0
+        PASS_ARGS=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --no-view) NO_VIEW=1; shift ;;
+                *) PASS_ARGS+=("$1"); shift ;;
+            esac
+        done
         print_status "Quick ingesting from: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4|*.png|*.jpg|*.jpeg" "$@"
+        if [[ $NO_VIEW -eq 1 ]]; then
+            run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4|*.png|*.jpg|*.jpeg" "${PASS_ARGS[@]}"
+        else
+            local_regex="$(pattern_to_find_iregex "*.mp4|*.png|*.jpg|*.jpeg")"
+            VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+            trap 'rm -rf "$VIEW_DIR"' EXIT
+            run_ingesting_tool "$VIEW_DIR" --enable-database --pattern "*.mp4|*.png|*.jpg|*.jpeg" "${PASS_ARGS[@]}"
+        fi
         ;;
+
     images)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for images command"
-            echo "Usage: $0 images <directory>"
+            echo "Usage: $0 images <directory> [--no-view]"
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
+        NO_VIEW=0
+        PASS_ARGS=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --no-view) NO_VIEW=1; shift ;;
+                *) PASS_ARGS+=("$1"); shift ;;
+            esac
+        done
         print_status "Ingesting images from: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.jpg|*.png|*.jpeg" "$@"
+        if [[ $NO_VIEW -eq 1 ]]; then
+            run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.jpg|*.png|*.jpeg" "${PASS_ARGS[@]}"
+        else
+            local_regex="$(pattern_to_find_iregex "*.jpg|*.png|*.jpeg")"
+            VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+            trap 'rm -rf "$VIEW_DIR"' EXIT
+            run_ingesting_tool "$VIEW_DIR" --enable-database --pattern "*.jpg|*.png|*.jpeg" "${PASS_ARGS[@]}"
+        fi
         ;;
+
     videos)
         if [[ $# -eq 0 ]]; then
             print_error "Directory required for videos command"
-            echo "Usage: $0 videos <directory>"
+            echo "Usage: $0 videos <directory> [--no-view]"
             exit 1
         fi
         DIRECTORY="$(realpath "$1")"; shift
+        NO_VIEW=0
+        PASS_ARGS=()
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                --no-view) NO_VIEW=1; shift ;;
+                *) PASS_ARGS+=("$1"); shift ;;
+            esac
+        done
         print_status "Ingesting videos from: $DIRECTORY"
         check_environment
-        run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4" "$@"
+        if [[ $NO_VIEW -eq 1 ]]; then
+            run_ingesting_tool "$DIRECTORY" --enable-database --pattern "*.mp4" "${PASS_ARGS[@]}"
+        else
+            local_regex="$(pattern_to_find_iregex "*.mp4")"
+            VIEW_DIR="$(build_filtered_view "$DIRECTORY" "$local_regex")"
+            trap 'rm -rf "$VIEW_DIR"' EXIT
+            run_ingesting_tool "$VIEW_DIR" --enable-database --pattern "*.mp4" "${PASS_ARGS[@]}"
+        fi
         ;;
+
     *)
         print_error "Unknown command: $COMMAND"
         echo ""
