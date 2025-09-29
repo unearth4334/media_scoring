@@ -42,6 +42,7 @@ class DataIngester:
             'metadata_extracted': 0,
             'keywords_added': 0,
             'scores_imported': 0,
+            'thumbnails_generated': 0,
             'errors': 0
         }
         # Store detailed data for export when in test mode
@@ -166,6 +167,12 @@ class DataIngester:
         
         except Exception as e:
             self.logger.warning(f"Failed to extract metadata for {file_path.name}: {e}")
+        
+        # Generate and store thumbnail
+        try:
+            self._generate_and_store_thumbnail(db, file_path)
+        except Exception as e:
+            self.logger.warning(f"Failed to generate thumbnail for {file_path.name}: {e}")
     
     def _process_files_without_database(self, files: List[Path]) -> None:
         """Process files without database (metadata extraction only)."""
@@ -318,7 +325,7 @@ class DataIngester:
             cmd = [
                 "ffmpeg", "-y", "-i", str(video_path), 
                 "-vf", f"scale=-1:{thumbnail_height}",
-                "-vframes", "1", "-q:v", "2",
+                "-vframes", "1", "-q:v", "2", "-update", "1",
                 str(output_path)
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -333,6 +340,59 @@ class DataIngester:
         except Exception as e:
             self.logger.error(f"Failed to generate video thumbnail for {video_path}: {e}")
             return False
+    
+    def _generate_and_store_thumbnail(self, db, file_path: Path) -> None:
+        """Generate and store thumbnail in database."""
+        import base64
+        
+        # Check if thumbnail already exists in database
+        existing_thumbnail = db.get_thumbnail(file_path, "64")
+        if existing_thumbnail:
+            self.logger.debug(f"Thumbnail already exists for {file_path.name}")
+            return
+        
+        # Define thumbnail path
+        thumbnail_dir = file_path.parent / ".thumbnails"
+        thumbnail_dir.mkdir(exist_ok=True, parents=True)
+        thumbnail_path = thumbnail_dir / f"{file_path.stem}_thumbnail.jpg"
+        
+        # Generate thumbnail if it doesn't exist
+        thumbnail_generated = False
+        if not thumbnail_path.exists():
+            name_lower = file_path.name.lower()
+            
+            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                thumbnail_generated = self._generate_image_thumbnail(file_path, thumbnail_path)
+            elif name_lower.endswith('.mp4'):
+                thumbnail_generated = self._generate_video_thumbnail(file_path, thumbnail_path)
+            else:
+                self.logger.debug(f"Unsupported file type for thumbnail: {file_path.name}")
+                return
+        else:
+            thumbnail_generated = True
+        
+        # Store in database if thumbnail was generated/exists
+        if thumbnail_generated and thumbnail_path.exists():
+            try:
+                # Read thumbnail as base64
+                with open(thumbnail_path, 'rb') as f:
+                    thumbnail_bytes = f.read()
+                    thumbnail_base64 = base64.b64encode(thumbnail_bytes).decode('utf-8')
+                
+                # Store in database
+                db.store_thumbnail(
+                    file_path=file_path,
+                    size="64",
+                    thumbnail_data=thumbnail_base64,
+                    thumbnail_file_path=thumbnail_path,
+                    mime_type='image/jpeg'
+                )
+                
+                self.stats['thumbnails_generated'] += 1
+                self.logger.debug(f"Stored thumbnail in database for {file_path.name}")
+                
+            except Exception as e:
+                self.logger.error(f"Failed to store thumbnail in database for {file_path.name}: {e}")
     
     def _make_json_serializable(self, obj):
         """Convert objects to JSON-serializable format."""

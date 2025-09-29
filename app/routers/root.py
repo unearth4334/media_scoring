@@ -257,22 +257,64 @@ def download_media(name: str):
 @router.get("/thumbnail/{name:path}")
 def serve_thumbnail(name: str):
     """Serve thumbnail image for a media file."""
+    from fastapi.responses import Response
+    import base64
     state = get_state()
     
     if not state.settings.generate_thumbnails:
         raise HTTPException(404, "Thumbnails not enabled")
     
-    # Find the original media file
-    target = (state.video_dir / name).resolve()
-    try:
-        target.relative_to(state.video_dir)
-    except Exception:
-        raise HTTPException(403, "Forbidden path")
+    # Initialize variables for database mode
+    media_file = None
+    db_path = None
+    
+    # If database is enabled, check for thumbnail in database first
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    # Find the media file by filename
+                    from ..database.models import MediaFile
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        # Check for stored thumbnail
+                        thumbnail = db.get_thumbnail(Path(media_file.file_path), "64")
+                        if thumbnail and thumbnail.thumbnail_data:
+                            # Return thumbnail from database
+                            thumbnail_bytes = base64.b64decode(thumbnail.thumbnail_data)
+                            return Response(content=thumbnail_bytes, media_type=thumbnail.mime_type)
+                        
+                        # Store paths for filesystem fallback
+                        db_path = media_file.file_path
+                        
+                        # Translate database path to container path for filesystem access
+                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                            if db_path.startswith(state.settings.user_path_prefix):
+                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                target = Path(container_path).resolve()
+                            else:
+                                target = Path(db_path).resolve()
+                        else:
+                            target = Path(db_path).resolve()
+        except Exception as e:
+            state.logger.error(f"Database thumbnail lookup failed: {e}")
+    
+    # Fallback to filesystem behavior if database not enabled or no thumbnail found
+    if not media_file:
+        target = (state.video_dir / name).resolve()
+        try:
+            target.relative_to(state.video_dir)
+        except Exception:
+            raise HTTPException(403, "Forbidden path")
     
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "Media file not found")
     
-    # Get thumbnail path
+    # Get filesystem thumbnail path
     thumb_path = get_thumbnail_path_for(target)
     
     if not thumb_path.exists():
