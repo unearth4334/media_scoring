@@ -5,7 +5,7 @@
 # =========================================================
 #
 # Usage:
-#   ./injest.sh <media_dir> [--database-url <url>]
+#   ./injest.sh <media_dir> [--database-url <url>] [--pattern "<pat>"] [--no-view] [--verbose]
 #       Run the full interactive workflow using the given media directory.
 #       Optionally specify a PostgreSQL database URL for use outside containers.
 #
@@ -16,6 +16,8 @@
 #   ./injest.sh ./media
 #   ./injest.sh /absolute/path/to/media
 #   ./injest.sh ./media --database-url "postgresql://user:pass@host/db"
+#   ./injest.sh ./media --pattern "*.mp4|*.png"
+#   ./injest.sh ./media --no-view
 #
 # Requirements:
 #   - A Python virtual environment in ".venv" alongside this script.
@@ -30,6 +32,8 @@
 #
 # =========================================================
 
+set -euo pipefail
+
 ## Resolve script directory regardless of caller's CWD
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 VENV_DIR="$SCRIPT_DIR/../.venv"
@@ -41,11 +45,25 @@ DATABASE_URL=""
 INGESTING_ARGS=()
 
 while [[ $# -gt 0 ]]; do
-    case $1 in
+    case "$1" in
         --database-url)
+            [[ $# -ge 2 ]] || { echo "❌ --database-url requires a value"; exit 1; }
             DATABASE_URL="$2"
             INGESTING_ARGS+=("--database-url" "$2")
             shift 2
+            ;;
+        --pattern)
+            [[ $# -ge 2 ]] || { echo "❌ --pattern requires a value"; exit 1; }
+            INGESTING_ARGS+=("--pattern" "$2")
+            shift 2
+            ;;
+        --no-view)
+            INGESTING_ARGS+=("--no-view")
+            shift
+            ;;
+        --verbose|-v)
+            INGESTING_ARGS+=("--verbose")
+            shift
             ;;
         --help|-h)
             sed -n '3,29p' "$0" | sed 's/^# //'
@@ -59,12 +77,12 @@ while [[ $# -gt 0 ]]; do
         *)
             if [[ -z "$MEDIA_DIR" ]]; then
                 MEDIA_DIR="$1"
+                shift
             else
                 echo "❌ Error: Multiple directories specified: '$MEDIA_DIR' and '$1'"
                 echo "Run './injest.sh --help' for usage."
                 exit 1
             fi
-            shift
             ;;
     esac
 done
@@ -85,15 +103,19 @@ if [[ ! -d "$MEDIA_DIR" ]]; then
     exit 1
 fi
 
-echo "🗂️  Media Archive Data Mining & Web App Integration Example"
+echo "🗂️  Media Archive Data Ingesting & Web App Integration"
 echo "========================================================="
 echo "Using media directory: $MEDIA_DIR"
+if [[ -n "$DATABASE_URL" ]]; then
+  echo "Database URL: (provided)"
+fi
 echo ""
 
 read -p "📁 Step 1: Test the archive with dry run. Continue? (y/n): " yn
 case $yn in
     [Yy]* ) 
         echo "---------------------------------------"
+        # Save test artifacts under ./results
         "$INGESTER" test "$MEDIA_DIR" --test-output-dir "$SCRIPT_DIR/results" "${INGESTING_ARGS[@]}"
         echo ""
         ;;
@@ -114,7 +136,11 @@ read -p "📊 Step 3: Check what was stored in the database. Continue? (y/n): " 
 case $yn in
     [Yy]* ) 
         echo "-----------------------------------------------"
-        source "$VENV_DIR/bin/activate"
+        # Activate venv if present (keeps parity with ingest scripts)
+        if [[ -d "$VENV_DIR" ]]; then
+          # shellcheck disable=SC1091
+          source "$VENV_DIR/bin/activate"
+        fi
         python - <<EOF
 from pathlib import Path
 from app.database.engine import init_database
@@ -129,7 +155,6 @@ if database_url:
     print(f"Using provided database URL: {database_url}")
     db_url = database_url
 else:
-    # Check environment variables for database URL (like the ingesting tool does)
     env_db_url = os.getenv('DATABASE_URL') or os.getenv('MEDIA_DB_URL')
     if env_db_url:
         print(f"Using database URL from environment: {env_db_url}")
@@ -149,22 +174,40 @@ except Exception as e:
     sys.exit(1)
 
 with DatabaseService() as db:
-    stats = db.get_stats()
+    # High-level stats
+    try:
+        stats = db.get_stats()
+    except Exception as e:
+        print(f"⚠️  Could not read stats: {e}")
+        stats = {}
+
     print('Database Statistics:')
     print('=' * 30)
-    for key, value in stats.items():
+    for key, value in (stats or {}).items():
         print(f'{key:.<25} {value}')
-    
-    print('\nSample file records:')
+
+    # Sample records by directory (robust to missing caches)
+    print('\\nSample file records:')
     print('=' * 30)
-    files = db.get_media_files_by_directory(media_dir)[:3]
+    files = []
+    try:
+        files = (db.get_media_files_by_directory(media_dir) or [])[:3]
+    except Exception as e:
+        print(f"⚠️  Skipping file sample: {e}")
+        files = []
+
     for file in files:
-        print(f'{file.filename} (score: {file.score}, type: {file.file_type})')
-        
-        keywords = db.get_keywords_for_file(Path(file.file_path))
-        if keywords:
-            kw_list = [kw.keyword for kw in keywords]
-            print(f'  Keywords: {kw_list}')
+        try:
+            print(f'{file.filename} (score: {getattr(file, "score", None)}, type: {getattr(file, "file_type", None)})')
+            try:
+                keywords = db.get_keywords_for_file(Path(file.file_path)) or []
+            except Exception:
+                keywords = []
+            if keywords:
+                kw_list = [getattr(kw, "keyword", str(kw)) for kw in keywords]
+                print(f'  Keywords: {kw_list}')
+        except Exception as e:
+            print(f"  ⚠️  Error printing record: {e}")
         print()
 EOF
         echo ""
@@ -186,6 +229,5 @@ echo ""
 echo "The web application will use the metadata and keywords extracted by the ingesting tool!"
 echo "You can search for files using the /api/search/files endpoint or the web interface."
 echo ""
-echo "✅ Mining workflow complete!"
-echo "Your archive data is now available for the Media Scoring application."
+echo "✅ Ingest workflow complete!"
 echo "========================================================="
