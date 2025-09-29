@@ -7,6 +7,7 @@
 let activePillEditor = null;
 let searchToolbarFilters = {
   sort: 'name',
+  sortDirection: 'asc',
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
@@ -16,6 +17,7 @@ let searchToolbarFilters = {
 // Default filter values for comparison (to detect modifications)
 const defaultFilters = {
   sort: 'name',
+  sortDirection: 'asc',
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
@@ -28,6 +30,12 @@ function isFilterModified(filterName) {
   const defaultValue = defaultFilters[filterName];
   
   // Handle special cases for different data types
+  if (filterName === 'sort') {
+    // Check both sort field and direction
+    return searchToolbarFilters.sort !== defaultFilters.sort || 
+           searchToolbarFilters.sortDirection !== defaultFilters.sortDirection;
+  }
+  
   if (filterName === 'filetype') {
     // Compare arrays - both must contain same elements in any order
     if (!Array.isArray(current) || !Array.isArray(defaultValue)) return false;
@@ -156,6 +164,13 @@ function populateEditor(pillType) {
   switch (pillType) {
     case 'sort':
       document.getElementById('sort-select').value = filter;
+      const direction = searchToolbarFilters.sortDirection;
+      const ascBtn = document.getElementById('sort-asc-btn');
+      const descBtn = document.getElementById('sort-desc-btn');
+      if (ascBtn && descBtn) {
+        ascBtn.classList.toggle('active', direction === 'asc');
+        descBtn.classList.toggle('active', direction === 'desc');
+      }
       break;
       
     case 'filetype':
@@ -178,7 +193,24 @@ function populateEditor(pillType) {
 function setupEditorActions() {
   // Sort editor  
   document.getElementById('sort-apply').addEventListener('click', () => applySearchToolbarFilter('sort'));
+  document.getElementById('sort-clear').addEventListener('click', () => clearFilter('sort'));
   document.getElementById('sort-close').addEventListener('click', closePillEditor);
+
+  // Sort direction toggle buttons
+  const ascBtn = document.getElementById('sort-asc-btn');
+  const descBtn = document.getElementById('sort-desc-btn');
+  if (ascBtn && descBtn) {
+    ascBtn.addEventListener('click', () => {
+      searchToolbarFilters.sortDirection = 'asc';
+      ascBtn.classList.add('active');
+      descBtn.classList.remove('active');
+    });
+    descBtn.addEventListener('click', () => {
+      searchToolbarFilters.sortDirection = 'desc';
+      descBtn.classList.add('active');
+      ascBtn.classList.remove('active');
+    });
+  }
   
   // File type editor
   document.getElementById('filetype-apply').addEventListener('click', () => applySearchToolbarFilter('filetype'));
@@ -221,7 +253,10 @@ function applySearchToolbarFilter(pillType) {
   switch (pillType) {
     case 'sort':
       newValue = document.getElementById('sort-select').value;
+  // Read direction from state (set by toggle buttons)
+  const sortDirection = searchToolbarFilters.sortDirection || 'asc';
       searchToolbarFilters.sort = newValue;
+      searchToolbarFilters.sortDirection = sortDirection;
       break;
       
     case 'filetype':
@@ -261,6 +296,18 @@ function applySearchToolbarFilter(pillType) {
 
 function clearFilter(pillType) {
   switch (pillType) {
+    case 'sort':
+      searchToolbarFilters.sort = 'name';
+      searchToolbarFilters.sortDirection = 'asc';
+      document.getElementById('sort-select').value = 'name';
+      const ascBtn2 = document.getElementById('sort-asc-btn');
+      const descBtn2 = document.getElementById('sort-desc-btn');
+      if (ascBtn2 && descBtn2) {
+        ascBtn2.classList.add('active');
+        descBtn2.classList.remove('active');
+      }
+      break;
+      
     case 'filetype':
       searchToolbarFilters.filetype = [];
       document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
@@ -292,7 +339,10 @@ function updatePillValues() {
   const sortValue = document.getElementById('sort-value');
   const sortPill = document.getElementById('pill-sort');
   const sortLabels = { name: 'Name', date: 'Date', size: 'Size', rating: 'Rating' };
-  sortValue.textContent = sortLabels[searchToolbarFilters.sort] || 'Name';
+  const directionLabels = { asc: '↑', desc: '↓' };
+  const sortLabel = sortLabels[searchToolbarFilters.sort] || 'Name';
+  const directionLabel = directionLabels[searchToolbarFilters.sortDirection] || '↑';
+  sortValue.textContent = `${sortLabel} ${directionLabel}`;
   
   // File type
   const filetypeValue = document.getElementById('filetype-value');
@@ -386,24 +436,35 @@ function applyCurrentFilters() {
 
 function applySortFilter() {
   const sortBy = searchToolbarFilters.sort;
+  const sortDirection = searchToolbarFilters.sortDirection;
   
   filtered.sort((a, b) => {
+    let result;
+    
     switch (sortBy) {
       case 'name':
-        return a.name.localeCompare(b.name);
+        result = a.name.localeCompare(b.name);
+        break;
       case 'date':
         // Note: This would require metadata from the backend
-        return a.name.localeCompare(b.name); // Fallback to name
+        result = a.name.localeCompare(b.name); // Fallback to name
+        break;
       case 'size':
         // Note: This would require metadata from the backend  
-        return a.name.localeCompare(b.name); // Fallback to name
+        result = a.name.localeCompare(b.name); // Fallback to name
+        break;
       case 'rating':
         const scoreA = a.score || 0;
         const scoreB = b.score || 0;
-        return scoreB - scoreA; // Highest first
+        result = scoreA - scoreB; // For consistent asc/desc logic
+        break;
       default:
-        return a.name.localeCompare(b.name);
+        result = a.name.localeCompare(b.name);
+        break;
     }
+    
+    // Apply sort direction
+    return sortDirection === 'desc' ? -result : result;
   });
 }
 

@@ -55,13 +55,24 @@
         <!-- Sort editor -->
         <div class="pill-editor" id="editor-sort" data-editor="sort">
           <div class="editor-content">
-            <select id="sort-select">
-              <option value="name">Name</option>
-              <option value="date">Date Modified</option>
-              <option value="size">File Size</option>
-              <option value="rating">Rating</option>
-            </select>
+            <div class="sort-field-group">
+              <label for="sort-select">Sort by:</label>
+              <select id="sort-select">
+                <option value="name">Name</option>
+                <option value="date">Date Modified</option>
+                <option value="size">File Size</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+            <div class="sort-direction-group">
+              <label>Order:</label>
+              <div class="sort-direction-buttons">
+                <button type="button" class="sort-dir-btn" id="sort-asc-btn" data-dir="asc">Ascending</button>
+                <button type="button" class="sort-dir-btn" id="sort-desc-btn" data-dir="desc">Descending</button>
+              </div>
+            </div>
             <div class="editor-actions">
+              <button class="editor-btn editor-clear" id="sort-clear">Clear</button>
               <button class="editor-btn editor-apply" id="sort-apply">Apply</button>
               <button class="editor-btn editor-close" id="sort-close">Close</button>
             </div>

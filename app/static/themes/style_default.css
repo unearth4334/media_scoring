@@ -747,6 +747,53 @@ aside#sidebar {
   margin: 0;
 }
 
+/* Sort editor specific styles */
+.sort-field-group,
+.sort-direction-group {
+  margin-bottom: 12px;
+}
+
+.sort-field-group label,
+.sort-direction-group > label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--btn-text);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sort-direction-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.sort-dir-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 12px;
+  border: 1px solid var(--btn-border);
+  background: var(--btn-bg);
+  color: var(--btn-text);
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  height: 36px; /* closely matches select height */
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-dir-btn:hover {
+  background: var(--btn-bg-hover);
+  border-color: var(--btn-border-hover);
+}
+
+.sort-dir-btn.active {
+  border-color: #00ffff;
+  box-shadow: 0 0 0 2px rgba(0,255,255,0.15) inset;
+  color: #00ffff;
+}
+
 .editor-actions {
   display: flex;
   gap: 8px;
