@@ -23,7 +23,7 @@ RUN pip install --trusted-host pypi.org --trusted-host pypi.python.org --trusted
 COPY . .
 
 # Make entrypoint script executable
-RUN chmod +x docker-entrypoint.sh
+RUN chmod +x scripts/docker-entrypoint.sh
 
 # Create media directory
 RUN mkdir -p /media
@@ -36,4 +36,4 @@ ENV PUID=0
 ENV PGID=0
 
 # Use the entrypoint script that properly handles configuration
-CMD ["./docker-entrypoint.sh"]
+CMD ["./scripts/docker-entrypoint.sh"]
