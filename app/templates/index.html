@@ -22,14 +22,6 @@
         <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
         </button>
 
-
-        <!-- Sort by pill -->
-        <div class="pill pill-sort" id="pill-sort" data-pill="sort">
-          <span class="pill-label">Sort by</span>
-          <span class="pill-value" id="sort-value">Name</span>
-        </div>
-        
-
         <!-- File type pill -->
         <div class="pill pill-filetype" id="pill-filetype" data-pill="filetype">
           <span class="pill-label">File Type</span>
@@ -54,6 +46,9 @@
 
         <!-- Sort editor -->
         <div class="pill-editor" id="editor-sort" data-editor="sort">
+          <div class="editor-header">
+            <button class="editor-close-icon" id="sort-close-icon" title="Close">×</button>
+          </div>
           <div class="editor-content">
             <div class="sort-field-group">
               <label for="sort-select">Sort by:</label>
@@ -70,11 +65,6 @@
                 <button type="button" class="sort-dir-btn" id="sort-asc-btn" data-dir="asc">Ascending</button>
                 <button type="button" class="sort-dir-btn" id="sort-desc-btn" data-dir="desc">Descending</button>
               </div>
-            </div>
-            <div class="editor-actions">
-              <button class="editor-btn editor-clear" id="sort-clear">Clear</button>
-              <button class="editor-btn editor-apply" id="sort-apply">Apply</button>
-              <button class="editor-btn editor-close" id="sort-close">Close</button>
             </div>
           </div>
         </div>
@@ -178,6 +168,12 @@
     <aside id="sidebar">
       <div id="sidebar_controls" style="display:none;">
         <div class="button-row">
+          <!-- Sort by pill (moved from search-toolbar) -->
+          <div class="pill pill-sort" id="pill-sort" data-pill="sort">
+            <span class="pill-label">Sort by</span>
+            <span class="pill-value" id="sort-value">Name</span>
+          </div>
+          
           <div id="thumbnail_toggle" class="thumbnail-toggle">
             <input type="checkbox" id="toggle_thumbnails" />
             <label for="toggle_thumbnails" class="thumbnail-icon"></label>

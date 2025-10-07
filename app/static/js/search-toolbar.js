@@ -103,6 +103,18 @@ function openPillEditor(pillType, pillElement) {
     // Position editor for desktop (popover style)
     if (window.innerWidth > 768) {
       positionEditorPopover(editor, pillElement);
+    } else {
+      // Mobile: For sort editor, position below search toolbar
+      if (pillType === 'sort') {
+        const searchToolbar = document.querySelector('.search-toolbar');
+        if (searchToolbar) {
+          const rect = searchToolbar.getBoundingClientRect();
+          editor.style.position = 'absolute';
+          editor.style.top = `${rect.bottom + window.scrollY + 8}px`;
+          editor.style.left = '8px';
+          editor.style.right = '8px';
+        }
+      }
     }
     
     // Populate editor with current values
@@ -191,12 +203,23 @@ function populateEditor(pillType) {
 }
 
 function setupEditorActions() {
-  // Sort editor  
-  document.getElementById('sort-apply').addEventListener('click', () => applySearchToolbarFilter('sort'));
-  document.getElementById('sort-clear').addEventListener('click', () => clearFilter('sort'));
-  document.getElementById('sort-close').addEventListener('click', closePillEditor);
+  // Sort editor - no Apply/Clear buttons, just instant updates  
+  const sortCloseIcon = document.getElementById('sort-close-icon');
+  if (sortCloseIcon) {
+    sortCloseIcon.addEventListener('click', closePillEditor);
+  }
 
-  // Sort direction toggle buttons
+  // Sort field select - apply instantly
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.addEventListener('change', () => {
+      searchToolbarFilters.sort = sortSelect.value;
+      updatePillValues();
+      applyCurrentFilters();
+    });
+  }
+
+  // Sort direction toggle buttons - apply instantly
   const ascBtn = document.getElementById('sort-asc-btn');
   const descBtn = document.getElementById('sort-desc-btn');
   if (ascBtn && descBtn) {
@@ -204,11 +227,15 @@ function setupEditorActions() {
       searchToolbarFilters.sortDirection = 'asc';
       ascBtn.classList.add('active');
       descBtn.classList.remove('active');
+      updatePillValues();
+      applyCurrentFilters();
     });
     descBtn.addEventListener('click', () => {
       searchToolbarFilters.sortDirection = 'desc';
       descBtn.classList.add('active');
       ascBtn.classList.remove('active');
+      updatePillValues();
+      applyCurrentFilters();
     });
   }
   
@@ -471,11 +498,13 @@ function applySortFilter() {
 function handleOutsideClick(event) {
   if (!activePillEditor) return;
   
-  // Check if click is inside search toolbar or editor
+  // Check if click is inside search toolbar, sidebar controls, or editor
   const searchToolbar = document.querySelector('.search-toolbar');
+  const sidebarControls = document.getElementById('sidebar_controls');
   const activeEditor = document.querySelector('.pill-editor.active');
   
   if (searchToolbar && !searchToolbar.contains(event.target) && 
+      sidebarControls && !sidebarControls.contains(event.target) &&
       (!activeEditor || !activeEditor.contains(event.target))) {
     closePillEditor();
   }
