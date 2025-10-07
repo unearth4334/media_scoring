@@ -88,7 +88,7 @@ input[type="text"] {
   border-radius: 8px;
   min-width: 280px;
 }
-#dir { min-width: 180px; max-width: 320px; }
+#dir { min-width: 180px; max-width: 420px; }
 .grow { flex: 1 1 auto; min-width: 280px; }
 
 .dir-input-container { position: relative; display: inline-block; }
