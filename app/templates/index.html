@@ -39,6 +39,10 @@
           <span class="pill-label">Creation Date</span>
           <span class="pill-value" id="date-value">All</span>
         </div>
+        
+        <!-- Menu button (far right) -->
+        <button id="menu-btn" class="menu-btn" title="Open menu">
+        </button>
       </div>
       
       <!-- Pill editors container -->
@@ -130,6 +134,25 @@
               <button class="editor-btn editor-clear" id="date-clear">Clear</button>
               <button class="editor-btn editor-close" id="date-close">Close</button>
             </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Menu overlay panel -->
+      <div class="menu-overlay" id="menu-overlay">
+        <div class="menu-panel">
+          <div class="menu-header">
+            <h2>Menu</h2>
+            <button class="menu-close-btn" id="menu-close-btn" title="Close menu">×</button>
+          </div>
+          <div class="menu-content">
+            <ul class="menu-list">
+              <li class="menu-item">Batch Operations</li>
+              <li class="menu-item">Export Settings</li>
+              <li class="menu-item">View Preferences</li>
+              <li class="menu-item">Database Tools</li>
+              <li class="menu-item">Help & Documentation</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -243,6 +266,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (exportBtn) {
     exportBtn.innerHTML = svgExport() + exportBtn.textContent;
   }
+  
+  // Menu button
+  const menuBtn = document.getElementById('menu-btn');
+  if (menuBtn) menuBtn.innerHTML = svgMenu();
 });
 </script>
 </body>
