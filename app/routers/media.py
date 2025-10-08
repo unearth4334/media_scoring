@@ -3,16 +3,51 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
+from enum import Enum
 
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
+from pydantic import BaseModel, Field
 
 from ..state import get_state
 from ..services.files import read_score, write_score, switch_directory
 from ..services.thumbnails import start_thumbnail_generation
 from ..utils.png_chunks import read_png_parameters_text
 from ..database.models import MediaFile
+
+
+class SortField(str, Enum):
+    """Valid sort fields for media files."""
+    NAME = "name"
+    DATE = "date"
+    SIZE = "size"
+    RATING = "rating"
+
+
+class SortDirection(str, Enum):
+    """Valid sort directions."""
+    ASC = "asc"
+    DESC = "desc"
+
+
+class FilterRequest(BaseModel):
+    """Request model for filtering media files."""
+    # Filtering parameters
+    min_score: Optional[int] = Field(None, ge=0, le=5)
+    max_score: Optional[int] = Field(None, ge=0, le=5)
+    file_types: Optional[List[str]] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    
+    # Sorting parameters
+    sort_field: SortField = Field(SortField.NAME, description="Field to sort by")
+    sort_direction: SortDirection = Field(SortDirection.ASC, description="Sort direction")
+    
+    # Pagination parameters (optional)
+    offset: Optional[int] = Field(None, ge=0)
+    limit: Optional[int] = Field(None, ge=1, le=10000)
+
 
 try:
     from PIL import Image
@@ -50,21 +85,19 @@ def list_videos():
 
 
 @router.post("/filter")
-async def filter_videos(req: Request):
-    """Filter media files based on criteria."""
+async def filter_videos(request: FilterRequest):
+    """Filter media files based on criteria with sorting."""
     state = get_state()
     
     if not state.database_enabled:
         raise HTTPException(503, "Database functionality is disabled")
     
-    data = await req.json()
-    
-    # Extract filter parameters
-    min_score = data.get("min_score")
-    max_score = data.get("max_score") 
-    file_types = data.get("file_types")
-    start_date = data.get("start_date")
-    end_date = data.get("end_date")
+    # Extract filter parameters from Pydantic model
+    min_score = request.min_score
+    max_score = request.max_score 
+    file_types = request.file_types
+    start_date = request.start_date
+    end_date = request.end_date
     
     # Convert date strings to datetime objects if provided
     from datetime import datetime
@@ -94,7 +127,11 @@ async def filter_videos(req: Request):
                 max_score=max_score,
                 file_types=file_types,
                 start_date=start_date_obj,
-                end_date=end_date_obj
+                end_date=end_date_obj,
+                sort_field=request.sort_field.value,
+                sort_direction=request.sort_direction.value,
+                offset=request.offset,
+                limit=request.limit
             )
             
             items = []
@@ -109,7 +146,8 @@ async def filter_videos(req: Request):
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
                     "file_type": media_file.file_type,
-                    "extension": media_file.extension
+                    "extension": media_file.extension,
+                    "file_size": media_file.file_size or 0
                 })
             
             return {
@@ -120,7 +158,11 @@ async def filter_videos(req: Request):
                     "max_score": max_score,
                     "file_types": file_types,
                     "start_date": start_date,
-                    "end_date": end_date
+                    "end_date": end_date,
+                    "sort_field": request.sort_field.value,
+                    "sort_direction": request.sort_direction.value,
+                    "offset": request.offset,
+                    "limit": request.limit
                 }
             }
     

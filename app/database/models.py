@@ -46,6 +46,10 @@ class MediaFile(Base):
         Index('idx_media_updated', 'updated_at'),
         Index('idx_media_file_id', 'media_file_id'),
         Index('idx_media_phash', 'phash'),
+        # Enhanced indexes for sorting performance
+        Index('idx_media_created_at', 'created_at'),
+        Index('idx_media_file_size', 'file_size'),
+        Index('idx_media_filename', 'filename'),
     )
     
     def __repr__(self):
