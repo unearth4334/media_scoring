@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .settings import Settings
 from .state import init_state
-from .routers import core, media, extract, thumbnails_api, root, search
+from .routers import core, media, extract, thumbnails_api, root, search, ingest
 from .services.files import switch_directory
 from .services.thumbnails import start_thumbnail_generation
 
@@ -35,6 +35,7 @@ def create_app(settings: Settings) -> FastAPI:
     app.include_router(extract.router)
     app.include_router(thumbnails_api.router)
     app.include_router(search.router)  # Database search functionality
+    app.include_router(ingest.router)  # Data ingestion tool
     
     # Initialize application
     _initialize_app(state)

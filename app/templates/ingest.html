@@ -1,0 +1,612 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Data Ingestion Tool - Video Scorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
+  <link rel="stylesheet" href="/themes/{{ settings.style }}">
+  <style>
+    .ingest-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .ingest-header {
+      margin-bottom: 30px;
+    }
+
+    .ingest-header h1 {
+      margin: 0 0 10px 0;
+    }
+
+    .ingest-header p {
+      margin: 0;
+      opacity: 0.7;
+    }
+
+    .ingest-form {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .form-group input[type="text"],
+    .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #444);
+      background: var(--bg-primary, #1a1a1a);
+      color: var(--text-color, #fff);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .form-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group-inline input[type="text"] {
+      flex: 1;
+    }
+
+    .browse-btn {
+      padding: 8px 16px;
+      background: var(--accent-color, #4a90e2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .browse-btn:hover {
+      background: var(--accent-hover, #357abd);
+    }
+
+    .browse-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .form-group input[type="checkbox"] {
+      margin-right: 5px;
+    }
+
+    .submit-btn {
+      padding: 12px 24px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .submit-btn:hover {
+      background: #218838;
+    }
+
+    .submit-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .back-link {
+      display: inline-block;
+      margin-bottom: 20px;
+      color: var(--accent-color, #4a90e2);
+      text-decoration: none;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Directory tree overlay */
+    .directory-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .directory-overlay.active {
+      display: flex;
+    }
+
+    .directory-panel {
+      background: var(--bg-primary, #1a1a1a);
+      border-radius: 8px;
+      width: 90%;
+      max-width: 700px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .directory-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border-color, #444);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .directory-header h2 {
+      margin: 0;
+    }
+
+    .directory-close-btn {
+      background: none;
+      border: none;
+      color: var(--text-color, #fff);
+      font-size: 32px;
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+    }
+
+    .directory-close-btn:hover {
+      color: #ff4444;
+    }
+
+    .directory-content {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .current-path {
+      margin-bottom: 15px;
+      padding: 10px;
+      background: var(--bg-secondary, #2a2a2a);
+      border-radius: 4px;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    .directory-tree {
+      font-family: monospace;
+    }
+
+    .tree-item {
+      padding: 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 4px;
+      margin: 2px 0;
+    }
+
+    .tree-item:hover {
+      background: var(--bg-secondary, #2a2a2a);
+    }
+
+    .tree-item.selected {
+      background: var(--accent-color, #4a90e2);
+      color: white;
+    }
+
+    .tree-folder {
+      font-weight: 500;
+    }
+
+    .tree-files {
+      color: #888;
+      font-size: 0.9em;
+      margin-left: 20px;
+    }
+
+    .tree-caret {
+      width: 0;
+      height: 0;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      border-left: 7px solid var(--text-color, #fff);
+      display: inline-block;
+      margin-right: 5px;
+      transition: transform 0.2s;
+    }
+
+    .tree-caret.expanded {
+      transform: rotate(90deg);
+    }
+
+    .tree-children {
+      margin-left: 20px;
+      display: none;
+    }
+
+    .tree-children.expanded {
+      display: block;
+    }
+
+    .tree-nav-btn {
+      padding: 8px 12px;
+      background: var(--accent-color, #4a90e2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-bottom: 10px;
+    }
+
+    .tree-nav-btn:hover {
+      background: var(--accent-hover, #357abd);
+    }
+
+    .tree-select-btn {
+      padding: 10px 20px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 15px;
+      width: 100%;
+    }
+
+    .tree-select-btn:hover {
+      background: #218838;
+    }
+
+    /* Progress pane */
+    .progress-pane {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .progress-pane.active {
+      display: block;
+    }
+
+    .progress-pane h3 {
+      margin-top: 0;
+    }
+
+    .progress-output {
+      background: var(--bg-primary, #1a1a1a);
+      padding: 15px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+      max-height: 400px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    .progress-line {
+      margin: 2px 0;
+    }
+
+    .progress-line.error {
+      color: #ff4444;
+    }
+
+    .progress-line.success {
+      color: #28a745;
+    }
+
+    .help-text {
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ingest-container">
+    <a href="/" class="back-link">← Back to Media Scorer</a>
+    
+    <div class="ingest-header">
+      <h1>🗃️ Data Ingestion Tool</h1>
+      <p>Batch import media files and metadata into the database</p>
+    </div>
+
+    <form class="ingest-form" id="ingest-form">
+      <div class="form-group">
+        <label for="directory">Target Directory *</label>
+        <div class="form-group-inline">
+          <input type="text" id="directory" name="directory" placeholder="/path/to/media/files" required>
+          <button type="button" class="browse-btn" id="browse-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            Browse
+          </button>
+        </div>
+        <div class="help-text">Select the directory containing media files to ingest</div>
+      </div>
+
+      <div class="form-group">
+        <label for="pattern">File Pattern</label>
+        <input type="text" id="pattern" name="pattern" value="*.mp4|*.png|*.jpg">
+        <div class="help-text">Pipe-separated patterns (e.g., *.mp4|*.png|*.jpg)</div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="enable_database" name="enable_database">
+          Enable Database Storage
+        </label>
+        <div class="help-text">If unchecked, runs in dry-run mode (preview only)</div>
+      </div>
+
+      <div class="form-group">
+        <label for="database_url">Database URL (optional)</label>
+        <input type="text" id="database_url" name="database_url" placeholder="postgresql://user:pass@host/db">
+        <div class="help-text">Leave empty to use DATABASE_URL environment variable</div>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <input type="checkbox" id="verbose" name="verbose">
+          Verbose Output
+        </label>
+        <div class="help-text">Show detailed progress information</div>
+      </div>
+
+      <button type="submit" class="submit-btn" id="submit-btn">
+        Run Ingestion
+      </button>
+    </form>
+
+    <div class="progress-pane" id="progress-pane">
+      <h3>Ingestion Progress</h3>
+      <div class="progress-output" id="progress-output"></div>
+    </div>
+  </div>
+
+  <!-- Directory browser overlay -->
+  <div class="directory-overlay" id="directory-overlay">
+    <div class="directory-panel">
+      <div class="directory-header">
+        <h2>Select Directory</h2>
+        <button class="directory-close-btn" id="directory-close-btn">×</button>
+      </div>
+      <div class="directory-content">
+        <button class="tree-nav-btn" id="parent-btn" style="display: none;">↑ Parent Directory</button>
+        <div class="current-path" id="current-path"></div>
+        <div class="directory-tree" id="directory-tree"></div>
+        <button class="tree-select-btn" id="select-btn">Select This Directory</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let currentPath = '';
+    let selectedPath = '';
+    let eventSource = null;
+
+    // Elements
+    const directoryInput = document.getElementById('directory');
+    const browseBtn = document.getElementById('browse-btn');
+    const directoryOverlay = document.getElementById('directory-overlay');
+    const directoryCloseBtn = document.getElementById('directory-close-btn');
+    const currentPathDiv = document.getElementById('current-path');
+    const directoryTree = document.getElementById('directory-tree');
+    const selectBtn = document.getElementById('select-btn');
+    const parentBtn = document.getElementById('parent-btn');
+    const ingestForm = document.getElementById('ingest-form');
+    const submitBtn = document.getElementById('submit-btn');
+    const progressPane = document.getElementById('progress-pane');
+    const progressOutput = document.getElementById('progress-output');
+
+    // Open directory browser
+    browseBtn.addEventListener('click', () => {
+      selectedPath = directoryInput.value || '';
+      loadDirectory(selectedPath);
+      directoryOverlay.classList.add('active');
+    });
+
+    // Close directory browser
+    directoryCloseBtn.addEventListener('click', () => {
+      directoryOverlay.classList.remove('active');
+    });
+
+    // Close overlay when clicking outside
+    directoryOverlay.addEventListener('click', (e) => {
+      if (e.target === directoryOverlay) {
+        directoryOverlay.classList.remove('active');
+      }
+    });
+
+    // Select directory
+    selectBtn.addEventListener('click', () => {
+      directoryInput.value = selectedPath;
+      directoryOverlay.classList.remove('active');
+    });
+
+    // Navigate to parent
+    parentBtn.addEventListener('click', () => {
+      fetch(`/api/ingest/directories?path=${encodeURIComponent(currentPath)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.parent) {
+            loadDirectory(data.parent);
+          }
+        });
+    });
+
+    // Load directory contents
+    async function loadDirectory(path) {
+      try {
+        const res = await fetch(`/api/ingest/directories?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+        
+        currentPath = data.path;
+        selectedPath = data.path;
+        currentPathDiv.textContent = data.path;
+        
+        // Show/hide parent button
+        if (data.parent) {
+          parentBtn.style.display = 'block';
+        } else {
+          parentBtn.style.display = 'none';
+        }
+        
+        // Render directory tree
+        directoryTree.innerHTML = '';
+        
+        if (data.directories.length === 0 && data.file_summary === 'No files') {
+          directoryTree.innerHTML = '<div style="color: #888; padding: 10px;">Empty directory</div>';
+        } else {
+          // Show file summary
+          if (data.file_summary && data.file_summary !== 'No files') {
+            const filesDiv = document.createElement('div');
+            filesDiv.className = 'tree-files';
+            filesDiv.textContent = `📄 ${data.file_summary}`;
+            directoryTree.appendChild(filesDiv);
+          }
+          
+          // Show subdirectories
+          data.directories.forEach(dir => {
+            const item = document.createElement('div');
+            item.className = 'tree-item tree-folder';
+            item.innerHTML = `
+              ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
+              📁 ${dir.name}
+            `;
+            
+            item.addEventListener('click', (e) => {
+              // Don't navigate if clicking caret
+              if (e.target.classList.contains('tree-caret')) {
+                return;
+              }
+              loadDirectory(dir.path);
+            });
+            
+            directoryTree.appendChild(item);
+          });
+        }
+      } catch (err) {
+        directoryTree.innerHTML = `<div style="color: #ff4444; padding: 10px;">Error: ${err.message}</div>`;
+      }
+    }
+
+    // Handle form submission
+    ingestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      // Close any existing connection
+      if (eventSource) {
+        eventSource.close();
+      }
+      
+      // Get form data
+      const formData = {
+        directory: directoryInput.value,
+        pattern: document.getElementById('pattern').value,
+        enable_database: document.getElementById('enable_database').checked,
+        database_url: document.getElementById('database_url').value || null,
+        verbose: document.getElementById('verbose').checked
+      };
+      
+      // Validate
+      if (!formData.directory) {
+        alert('Please select a target directory');
+        return;
+      }
+      
+      // Show progress pane
+      progressPane.classList.add('active');
+      progressOutput.innerHTML = '<div class="progress-line">Starting ingestion...</div>';
+      
+      // Disable submit button
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Running...';
+      
+      try {
+        // Start streaming
+        const response = await fetch('/api/ingest/run', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(formData)
+        });
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          const text = decoder.decode(value);
+          const lines = text.split('\n');
+          
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const message = line.substring(6);
+              if (message.trim()) {
+                const div = document.createElement('div');
+                div.className = 'progress-line';
+                
+                if (message.includes('[ERROR]')) {
+                  div.classList.add('error');
+                } else if (message.includes('[COMPLETE]')) {
+                  div.classList.add('success');
+                }
+                
+                div.textContent = message;
+                progressOutput.appendChild(div);
+                
+                // Auto-scroll to bottom
+                progressOutput.scrollTop = progressOutput.scrollHeight;
+              }
+            }
+          }
+        }
+      } catch (err) {
+        const div = document.createElement('div');
+        div.className = 'progress-line error';
+        div.textContent = `Error: ${err.message}`;
+        progressOutput.appendChild(div);
+      } finally {
+        // Re-enable submit button
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Run Ingestion';
+      }
+    });
+  </script>
+</body>
+</html>
