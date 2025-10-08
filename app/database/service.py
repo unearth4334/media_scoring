@@ -123,8 +123,12 @@ class DatabaseService:
                            max_score: Optional[int] = None,
                            file_types: Optional[List[str]] = None,
                            start_date: Optional[datetime] = None,
-                           end_date: Optional[datetime] = None) -> List[MediaFile]:
-        """Get all media files with optional filters."""
+                           end_date: Optional[datetime] = None,
+                           sort_field: str = "name",
+                           sort_direction: str = "asc",
+                           offset: Optional[int] = None,
+                           limit: Optional[int] = None) -> List[MediaFile]:
+        """Get all media files with optional filters and sorting."""
         query = self.session.query(MediaFile)
         
         # Apply score filters
@@ -149,8 +153,29 @@ class DatabaseService:
             query = query.filter(MediaFile.created_at >= start_date)
         if end_date is not None:
             query = query.filter(MediaFile.created_at <= end_date)
+        
+        # Apply dynamic sorting
+        sort_func = desc if sort_direction == "desc" else asc
+        
+        if sort_field == "name":
+            query = query.order_by(sort_func(MediaFile.filename))
+        elif sort_field == "date":
+            query = query.order_by(sort_func(MediaFile.created_at), MediaFile.filename)
+        elif sort_field == "size": 
+            query = query.order_by(sort_func(MediaFile.file_size), MediaFile.filename)
+        elif sort_field == "rating":
+            query = query.order_by(sort_func(MediaFile.score), MediaFile.filename)
+        else:
+            # Default fallback to name sorting
+            query = query.order_by(sort_func(MediaFile.filename))
+        
+        # Apply pagination if specified
+        if offset is not None:
+            query = query.offset(offset)
+        if limit is not None:
+            query = query.limit(limit)
             
-        return query.order_by(desc(MediaFile.created_at), MediaFile.filename).all()
+        return query.all()
     
     # Metadata Operations
     

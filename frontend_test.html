@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Frontend Sorting Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .pass { background-color: #d4edda; color: #155724; }
+        .fail { background-color: #f8d7da; color: #721c24; }
+        button { margin: 5px; padding: 10px; }
+        #results { margin-top: 20px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🎬 Frontend Sorting Test</h1>
+    <p>This page tests the new frontend sorting functionality.</p>
+    
+    <div>
+        <button onclick="testSortByRating()">Test Sort by Rating ↓</button>
+        <button onclick="testSortByName()">Test Sort by Name ↑</button>
+        <button onclick="testSortBySize()">Test Sort by Size ↓</button>
+        <button onclick="testSortByDate()">Test Sort by Date ↓</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        // Mock the searchToolbarFilters object (normally from search-toolbar.js)
+        const searchToolbarFilters = {
+            sort: 'name',
+            sortDirection: 'asc',
+            filetype: [],
+            rating: 'none',
+            dateStart: null,
+            dateEnd: null,
+            search: ''
+        };
+
+        // Simplified version of applyDatabaseFilters for testing
+        async function applyDatabaseFilters() {
+            try {
+                // Build comprehensive filter request (NEW IMPLEMENTATION)
+                const filterRequest = {
+                    // Existing filters
+                    file_types: searchToolbarFilters.filetype,
+                    start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
+                    end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
+                    
+                    // NEW: Add sorting parameters
+                    sort_field: searchToolbarFilters.sort,      // 'name', 'date', 'size', 'rating'
+                    sort_direction: searchToolbarFilters.sortDirection,  // 'asc' or 'desc'
+                    
+                    // NEW: Add pagination (future-proofing)
+                    offset: null,
+                    limit: null  // null for all results
+                };
+
+                // Add rating filters
+                if (searchToolbarFilters.rating !== 'none') {
+                    if (searchToolbarFilters.rating === 'unrated') {
+                        filterRequest.max_score = 0;
+                    } else {
+                        filterRequest.min_score = parseInt(searchToolbarFilters.rating);
+                    }
+                }
+
+                const response = await fetch('/api/filter', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(filterRequest)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    return { success: true, data, filterRequest };
+                } else {
+                    const errorText = await response.text();
+                    return { success: false, error: `HTTP ${response.status}: ${errorText}` };
+                }
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        function addResult(testName, success, message, data = null) {
+            const resultsDiv = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${success ? 'pass' : 'fail'}`;
+            
+            let html = `<strong>${success ? '✅ PASS' : '❌ FAIL'} ${testName}:</strong> ${message}`;
+            
+            if (data) {
+                html += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            resultDiv.innerHTML = html;
+            resultsDiv.appendChild(resultDiv);
+        }
+
+        async function testSortByRating() {
+            searchToolbarFilters.sort = 'rating';
+            searchToolbarFilters.sortDirection = 'desc';
+            
+            const result = await applyDatabaseFilters();
+            
+            if (result.success) {
+                const videos = result.data.videos;
+                const filtersApplied = result.data.filters_applied;
+                
+                // Check that sort parameters were sent and returned
+                const sentCorrectly = result.filterRequest.sort_field === 'rating' && result.filterRequest.sort_direction === 'desc';
+                const returnedCorrectly = filtersApplied.sort_field === 'rating' && filtersApplied.sort_direction === 'desc';
+                
+                // Check sorting correctness
+                const scores = videos.slice(0, 5).map(v => v.score || 0);
+                const sortedCorrectly = scores.length <= 1 || scores.every((score, i) => i === 0 || scores[i-1] >= score);
+                
+                const success = sentCorrectly && returnedCorrectly && sortedCorrectly;
+                const message = `Sent: ${sentCorrectly}, Returned: ${returnedCorrectly}, Sorted: ${sortedCorrectly}. Scores: [${scores.join(', ')}]`;
+                
+                addResult('Sort by Rating ↓', success, message);
+            } else {
+                addResult('Sort by Rating ↓', false, result.error);
+            }
+        }
+
+        async function testSortByName() {
+            searchToolbarFilters.sort = 'name';
+            searchToolbarFilters.sortDirection = 'asc';
+            
+            const result = await applyDatabaseFilters();
+            
+            if (result.success) {
+                const videos = result.data.videos;
+                const filtersApplied = result.data.filters_applied;
+                
+                const sentCorrectly = result.filterRequest.sort_field === 'name' && result.filterRequest.sort_direction === 'asc';
+                const returnedCorrectly = filtersApplied.sort_field === 'name' && filtersApplied.sort_direction === 'asc';
+                
+                const names = videos.slice(0, 3).map(v => v.name);
+                const sortedCorrectly = names.length <= 1 || [...names].sort().join(',') === names.join(',');
+                
+                const success = sentCorrectly && returnedCorrectly && sortedCorrectly;
+                const message = `Sent: ${sentCorrectly}, Returned: ${returnedCorrectly}, Sorted: ${sortedCorrectly}. Names: [${names.join(', ')}]`;
+                
+                addResult('Sort by Name ↑', success, message);
+            } else {
+                addResult('Sort by Name ↑', false, result.error);
+            }
+        }
+
+        async function testSortBySize() {
+            searchToolbarFilters.sort = 'size';
+            searchToolbarFilters.sortDirection = 'desc';
+            
+            const result = await applyDatabaseFilters();
+            
+            if (result.success) {
+                const videos = result.data.videos;
+                const filtersApplied = result.data.filters_applied;
+                
+                const sentCorrectly = result.filterRequest.sort_field === 'size' && result.filterRequest.sort_direction === 'desc';
+                const returnedCorrectly = filtersApplied.sort_field === 'size' && filtersApplied.sort_direction === 'desc';
+                
+                const sizes = videos.slice(0, 3).map(v => v.file_size || 0);
+                const sortedCorrectly = sizes.length <= 1 || sizes.every((size, i) => i === 0 || sizes[i-1] >= size);
+                
+                const success = sentCorrectly && returnedCorrectly && sortedCorrectly;
+                const message = `Sent: ${sentCorrectly}, Returned: ${returnedCorrectly}, Sorted: ${sortedCorrectly}. Sizes: [${sizes.join(', ')}]`;
+                
+                addResult('Sort by Size ↓', success, message);
+            } else {
+                addResult('Sort by Size ↓', false, result.error);
+            }
+        }
+
+        async function testSortByDate() {
+            searchToolbarFilters.sort = 'date';
+            searchToolbarFilters.sortDirection = 'desc';
+            
+            const result = await applyDatabaseFilters();
+            
+            if (result.success) {
+                const videos = result.data.videos;
+                const filtersApplied = result.data.filters_applied;
+                
+                const sentCorrectly = result.filterRequest.sort_field === 'date' && result.filterRequest.sort_direction === 'desc';
+                const returnedCorrectly = filtersApplied.sort_field === 'date' && filtersApplied.sort_direction === 'desc';
+                
+                const dates = videos.slice(0, 3).map(v => v.created_at).filter(d => d);
+                const sortedCorrectly = dates.length <= 1 || dates.every((date, i) => i === 0 || dates[i-1] >= date);
+                
+                const success = sentCorrectly && returnedCorrectly && sortedCorrectly;
+                const message = `Sent: ${sentCorrectly}, Returned: ${returnedCorrectly}, Sorted: ${sortedCorrectly}. Dates: [${dates.slice(0,2).join(', ')}...]`;
+                
+                addResult('Sort by Date ↓', success, message);
+            } else {
+                addResult('Sort by Date ↓', false, result.error);
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+    </script>
+</body>
+</html>

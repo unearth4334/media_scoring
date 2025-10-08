@@ -588,14 +588,23 @@ function applyCurrentFilters() {
 }
 
 async function applyDatabaseFilters() {
-  console.log('Applying database filters...', { databaseEnabled: window.databaseEnabled });
+  console.log('Applying database filters with sort...', searchToolbarFilters);
   
   try {
-    // Build filter request
+    // Build comprehensive filter request
     const filterRequest = {
+      // Existing filters
       file_types: searchToolbarFilters.filetype,
       start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
-      end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null
+      end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
+      
+      // NEW: Add sorting parameters
+      sort_field: searchToolbarFilters.sort,      // 'name', 'date', 'size', 'rating'
+      sort_direction: searchToolbarFilters.sortDirection,  // 'asc' or 'desc'
+      
+      // NEW: Add pagination (future-proofing)
+      offset: null,
+      limit: null  // null for all results
     };
     
     console.log('Filter request:', filterRequest);
@@ -631,8 +640,8 @@ async function applyDatabaseFilters() {
       
       console.log('Filtered results:', filtered.length);
       
-      // Apply sort
-      applySortFilter();
+      // NO client-side sorting needed - backend did it!
+      // applySortFilter(); ← REMOVED: Backend handles sorting
       
       // Update display
       if (typeof renderSidebar === 'function') {
