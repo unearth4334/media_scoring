@@ -715,4 +715,42 @@ function applyClientSideFilters() {
 document.addEventListener('DOMContentLoaded', () => {
   // Small delay to ensure other scripts have initialized
   setTimeout(initializeSearchToolbar, 100);
+  
+  // Initialize menu functionality
+  initializeMenu();
 });
+
+/**
+ * Menu overlay functionality
+ */
+function initializeMenu() {
+  const menuBtn = document.getElementById('menu-btn');
+  const menuOverlay = document.getElementById('menu-overlay');
+  const menuCloseBtn = document.getElementById('menu-close-btn');
+  
+  if (!menuBtn || !menuOverlay || !menuCloseBtn) return;
+  
+  // Open menu
+  menuBtn.addEventListener('click', () => {
+    menuOverlay.classList.add('active');
+  });
+  
+  // Close menu via close button
+  menuCloseBtn.addEventListener('click', () => {
+    menuOverlay.classList.remove('active');
+  });
+  
+  // Close menu when clicking outside the panel
+  menuOverlay.addEventListener('click', (e) => {
+    if (e.target === menuOverlay) {
+      menuOverlay.classList.remove('active');
+    }
+  });
+  
+  // Close menu with Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && menuOverlay.classList.contains('active')) {
+      menuOverlay.classList.remove('active');
+    }
+  });
+}
