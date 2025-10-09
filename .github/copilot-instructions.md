@@ -138,11 +138,14 @@ docker-compose up -d
 
 ### Container Access (Docker Testing)
 - **Remote Host**: Container runs on QNAP NAS at `10.0.78.66`
+- **Service Location**: The service runs from `/share/Container/media_scoring/` on QNAP
 - **Access from Dev Terminal**: `ssh qnap` (then use Docker commands with proper PATH)
 - **Direct Container SSH**: `ssh root@10.0.78.66 -p 2222`
 - **Web Interface**: http://10.0.78.66:7862
 - **Container logs**: `docker logs media-scorer` (run from QNAP host with PATH setup)
 - **Database logs**: Available in `/app/.logs/` inside container
+- **Git Operations**: Deployed service git operations via mounted path at `/mnt/qnap-containers/media_scoring/`
+- **Test Media Directory**: Use `/media/txt2img-images/2025-10-08` for ingestion testing
 
 **Note**: QNAP requires proper PATH setup for Docker commands:
 ```bash
@@ -197,6 +200,15 @@ export PATH=$PATH:/share/CACHEDEV1_DATA/.qpkg/container-station/bin:/usr/sbin:/s
    
    # Check database logs (inside container)
    ls -la /app/.logs/
+   
+   # Git operations on deployed service (via mounted path)
+   cd /mnt/qnap-containers/media_scoring && git status
+   cd /mnt/qnap-containers/media_scoring && git pull origin main
+   
+   # Test ingestion with sample directory
+   curl -X POST "http://10.0.78.66:7862/api/ingest/process" \
+     -H "Content-Type: application/json" \
+     -d '{"parameters": {"directory": "/media/txt2img-images/2025-10-08", "pattern": "*.png|*.jpg|*.jpeg"}}'
    ```
 
 ### Expected Behavior
