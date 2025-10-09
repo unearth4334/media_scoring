@@ -389,6 +389,7 @@ async def commit_data_background(session_id: str):
     try:
         session["commit_errors"] = []
         processed_data = session["processed_data"]
+        parameters = session["parameters"]
         
         with DatabaseService() as db:
             for i, file_data in enumerate(processed_data):
@@ -402,10 +403,20 @@ async def commit_data_background(session_id: str):
                     # Update file attributes
                     if "score" in file_data:
                         media_file.score = file_data["score"]
-                    if "nsfw_score" in file_data:
+                    
+                    # Handle NSFW detection results
+                    if "nsfw_score" in file_data and file_data["nsfw_score"] is not None:
                         media_file.nsfw_score = file_data["nsfw_score"]
-                    if "nsfw_label" in file_data:
-                        media_file.nsfw_label = file_data["nsfw_label"]
+                        media_file.nsfw_label = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
+                        media_file.nsfw = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
+                        media_file.nsfw_model = "Marqo/nsfw-image-detection-384"
+                        media_file.nsfw_model_version = "1.0"
+                        media_file.nsfw_threshold = parameters["nsfw_threshold"]
+                    else:
+                        # Set default values for files without NSFW detection
+                        media_file.nsfw = False
+                        media_file.nsfw_score = None
+                        media_file.nsfw_label = None
                     if "media_file_id" in file_data:
                         media_file.media_file_id = file_data["media_file_id"]
                     if "phash" in file_data:

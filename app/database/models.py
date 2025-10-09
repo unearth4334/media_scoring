@@ -26,8 +26,13 @@ class MediaFile(Base):
     file_type = Column(String(50))  # 'video', 'image'
     extension = Column(String(10))
     score = Column(Integer, default=0)  # -1 to 5
+    # NSFW detection fields
+    nsfw = Column(Boolean, nullable=False, default=False)  # Main NSFW boolean flag
     nsfw_score = Column(Float, nullable=True)  # NSFW probability score (0.0-1.0)
-    nsfw_label = Column(String(10), nullable=True)  # 'sfw' or 'nsfw'
+    nsfw_label = Column(Boolean, nullable=True)  # True for NSFW, False for SFW
+    nsfw_model = Column(String(128), nullable=True)  # Model name used for detection
+    nsfw_model_version = Column(String(64), nullable=True)  # Model version
+    nsfw_threshold = Column(Float, nullable=True)  # Threshold used for classification
     media_file_id = Column(String(64), nullable=True)  # SHA256 hash of exact pixel content
     phash = Column(String(64), nullable=True)  # Perceptual hash for similarity detection
     created_at = Column(DateTime, default=dt.datetime.utcnow)
@@ -52,7 +57,9 @@ class MediaFile(Base):
         Index('idx_media_created_at', 'created_at'),
         Index('idx_media_file_size', 'file_size'),
         Index('idx_media_filename', 'filename'),
+        Index('idx_media_nsfw', 'nsfw'),
         Index('idx_media_nsfw_score', 'nsfw_score'),
+        Index('idx_media_nsfw_label', 'nsfw_label'),
     )
     
     def __repr__(self):
