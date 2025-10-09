@@ -1404,6 +1404,59 @@ aside#sidebar {
   color: #ff4444;
 }
 
+/* Star button styling with thin cyan lines */
+.mobile-score-option.star-btn {
+  border-color: #00bcd4;
+  color: #00bcd4;
+  font-size: 20px;
+  text-shadow: 0 0 2px rgba(0, 188, 212, 0.3);
+  border-width: 1px;
+}
+
+.mobile-score-option.star-btn:hover {
+  background: rgba(0, 188, 212, 0.1);
+  border-color: #26c6da;
+  color: #26c6da;
+  text-shadow: 0 0 4px rgba(38, 198, 218, 0.5);
+}
+
+/* Filled star state */
+.mobile-score-option.star-btn.filled {
+  color: #00bcd4;
+  background: rgba(0, 188, 212, 0.15);
+  border-color: #00bcd4;
+  text-shadow: 0 0 4px rgba(0, 188, 212, 0.6);
+}
+
+/* Unfilled star state (default) - uses ☆ from HTML */
+.mobile-score-option.star-btn:not(.filled) {
+  color: #00bcd4;
+  background: transparent;
+}
+
+/* Clear and reject button styles */
+.mobile-score-option.clear-btn {
+  border-color: #9e9e9e;
+  color: #9e9e9e;
+}
+
+.mobile-score-option.clear-btn:hover {
+  background: rgba(158, 158, 158, 0.1);
+  border-color: #bdbdbd;
+  color: #bdbdbd;
+}
+
+.mobile-score-option.reject-btn {
+  border-color: #f44336;
+  color: #f44336;
+}
+
+.mobile-score-option.reject-btn:hover {
+  background: rgba(244, 67, 54, 0.1);
+  border-color: #ef5350;
+  color: #ef5350;
+}
+
 /* Maximized view adjustments for mobile */
 body.maximized .mobile-scorebar {
   z-index: 1001; /* Ensure it's above maximized content */

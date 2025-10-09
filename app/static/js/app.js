@@ -631,6 +631,8 @@ function updateMobileScorePopover(score) {
   const popover = document.getElementById('mobile-score-popover');
   if (!popover) return;
   
+  console.log('Updating mobile score popover for score:', score);
+  
   // Clear all selected states
   popover.querySelectorAll('.mobile-score-option').forEach(btn => {
     btn.classList.remove('selected');
@@ -641,6 +643,26 @@ function updateMobileScorePopover(score) {
   if (selectedBtn) {
     selectedBtn.classList.add('selected');
   }
+  
+  // Update star buttons filled/unfilled states
+  const starButtons = popover.querySelectorAll('.mobile-score-option.star-btn');
+  const currentScore = score > 0 ? score : 0;
+  
+  console.log('Found', starButtons.length, 'star buttons, current score:', currentScore);
+  
+  starButtons.forEach((btn, index) => {
+    const starValue = index + 1; // stars are 1-5
+    btn.classList.remove('filled');
+    
+    if (starValue <= currentScore) {
+      btn.classList.add('filled');
+      btn.textContent = '★'; // Filled star
+      console.log('Star', starValue, 'filled');
+    } else {
+      btn.textContent = '☆'; // Unfilled star
+      console.log('Star', starValue, 'unfilled');
+    }
+  });
 }
 
 function initializeMobileScoreBar() {
