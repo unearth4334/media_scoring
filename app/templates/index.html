@@ -261,6 +261,29 @@
       </div>
     </section>
   </main>
+
+  <!-- Mobile Score Bar (fixed at bottom) -->
+  <div class="mobile-scorebar" id="mobile-scorebar">
+    <button class="mobile-nav-btn" id="mobile-prev-btn" title="Previous media">‹</button>
+    <button class="mobile-score-btn" id="mobile-score-btn" title="Rate media">★</button>
+    <button class="mobile-nav-btn" id="mobile-next-btn" title="Next media">›</button>
+    <button class="mobile-action-btn" id="mobile-download-btn" title="Download media" disabled>↓</button>
+    <button class="mobile-action-btn" id="mobile-maximize-btn" title="Maximize media">⤢</button>
+  </div>
+
+  <!-- Mobile Score Popover -->
+  <div class="mobile-score-popover" id="mobile-score-popover">
+    <div class="mobile-score-grid">
+      <button class="mobile-score-option" data-score="-1" title="Reject">✕</button>
+      <button class="mobile-score-option" data-score="0" title="Clear">—</button>
+      <button class="mobile-score-option" data-score="1" title="1 star">★</button>
+      <button class="mobile-score-option" data-score="2" title="2 stars">★★</button>
+      <button class="mobile-score-option" data-score="3" title="3 stars">★★★</button>
+      <button class="mobile-score-option" data-score="4" title="4 stars">★★★★</button>
+      <button class="mobile-score-option" data-score="5" title="5 stars">★★★★★</button>
+    </div>
+  </div>
+
 <script src="/static/js/svg-icons.js"></script>
 <script src="/static/js/search-toolbar.js"></script>
 <script src="/static/js/app.js"></script>

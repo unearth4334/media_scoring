@@ -112,6 +112,9 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Add video state persistence listeners
   setTimeout(initializeVideoStatePersistence, 100);
+  
+  // Initialize mobile score bar
+  setTimeout(initializeMobileScoreBar, 100);
 });
 
 let videos = [];
@@ -451,6 +454,12 @@ function toggleMaximize(){
   if (typeof saveState === 'function') {
     saveState('isMaximized', isMaximized);
   }
+  
+  // Update mobile score bar maximize button
+  const currentVideo = filtered[idx];
+  if (currentVideo) {
+    updateMobileScoreBar(currentVideo.score || 0);
+  }
 }
 
 function updateDownloadButton(name){
@@ -520,6 +529,9 @@ function renderScoreBar(score){
   html += `</div>`;
   bar.innerHTML = html;
   
+  // Update mobile score bar
+  updateMobileScoreBar(score);
+  
   // Attach event listeners to the new buttons
   const maximizeBtn = document.getElementById('maximize-btn');
   if (maximizeBtn) {
@@ -552,6 +564,161 @@ function renderScoreBar(score){
     }
   }
 }
+
+// Mobile Score Bar Functions
+function updateMobileScoreBar(score) {
+  const mobileScoreBtn = document.getElementById('mobile-score-btn');
+  const mobileDownloadBtn = document.getElementById('mobile-download-btn');
+  const mobileMaximizeBtn = document.getElementById('mobile-maximize-btn');
+  const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+  const mobileNextBtn = document.getElementById('mobile-next-btn');
+  
+  if (!mobileScoreBtn) return; // Mobile score bar not present
+  
+  // Update score button display
+  if (score === -1) {
+    mobileScoreBtn.textContent = '✕';
+    mobileScoreBtn.className = 'mobile-score-btn active';
+    mobileScoreBtn.title = 'Rejected';
+  } else if (score === 0 || !score) {
+    mobileScoreBtn.textContent = '★';
+    mobileScoreBtn.className = 'mobile-score-btn';
+    mobileScoreBtn.title = 'Rate media';
+  } else {
+    mobileScoreBtn.textContent = '★'.repeat(score);
+    mobileScoreBtn.className = 'mobile-score-btn active';
+    mobileScoreBtn.title = `${score} star${score > 1 ? 's' : ''}`;
+  }
+  
+  // Update download button state
+  if (mobileDownloadBtn) {
+    const currentVideo = filtered[idx];
+    if (currentVideo) {
+      mobileDownloadBtn.disabled = false;
+      mobileDownloadBtn.title = 'Download current media';
+    } else {
+      mobileDownloadBtn.disabled = true;
+      mobileDownloadBtn.title = 'No media to download';
+    }
+  }
+  
+  // Update maximize button
+  if (mobileMaximizeBtn) {
+    if (isMaximized) {
+      mobileMaximizeBtn.textContent = '⤡';
+      mobileMaximizeBtn.title = 'Return to actual size';
+    } else {
+      mobileMaximizeBtn.textContent = '⤢';
+      mobileMaximizeBtn.title = 'Maximize media';
+    }
+  }
+  
+  // Update navigation buttons
+  if (mobilePrevBtn) {
+    mobilePrevBtn.disabled = (idx <= 0);
+    mobilePrevBtn.style.opacity = (idx <= 0) ? '0.4' : '1';
+  }
+  if (mobileNextBtn) {
+    mobileNextBtn.disabled = (idx >= filtered.length - 1);
+    mobileNextBtn.style.opacity = (idx >= filtered.length - 1) ? '0.4' : '1';
+  }
+  
+  // Update popover selected state
+  updateMobileScorePopover(score);
+}
+
+function updateMobileScorePopover(score) {
+  const popover = document.getElementById('mobile-score-popover');
+  if (!popover) return;
+  
+  // Clear all selected states
+  popover.querySelectorAll('.mobile-score-option').forEach(btn => {
+    btn.classList.remove('selected');
+  });
+  
+  // Set selected state for current score
+  const selectedBtn = popover.querySelector(`[data-score="${score || 0}"]`);
+  if (selectedBtn) {
+    selectedBtn.classList.add('selected');
+  }
+}
+
+function initializeMobileScoreBar() {
+  const mobileScoreBtn = document.getElementById('mobile-score-btn');
+  const mobilePopover = document.getElementById('mobile-score-popover');
+  const mobilePrevBtn = document.getElementById('mobile-prev-btn');
+  const mobileNextBtn = document.getElementById('mobile-next-btn');
+  const mobileDownloadBtn = document.getElementById('mobile-download-btn');
+  const mobileMaximizeBtn = document.getElementById('mobile-maximize-btn');
+  
+  if (!mobileScoreBtn || !mobilePopover) return;
+  
+  // Score button toggle popover
+  mobileScoreBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    mobilePopover.classList.toggle('active');
+  });
+  
+  // Score option buttons
+  mobilePopover.querySelectorAll('.mobile-score-option').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const score = parseInt(btn.dataset.score);
+      postScore(score);
+      mobilePopover.classList.remove('active');
+    });
+  });
+  
+  // Navigation buttons
+  if (mobilePrevBtn) {
+    mobilePrevBtn.addEventListener('click', () => {
+      if (idx > 0) {
+        show(idx - 1);
+      }
+    });
+  }
+  
+  if (mobileNextBtn) {
+    mobileNextBtn.addEventListener('click', () => {
+      if (idx < filtered.length - 1) {
+        show(idx + 1);
+      }
+    });
+  }
+  
+  // Download button
+  if (mobileDownloadBtn) {
+    mobileDownloadBtn.addEventListener('click', () => {
+      const currentVideo = filtered[idx];
+      if (currentVideo) {
+        const link = document.createElement('a');
+        link.href = '/media/' + encodeURIComponent(currentVideo.name);
+        link.download = currentVideo.name;
+        link.click();
+      }
+    });
+  }
+  
+  // Maximize button
+  if (mobileMaximizeBtn) {
+    mobileMaximizeBtn.addEventListener('click', toggleMaximize);
+  }
+  
+  // Close popover when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!mobilePopover.contains(e.target) && !mobileScoreBtn.contains(e.target)) {
+      mobilePopover.classList.remove('active');
+    }
+  });
+  
+  // Close popover on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobilePopover.classList.contains('active')) {
+      mobilePopover.classList.remove('active');
+    }
+  });
+}
+
 function scoreBadge(s){
   if (s === -1) return 'R';
   if (!s || s < 1) return '—';

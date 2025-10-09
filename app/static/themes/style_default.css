@@ -1239,4 +1239,172 @@ aside#sidebar {
     gap: 4px;
     align-items: center;
   }
+  
+  /* Hide desktop scorebar on mobile */
+  .scorebar {
+    display: none !important;
+  }
+  
+  /* Show mobile scorebar */
+  .mobile-scorebar {
+    display: flex !important;
+  }
+}
+
+/* =========================================================
+   MOBILE SCORE BAR
+   --------------------------------------------------------- */
+.mobile-scorebar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: rgba(24, 24, 24, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid #333;
+  display: none; /* Hidden by default, shown on mobile via media query */
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 8px 16px;
+  z-index: 1001; /* Above maximized content */
+  box-sizing: border-box;
+}
+
+.mobile-scorebar button {
+  background: none;
+  border: 1px solid #555;
+  color: #eee;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-nav-btn {
+  width: 44px !important;
+  height: 40px !important;
+  font-size: 18px !important;
+}
+
+.mobile-score-btn {
+  width: 48px !important;
+  height: 40px !important;
+  font-size: 20px !important;
+  border-color: #ffd700 !important;
+  color: #ffd700 !important;
+}
+
+.mobile-action-btn {
+  width: 40px !important;
+  height: 40px !important;
+  font-size: 14px !important;
+}
+
+.mobile-scorebar button:hover,
+.mobile-scorebar button:active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #777;
+}
+
+.mobile-scorebar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mobile-score-btn.active {
+  background: rgba(255, 215, 0, 0.2) !important;
+  border-color: #ffd700 !important;
+  color: #ffd700 !important;
+}
+
+/* Mobile Score Popover */
+.mobile-score-popover {
+  position: fixed;
+  bottom: 64px; /* Above mobile scorebar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(24, 24, 24, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  z-index: 1002;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.mobile-score-popover.active {
+  display: block;
+  animation: popoverSlideUp 0.2s ease-out;
+}
+
+@keyframes popoverSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.mobile-score-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+
+.mobile-score-option {
+  width: 44px !important;
+  height: 44px !important;
+  background: none;
+  border: 1px solid #555;
+  color: #eee;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-score-option:hover,
+.mobile-score-option:active {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #777;
+}
+
+.mobile-score-option.selected {
+  background: rgba(255, 215, 0, 0.2);
+  border-color: #ffd700;
+  color: #ffd700;
+}
+
+.mobile-score-option[data-score="-1"] {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+.mobile-score-option[data-score="-1"].selected {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+/* Maximized view adjustments for mobile */
+body.maximized .mobile-scorebar {
+  z-index: 1001; /* Ensure it's above maximized content */
 }
