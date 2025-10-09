@@ -1,0 +1,880 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Data Ingestion Tool v2 - Video Scorer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
+  <link rel="stylesheet" href="/themes/{{ settings.style }}">
+  <style>
+    .ingest-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .ingest-header {
+      margin-bottom: 30px;
+    }
+
+    .ingest-header h1 {
+      margin: 0 0 10px 0;
+    }
+
+    .ingest-header p {
+      margin: 0;
+      opacity: 0.7;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      background: var(--accent-color, #4a90e2);
+      color: white;
+      border-radius: 12px;
+      font-size: 0.8em;
+      margin-left: 10px;
+    }
+
+    .badge.new {
+      background: #28a745;
+    }
+
+    .workflow-steps {
+      display: flex;
+      justify-content: space-between;
+      margin: 30px 0;
+      padding: 20px;
+      background: var(--bg-secondary, #2a2a2a);
+      border-radius: 8px;
+    }
+
+    .workflow-step {
+      flex: 1;
+      text-align: center;
+      padding: 0 10px;
+      position: relative;
+    }
+
+    .workflow-step:not(:last-child)::after {
+      content: '→';
+      position: absolute;
+      right: -15px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.5em;
+      color: var(--text-color, #fff);
+      opacity: 0.5;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 30px;
+      height: 30px;
+      line-height: 30px;
+      background: var(--border-color, #444);
+      color: var(--text-color, #fff);
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+
+    .step-number.active {
+      background: var(--accent-color, #4a90e2);
+    }
+
+    .step-number.completed {
+      background: #28a745;
+    }
+
+    .step-title {
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+
+    .step-description {
+      font-size: 0.9em;
+      opacity: 0.7;
+    }
+
+    .parameters-form {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .form-section {
+      margin-bottom: 25px;
+    }
+
+    .form-section h3 {
+      margin: 0 0 15px 0;
+      color: var(--accent-color, #4a90e2);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    .form-group input[type="text"],
+    .form-group input[type="number"],
+    .form-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid var(--border-color, #444);
+      background: var(--bg-primary, #1a1a1a);
+      color: var(--text-color, #fff);
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    .form-group-inline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group-inline input[type="text"] {
+      flex: 1;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin: 0;
+    }
+
+    .browse-btn {
+      padding: 8px 16px;
+      background: var(--accent-color, #4a90e2);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+
+    .browse-btn:hover {
+      background: var(--accent-hover, #357abd);
+    }
+
+    .process-btn {
+      padding: 12px 24px;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      width: 100%;
+      margin-top: 20px;
+    }
+
+    .process-btn:hover:not(:disabled) {
+      background: #218838;
+    }
+
+    .process-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .progress-section {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .progress-section.show {
+      display: block;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 20px;
+      background: var(--border-color, #444);
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 10px 0;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #4a90e2, #28a745);
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-info {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .current-file {
+      font-family: monospace;
+      font-size: 0.9em;
+      color: var(--accent-color, #4a90e2);
+      margin: 5px 0;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin: 15px 0;
+    }
+
+    .stat-card {
+      background: var(--bg-primary, #1a1a1a);
+      padding: 15px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .stat-number {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: var(--accent-color, #4a90e2);
+    }
+
+    .stat-label {
+      font-size: 0.9em;
+      opacity: 0.7;
+      margin-top: 5px;
+    }
+
+    .preview-section {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .preview-section.show {
+      display: block;
+    }
+
+    .preview-actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: var(--accent-color, #4a90e2);
+      color: white;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: white;
+    }
+
+    .btn-secondary {
+      background: var(--border-color, #444);
+      color: var(--text-color, #fff);
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.9;
+    }
+
+    .btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+
+    .commit-section {
+      background: var(--bg-secondary, #2a2a2a);
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .commit-section.show {
+      display: block;
+    }
+
+    .error-list {
+      background: #fff5f5;
+      color: #c53030;
+      border: 1px solid #fed7d7;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 10px 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .error-item {
+      margin: 5px 0;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .success-message {
+      background: #f0fff4;
+      color: #22543d;
+      border: 1px solid #9ae6b4;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 10px 0;
+    }
+
+    .nsfw-indicator {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 0.8em;
+      font-weight: bold;
+    }
+
+    .nsfw-indicator.available {
+      background: #28a745;
+      color: white;
+    }
+
+    .nsfw-indicator.unavailable {
+      background: #ffc107;
+      color: #212529;
+    }
+
+    @media (max-width: 768px) {
+      .workflow-steps {
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .workflow-step:not(:last-child)::after {
+        content: '↓';
+        position: static;
+        display: block;
+        margin: 10px 0;
+      }
+
+      .preview-actions {
+        flex-direction: column;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="ingest-container">
+    <div class="ingest-header">
+      <h1>🎬 Data Ingestion Tool v2 <span class="badge new">Enhanced</span></h1>
+      <p>Batch process media files with preview and commit workflow</p>
+    </div>
+
+    <!-- Workflow Steps -->
+    <div class="workflow-steps">
+      <div class="workflow-step">
+        <div class="step-number active" id="step-1">1</div>
+        <div class="step-title">Configure</div>
+        <div class="step-description">Set parameters</div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-number" id="step-2">2</div>
+        <div class="step-title">Process</div>
+        <div class="step-description">Extract data</div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-number" id="step-3">3</div>
+        <div class="step-title">Preview</div>
+        <div class="step-description">Review results</div>
+      </div>
+      <div class="workflow-step">
+        <div class="step-number" id="step-4">4</div>
+        <div class="step-title">Commit</div>
+        <div class="step-description">Save to database</div>
+      </div>
+    </div>
+
+    <!-- Parameters Form -->
+    <div class="parameters-form" id="parameters-form">
+      <div class="form-section">
+        <h3>📁 Source Directory</h3>
+        <div class="form-group">
+          <label for="directory">Directory Path</label>
+          <div class="form-group-inline">
+            <input type="text" id="directory" placeholder="/path/to/media/files" />
+            <button type="button" class="browse-btn" onclick="openDirectoryBrowser()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20 6h-2l-2-2H8L6 6H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/>
+              </svg>
+              Browse
+            </button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="pattern">File Pattern</label>
+          <input type="text" id="pattern" value="*.mp4|*.png|*.jpg" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>🔞 NSFW Detection</h3>
+        <div class="checkbox-group">
+          <input type="checkbox" id="enable_nsfw_detection" checked />
+          <label for="enable_nsfw_detection">Enable NSFW Detection</label>
+          <span class="nsfw-indicator {{ 'available' if nsfw_detection_available else 'unavailable' }}">
+            {{ 'Available' if nsfw_detection_available else 'Unavailable' }}
+          </span>
+        </div>
+        <div class="form-group">
+          <label for="nsfw_threshold">NSFW Threshold (0.0 - 1.0)</label>
+          <input type="number" id="nsfw_threshold" value="0.5" min="0" max="1" step="0.1" />
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3>⚙️ Processing Options</h3>
+        <div class="checkbox-group">
+          <input type="checkbox" id="extract_metadata" checked />
+          <label for="extract_metadata">Extract Metadata (dimensions, duration, etc.)</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="extract_keywords" checked />
+          <label for="extract_keywords">Extract Keywords from Metadata</label>
+        </div>
+        <div class="checkbox-group">
+          <input type="checkbox" id="import_scores" checked />
+          <label for="import_scores">Import Existing Score Files</label>
+        </div>
+        <div class="form-group">
+          <label for="max_files">Max Files to Process (for testing)</label>
+          <input type="number" id="max_files" placeholder="Leave empty for all files" min="1" />
+        </div>
+      </div>
+
+      <button type="button" class="process-btn" onclick="startProcessing()" id="process-btn">
+        🚀 Start Processing
+      </button>
+    </div>
+
+    <!-- Progress Section -->
+    <div class="progress-section" id="progress-section">
+      <h3>⏳ Processing Files...</h3>
+      <div class="progress-info">
+        <span id="progress-text">Initializing...</span>
+        <span id="progress-percentage">0%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="current-file" id="current-file"></div>
+      
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="stat-processed">0</div>
+          <div class="stat-label">Processed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-metadata">0</div>
+          <div class="stat-label">Metadata</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-keywords">0</div>
+          <div class="stat-label">Keywords</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-scores">0</div>
+          <div class="stat-label">Scores</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-nsfw">0</div>
+          <div class="stat-label">NSFW Detected</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="stat-errors">0</div>
+          <div class="stat-label">Errors</div>
+        </div>
+      </div>
+
+      <div id="error-container"></div>
+    </div>
+
+    <!-- Preview Section -->
+    <div class="preview-section" id="preview-section">
+      <h3>📊 Processing Completed!</h3>
+      <p>Your files have been processed successfully. Review the results before committing to the database.</p>
+      
+      <div class="preview-actions">
+        <a href="#" class="btn btn-primary" id="view-report-btn" target="_blank">
+          📄 View Detailed Report
+        </a>
+        <button type="button" class="btn btn-success" onclick="commitToDatabase()" id="commit-btn">
+          💾 Commit to Database
+        </button>
+        <button type="button" class="btn btn-secondary" onclick="startNewSession()">
+          🔄 Start New Session
+        </button>
+      </div>
+    </div>
+
+    <!-- Commit Section -->
+    <div class="commit-section" id="commit-section">
+      <h3>💾 Committing to Database...</h3>
+      <div class="progress-info">
+        <span id="commit-progress-text">Saving data...</span>
+        <span id="commit-progress-percentage">0%</span>
+      </div>
+      <div class="progress-bar-container">
+        <div class="progress-bar" id="commit-progress-bar"></div>
+      </div>
+      
+      <div id="commit-result"></div>
+    </div>
+  </div>
+
+  <!-- Directory Browser Modal (placeholder) -->
+  <div id="directory-modal" style="display: none;">
+    <!-- Directory browser implementation would go here -->
+  </div>
+
+  <script>
+    let currentSessionId = null;
+    let processingTimer = null;
+    let commitTimer = null;
+
+    function updateWorkflowStep(stepNumber) {
+      // Reset all steps
+      for (let i = 1; i <= 4; i++) {
+        const stepEl = document.getElementById(`step-${i}`);
+        stepEl.classList.remove('active', 'completed');
+        if (i < stepNumber) {
+          stepEl.classList.add('completed');
+        } else if (i === stepNumber) {
+          stepEl.classList.add('active');
+        }
+      }
+    }
+
+    function showSection(sectionId) {
+      const sections = ['parameters-form', 'progress-section', 'preview-section', 'commit-section'];
+      sections.forEach(id => {
+        const el = document.getElementById(id);
+        if (id === sectionId) {
+          el.classList.add('show');
+          el.style.display = 'block';
+        } else {
+          el.classList.remove('show');
+          el.style.display = 'none';
+        }
+      });
+    }
+
+    async function startProcessing() {
+      const parameters = {
+        directory: document.getElementById('directory').value,
+        pattern: document.getElementById('pattern').value,
+        enable_nsfw_detection: document.getElementById('enable_nsfw_detection').checked,
+        nsfw_threshold: parseFloat(document.getElementById('nsfw_threshold').value),
+        extract_metadata: document.getElementById('extract_metadata').checked,
+        extract_keywords: document.getElementById('extract_keywords').checked,
+        import_scores: document.getElementById('import_scores').checked,
+        max_files: document.getElementById('max_files').value ? parseInt(document.getElementById('max_files').value) : null
+      };
+
+      if (!parameters.directory) {
+        alert('Please select a directory');
+        return;
+      }
+
+      try {
+        document.getElementById('process-btn').disabled = true;
+        document.getElementById('process-btn').textContent = '🚀 Starting...';
+
+        const response = await fetch('/api/ingest/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parameters })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to start processing');
+        }
+
+        const result = await response.json();
+        currentSessionId = result.session_id;
+
+        updateWorkflowStep(2);
+        showSection('progress-section');
+        
+        // Start polling for progress
+        startProgressPolling();
+
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        document.getElementById('process-btn').disabled = false;
+        document.getElementById('process-btn').textContent = '🚀 Start Processing';
+      }
+    }
+
+    function startProgressPolling() {
+      processingTimer = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/ingest/status/${currentSessionId}`);
+          if (!response.ok) {
+            throw new Error('Failed to get status');
+          }
+
+          const status = await response.json();
+          updateProgressDisplay(status);
+
+          if (status.status === 'completed') {
+            clearInterval(processingTimer);
+            showPreviewSection();
+          } else if (status.status === 'error') {
+            clearInterval(processingTimer);
+            showError(`Processing failed: ${status.error || 'Unknown error'}`);
+          }
+
+        } catch (error) {
+          console.error('Error polling status:', error);
+        }
+      }, 1000);
+    }
+
+    function updateProgressDisplay(status) {
+      document.getElementById('progress-text').textContent = 
+        `Processing ${status.processed_files}/${status.total_files} files`;
+      document.getElementById('progress-percentage').textContent = `${status.progress}%`;
+      document.getElementById('progress-bar').style.width = `${status.progress}%`;
+      
+      if (status.current_file) {
+        document.getElementById('current-file').textContent = `Current: ${status.current_file}`;
+      }
+
+      // Update stats
+      const stats = status.stats;
+      document.getElementById('stat-processed').textContent = stats.processed_files;
+      document.getElementById('stat-metadata').textContent = stats.metadata_extracted;
+      document.getElementById('stat-keywords').textContent = stats.keywords_added;
+      document.getElementById('stat-scores').textContent = stats.scores_imported;
+      document.getElementById('stat-nsfw').textContent = stats.nsfw_detected;
+      document.getElementById('stat-errors').textContent = stats.errors;
+
+      // Show errors if any
+      if (status.errors && status.errors.length > 0) {
+        showErrors(status.errors);
+      }
+    }
+
+    function showErrors(errors) {
+      const container = document.getElementById('error-container');
+      container.innerHTML = `
+        <div class="error-list">
+          <h4>Recent Errors:</h4>
+          ${errors.map(error => `<div class="error-item">${error}</div>`).join('')}
+        </div>
+      `;
+    }
+
+    function showPreviewSection() {
+      updateWorkflowStep(3);
+      showSection('preview-section');
+      
+      // Set up report link
+      const reportBtn = document.getElementById('view-report-btn');
+      reportBtn.href = `/api/ingest/report/${currentSessionId}`;
+    }
+
+    async function commitToDatabase() {
+      try {
+        document.getElementById('commit-btn').disabled = true;
+        document.getElementById('commit-btn').textContent = '💾 Starting Commit...';
+
+        const response = await fetch('/api/ingest/commit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ session_id: currentSessionId })
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.detail || 'Failed to start commit');
+        }
+
+        updateWorkflowStep(4);
+        showSection('commit-section');
+        
+        // Start polling for commit progress
+        startCommitPolling();
+
+      } catch (error) {
+        alert(`Error: ${error.message}`);
+        document.getElementById('commit-btn').disabled = false;
+        document.getElementById('commit-btn').textContent = '💾 Commit to Database';
+      }
+    }
+
+    function startCommitPolling() {
+      commitTimer = setInterval(async () => {
+        try {
+          const response = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
+          if (!response.ok) {
+            throw new Error('Failed to get commit status');
+          }
+
+          const status = await response.json();
+          updateCommitDisplay(status);
+
+          if (status.status === 'committed') {
+            clearInterval(commitTimer);
+            showCommitSuccess();
+          } else if (status.status === 'commit_error') {
+            clearInterval(commitTimer);
+            showCommitError(status.commit_error || 'Unknown error');
+          }
+
+        } catch (error) {
+          console.error('Error polling commit status:', error);
+        }
+      }, 1000);
+    }
+
+    function updateCommitDisplay(status) {
+      document.getElementById('commit-progress-text').textContent = 'Saving to database...';
+      document.getElementById('commit-progress-percentage').textContent = `${status.commit_progress}%`;
+      document.getElementById('commit-progress-bar').style.width = `${status.commit_progress}%`;
+
+      if (status.commit_errors && status.commit_errors.length > 0) {
+        const container = document.getElementById('commit-result');
+        container.innerHTML = `
+          <div class="error-list">
+            <h4>Commit Errors:</h4>
+            ${status.commit_errors.map(error => `<div class="error-item">${error}</div>`).join('')}
+          </div>
+        `;
+      }
+    }
+
+    function showCommitSuccess() {
+      const container = document.getElementById('commit-result');
+      container.innerHTML = `
+        <div class="success-message">
+          <h4>✅ Successfully Committed to Database!</h4>
+          <p>All processed data has been saved to your database. You can now view the files in the main application.</p>
+          <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+            🏠 Return to Main App
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="startNewSession()">
+            🔄 Process More Files
+          </button>
+        </div>
+      `;
+    }
+
+    function showCommitError(error) {
+      const container = document.getElementById('commit-result');
+      container.innerHTML = `
+        <div class="error-list">
+          <h4>❌ Commit Failed</h4>
+          <p>Error: ${error}</p>
+          <button type="button" class="btn btn-secondary" onclick="startNewSession()">
+            🔄 Start Over
+          </button>
+        </div>
+      `;
+    }
+
+    function showError(message) {
+      const container = document.getElementById('error-container');
+      container.innerHTML = `
+        <div class="error-list">
+          <h4>❌ Processing Error</h4>
+          <div class="error-item">${message}</div>
+          <button type="button" class="btn btn-secondary" onclick="startNewSession()">
+            🔄 Start Over
+          </button>
+        </div>
+      `;
+    }
+
+    function startNewSession() {
+      // Clean up current session
+      if (currentSessionId) {
+        fetch(`/api/ingest/session/${currentSessionId}`, { method: 'DELETE' });
+      }
+      
+      // Clear timers
+      if (processingTimer) {
+        clearInterval(processingTimer);
+        processingTimer = null;
+      }
+      if (commitTimer) {
+        clearInterval(commitTimer);
+        commitTimer = null;
+      }
+      
+      // Reset UI
+      currentSessionId = null;
+      updateWorkflowStep(1);
+      showSection('parameters-form');
+      
+      // Reset form
+      document.getElementById('process-btn').disabled = false;
+      document.getElementById('process-btn').textContent = '🚀 Start Processing';
+      document.getElementById('commit-btn').disabled = false;
+      document.getElementById('commit-btn').textContent = '💾 Commit to Database';
+      
+      // Clear progress
+      document.getElementById('progress-bar').style.width = '0%';
+      document.getElementById('commit-progress-bar').style.width = '0%';
+      document.getElementById('error-container').innerHTML = '';
+      document.getElementById('commit-result').innerHTML = '';
+    }
+
+    function openDirectoryBrowser() {
+      // For now, just prompt the user to enter the path
+      // In a full implementation, this would open a file browser
+      const path = prompt('Enter the directory path:');
+      if (path) {
+        document.getElementById('directory').value = path;
+      }
+    }
+
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', () => {
+      updateWorkflowStep(1);
+      showSection('parameters-form');
+    });
+  </script>
+</body>
+</html>
