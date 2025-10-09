@@ -11,7 +11,8 @@ let searchToolbarFilters = {
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
-  dateEnd: null
+  dateEnd: null,
+  nsfw: 'all'
 };
 
 // Default filter values for comparison (to detect modifications)
@@ -21,7 +22,8 @@ const defaultFilters = {
   filetype: ['jpg', 'png', 'mp4'],
   rating: 'none',
   dateStart: null,
-  dateEnd: null
+  dateEnd: null,
+  nsfw: 'all'
 };
 
 // Check if a filter value has been modified from its default
@@ -199,6 +201,18 @@ function populateEditor(pillType) {
       document.getElementById('date-start').value = searchToolbarFilters.dateStart || '';
       document.getElementById('date-end').value = searchToolbarFilters.dateEnd || '';
       break;
+      
+    case 'nsfw':
+      const nsfwFilter = searchToolbarFilters.nsfw;
+      const allBtn = document.getElementById('nsfw-all-btn');
+      const sfwBtn = document.getElementById('nsfw-sfw-btn');
+      const nsfwBtn = document.getElementById('nsfw-nsfw-btn');
+      if (allBtn && sfwBtn && nsfwBtn) {
+        allBtn.classList.toggle('active', nsfwFilter === 'all');
+        sfwBtn.classList.toggle('active', nsfwFilter === 'sfw');
+        nsfwBtn.classList.toggle('active', nsfwFilter === 'nsfw');
+      }
+      break;
   }
 }
 
@@ -262,6 +276,36 @@ function setupEditorActions() {
     });
   });
   
+  // NSFW editor
+  document.getElementById('nsfw-apply').addEventListener('click', () => applySearchToolbarFilter('nsfw'));
+  document.getElementById('nsfw-clear').addEventListener('click', () => clearFilter('nsfw'));
+  document.getElementById('nsfw-close').addEventListener('click', closePillEditor);
+  
+  // NSFW filter toggle buttons
+  const nsfwAllBtn = document.getElementById('nsfw-all-btn');
+  const nsfwSfwBtn = document.getElementById('nsfw-sfw-btn');
+  const nsfwNsfwBtn = document.getElementById('nsfw-nsfw-btn');
+  if (nsfwAllBtn && nsfwSfwBtn && nsfwNsfwBtn) {
+    nsfwAllBtn.addEventListener('click', () => {
+      searchToolbarFilters.nsfw = 'all';
+      nsfwAllBtn.classList.add('active');
+      nsfwSfwBtn.classList.remove('active');
+      nsfwNsfwBtn.classList.remove('active');
+    });
+    nsfwSfwBtn.addEventListener('click', () => {
+      searchToolbarFilters.nsfw = 'sfw';
+      nsfwSfwBtn.classList.add('active');
+      nsfwAllBtn.classList.remove('active');
+      nsfwNsfwBtn.classList.remove('active');
+    });
+    nsfwNsfwBtn.addEventListener('click', () => {
+      searchToolbarFilters.nsfw = 'nsfw';
+      nsfwNsfwBtn.classList.add('active');
+      nsfwAllBtn.classList.remove('active');
+      nsfwSfwBtn.classList.remove('active');
+    });
+  }
+  
   // Enter key support
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && activePillEditor) {
@@ -314,6 +358,11 @@ function applySearchToolbarFilter(pillType) {
       searchToolbarFilters.dateStart = document.getElementById('date-start').value || null;
       searchToolbarFilters.dateEnd = document.getElementById('date-end').value || null;
       break;
+      
+    case 'nsfw':
+      // NSFW filter is already set by the toggle buttons
+      // Just need to trigger the update
+      break;
   }
   
   updatePillValues();
@@ -354,6 +403,18 @@ function clearFilter(pillType) {
       searchToolbarFilters.dateEnd = null;
       document.getElementById('date-start').value = '';
       document.getElementById('date-end').value = '';
+      break;
+      
+    case 'nsfw':
+      searchToolbarFilters.nsfw = 'all';
+      const nsfwAllBtn = document.getElementById('nsfw-all-btn');
+      const nsfwSfwBtn = document.getElementById('nsfw-sfw-btn');
+      const nsfwNsfwBtn = document.getElementById('nsfw-nsfw-btn');
+      if (nsfwAllBtn && nsfwSfwBtn && nsfwNsfwBtn) {
+        nsfwAllBtn.classList.add('active');
+        nsfwSfwBtn.classList.remove('active');
+        nsfwNsfwBtn.classList.remove('active');
+      }
       break;
   }
   
@@ -414,12 +475,25 @@ function updatePillValues() {
     dateValue.textContent = 'All';
   }
   
+  // NSFW
+  const nsfwValue = document.getElementById('nsfw-value');
+  const nsfwPill = document.getElementById('pill-nsfw');
+  const nsfwLabels = {
+    'all': 'All',
+    'sfw': 'SFW Only',
+    'nsfw': 'NSFW Only'
+  };
+  if (nsfwValue) {
+    nsfwValue.textContent = nsfwLabels[searchToolbarFilters.nsfw] || 'All';
+  }
+  
   // Apply modified state classes to pills
   const pillsData = [
     { pill: sortPill, filterName: 'sort' },
     { pill: filetypePill, filterName: 'filetype' },
     { pill: ratingPill, filterName: 'rating' },
-    { pill: datePill, filterName: 'dateStart' } // Check if any date is set
+    { pill: datePill, filterName: 'dateStart' }, // Check if any date is set
+    { pill: nsfwPill, filterName: 'nsfw' }
   ];
   
   pillsData.forEach(({ pill, filterName }) => {
@@ -601,6 +675,9 @@ async function applyDatabaseFilters() {
       // NEW: Add sorting parameters
       sort_field: searchToolbarFilters.sort,      // 'name', 'date', 'size', 'rating'
       sort_direction: searchToolbarFilters.sortDirection,  // 'asc' or 'desc'
+      
+      // NEW: Add NSFW filter
+      nsfw_filter: searchToolbarFilters.nsfw,  // 'all', 'sfw', 'nsfw'
       
       // NEW: Add pagination (future-proofing)
       offset: null,

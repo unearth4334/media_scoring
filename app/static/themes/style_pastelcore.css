@@ -930,6 +930,51 @@ aside#sidebar {
   background: #e88888;
 }
 
+/* NSFW filter buttons */
+.nsfw-filter-group {
+  margin-bottom: 16px;
+}
+
+.nsfw-filter-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  color: #6b6b6b;
+}
+
+.nsfw-filter-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.nsfw-filter-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 12px;
+  border: 1px solid #d0d0d0;
+  background: #ffffff;
+  color: #333333;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1;
+  height: 36px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nsfw-filter-btn:hover {
+  background: #f9f9f9;
+  border-color: #a0a0a0;
+}
+
+.nsfw-filter-btn.active {
+  border-color: #ff85a1;
+  box-shadow: 0 0 0 2px rgba(255,133,161,0.2) inset;
+  color: #ff85a1;
+  background: #fff5f7;
+}
+
 /* Info bar styling (formerly controls-row) */
 .info-bar {
   display: flex;
