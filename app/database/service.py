@@ -124,6 +124,7 @@ class DatabaseService:
                            file_types: Optional[List[str]] = None,
                            start_date: Optional[datetime] = None,
                            end_date: Optional[datetime] = None,
+                           nsfw_filter: Optional[str] = None,
                            sort_field: str = "name",
                            sort_direction: str = "asc",
                            offset: Optional[int] = None,
@@ -153,6 +154,19 @@ class DatabaseService:
             query = query.filter(MediaFile.created_at >= start_date)
         if end_date is not None:
             query = query.filter(MediaFile.created_at <= end_date)
+        
+        # Apply NSFW filter
+        if nsfw_filter and nsfw_filter != 'all':
+            if nsfw_filter == 'sfw':
+                # Show only SFW content (nsfw=False or nsfw_label=False)
+                query = query.filter(
+                    (MediaFile.nsfw == False) | (MediaFile.nsfw_label == False)
+                )
+            elif nsfw_filter == 'nsfw':
+                # Show only NSFW content (nsfw=True or nsfw_label=True)
+                query = query.filter(
+                    (MediaFile.nsfw == True) | (MediaFile.nsfw_label == True)
+                )
         
         # Apply dynamic sorting
         sort_func = desc if sort_direction == "desc" else asc

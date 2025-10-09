@@ -39,6 +39,7 @@ class FilterRequest(BaseModel):
     file_types: Optional[List[str]] = None
     start_date: Optional[str] = None
     end_date: Optional[str] = None
+    nsfw_filter: Optional[str] = Field(None, description="NSFW filter: 'all', 'sfw', or 'nsfw'")
     
     # Sorting parameters
     sort_field: SortField = Field(SortField.NAME, description="Field to sort by")
@@ -128,6 +129,7 @@ async def filter_videos(request: FilterRequest):
                 file_types=file_types,
                 start_date=start_date_obj,
                 end_date=end_date_obj,
+                nsfw_filter=request.nsfw_filter,
                 sort_field=request.sort_field.value,
                 sort_direction=request.sort_direction.value,
                 offset=request.offset,
@@ -159,6 +161,7 @@ async def filter_videos(request: FilterRequest):
                     "file_types": file_types,
                     "start_date": start_date,
                     "end_date": end_date,
+                    "nsfw_filter": request.nsfw_filter,
                     "sort_field": request.sort_field.value,
                     "sort_direction": request.sort_direction.value,
                     "offset": request.offset,
