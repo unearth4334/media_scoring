@@ -26,6 +26,8 @@ class MediaFile(Base):
     file_type = Column(String(50))  # 'video', 'image'
     extension = Column(String(10))
     score = Column(Integer, default=0)  # -1 to 5
+    nsfw_score = Column(Float, nullable=True)  # NSFW probability score (0.0-1.0)
+    nsfw_label = Column(String(10), nullable=True)  # 'sfw' or 'nsfw'
     media_file_id = Column(String(64), nullable=True)  # SHA256 hash of exact pixel content
     phash = Column(String(64), nullable=True)  # Perceptual hash for similarity detection
     created_at = Column(DateTime, default=dt.datetime.utcnow)
@@ -50,6 +52,7 @@ class MediaFile(Base):
         Index('idx_media_created_at', 'created_at'),
         Index('idx_media_file_size', 'file_size'),
         Index('idx_media_filename', 'filename'),
+        Index('idx_media_nsfw_score', 'nsfw_score'),
     )
     
     def __repr__(self):
