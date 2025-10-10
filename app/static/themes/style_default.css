@@ -1273,8 +1273,8 @@ aside#sidebar {
 
 .mobile-scorebar button {
   background: none;
-  border: 1px solid #555;
-  color: #eee;
+  border: none;
+  color: #00bcd4;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -1291,27 +1291,26 @@ aside#sidebar {
 .mobile-nav-btn {
   width: 44px !important;
   height: 40px !important;
-  font-size: 18px !important;
+  font-size: 32px !important;
 }
 
 .mobile-score-btn {
   width: 48px !important;
   height: 40px !important;
-  font-size: 20px !important;
-  border-color: #ffd700 !important;
-  color: #ffd700 !important;
+  font-size: 32px !important;
+  color: #00bcd4 !important;
+  position: relative;
 }
 
 .mobile-action-btn {
   width: 40px !important;
   height: 40px !important;
-  font-size: 14px !important;
+  font-size: 28px !important;
 }
 
 .mobile-scorebar button:hover,
 .mobile-scorebar button:active {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #777;
+  background: rgba(0, 188, 212, 0.1);
 }
 
 .mobile-scorebar button:disabled {
@@ -1320,9 +1319,20 @@ aside#sidebar {
 }
 
 .mobile-score-btn.active {
-  background: rgba(255, 215, 0, 0.2) !important;
-  border-color: #ffd700 !important;
-  color: #ffd700 !important;
+  background: transparent !important;
+  color: #00bcd4 !important;
+}
+
+/* Score number inside star */
+.mobile-score-btn .score-number {
+  position: absolute;
+  font-size: 16px;
+  font-weight: 700;
+  color: rgba(24, 24, 24, 0.95);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
 
 /* Mobile Score Popover */

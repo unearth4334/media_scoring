@@ -575,17 +575,17 @@ function updateMobileScoreBar(score) {
   
   if (!mobileScoreBtn) return; // Mobile score bar not present
   
-  // Update score button display
+  // Update score button display with SVG icons
   if (score === -1) {
-    mobileScoreBtn.textContent = '✕';
+    mobileScoreBtn.innerHTML = svgMobileReject();
     mobileScoreBtn.className = 'mobile-score-btn active';
     mobileScoreBtn.title = 'Rejected';
   } else if (score === 0 || !score) {
-    mobileScoreBtn.textContent = '★';
+    mobileScoreBtn.innerHTML = svgMobileStarEmpty();
     mobileScoreBtn.className = 'mobile-score-btn';
     mobileScoreBtn.title = 'Rate media';
   } else {
-    mobileScoreBtn.textContent = '★'.repeat(score);
+    mobileScoreBtn.innerHTML = svgMobileStarFilled(score);
     mobileScoreBtn.className = 'mobile-score-btn active';
     mobileScoreBtn.title = `${score} star${score > 1 ? 's' : ''}`;
   }
