@@ -43,11 +43,21 @@ async def ingest_page(request: Request):
 async def list_directories_tree(path: str = ""):
     """List directories with file counts for tree view."""
     try:
+        # Define media root directory
+        media_root = Path("/media").resolve()
+        
         if not path:
-            # Start from user's home directory or root
-            target_path = Path.home()
+            # Start from /media/ instead of home directory
+            target_path = media_root
         else:
             target_path = Path(path).expanduser().resolve()
+        
+        # Security check: prevent navigation above /media/
+        try:
+            target_path.relative_to(media_root)
+        except ValueError:
+            # Path is outside /media/, redirect to media root
+            target_path = media_root
         
         if not target_path.exists() or not target_path.is_dir():
             raise HTTPException(404, "Directory not found")
@@ -80,9 +90,14 @@ async def list_directories_tree(path: str = ""):
                 ext_name = ext[1:] if ext else "no extension"
                 file_summary.append(f"{count} {ext_name}")
         
+        # Only allow parent if not at media root
+        parent_path = None
+        if target_path != media_root and target_path.parent != target_path:
+            parent_path = str(target_path.parent)
+        
         return {
             "path": str(target_path),
-            "parent": str(target_path.parent) if target_path != target_path.parent else None,
+            "parent": parent_path,
             "directories": subdirs,
             "file_summary": ", ".join(file_summary) if file_summary else "No files"
         }
