@@ -755,7 +755,18 @@ function syncBackwardCompatibility() {
   
   if (minFilterSelect.value && minFilterSelect.value !== 'none') {
     searchToolbarFilters.rating = minFilterSelect.value;
-    minFilter = minFilterSelect.value;
+    
+    // Properly convert minFilter value with type checking
+    const val = minFilterSelect.value;
+    if (val === 'none') {
+      minFilter = null;
+    } else if (val === 'unrated') {
+      minFilter = 'unrated';
+    } else if (!isNaN(parseInt(val))) {
+      minFilter = parseInt(val);
+    } else {
+      minFilter = null; // Default fallback
+    }
   }
   
   updatePillValues();

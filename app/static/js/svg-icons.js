@@ -193,3 +193,43 @@ function svgMenu() {
   <line x1="3" y1="18" x2="21" y2="18" stroke-linecap="round"/>
 </svg>`;
 }
+
+/**
+ * Mobile reject icon - red X in red circle
+ * @returns {string} SVG markup
+ */
+function svgMobileReject() {
+  const r = 14, cx = 16, cy = 16;
+  return `
+<svg width="32" height="32" viewBox="0 0 32 32">
+  <circle cx="${cx}" cy="${cy}" r="${r}" fill="#f44336" stroke="#f44336" stroke-width="2" />
+  <line x1="${cx-7}" y1="${cy-7}" x2="${cx+7}" y2="${cy+7}" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+  <line x1="${cx-7}" y1="${cy+7}" x2="${cx+7}" y2="${cy-7}" stroke="#ffffff" stroke-width="3" stroke-linecap="round" />
+</svg>`;
+}
+
+/**
+ * Mobile star icon - empty star outline
+ * @returns {string} SVG markup
+ */
+function svgMobileStarEmpty() {
+  return `
+<svg width="32" height="32" viewBox="0 0 32 32">
+  <polygon points="16,3 19,12 28,12 21,18 24,28 16,22 8,28 11,18 4,12 13,12"
+    fill="none" stroke="#00bcd4" stroke-width="2"/>
+</svg>`;
+}
+
+/**
+ * Mobile star icon - filled star with number
+ * @param {number} score - The score number to display (1-5)
+ * @returns {string} SVG markup
+ */
+function svgMobileStarFilled(score) {
+  return `
+<svg width="32" height="32" viewBox="0 0 32 32">
+  <polygon points="16,3 19,12 28,12 21,18 24,28 16,22 8,28 11,18 4,12 13,12"
+    fill="#00bcd4" stroke="#00bcd4" stroke-width="2"/>
+  <text x="16" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="rgba(24, 24, 24, 0.95)">${score}</text>
+</svg>`;
+}

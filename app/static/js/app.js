@@ -40,7 +40,19 @@ function restoreAppState() {
   toolbarCollapsed = loadState('toolbarCollapsed') || false;
   currentDir = loadState('currentDir') || '';
   currentPattern = loadState('currentPattern') || '*.mp4';
-  minFilter = loadState('minFilter') === 'null' ? null : loadState('minFilter');
+  
+  // Properly restore minFilter with type conversion
+  const savedMinFilter = loadState('minFilter');
+  if (savedMinFilter === 'none' || savedMinFilter === null) {
+    minFilter = null;
+  } else if (savedMinFilter === 'unrated') {
+    minFilter = 'unrated';
+  } else if (!isNaN(parseInt(savedMinFilter))) {
+    minFilter = parseInt(savedMinFilter);
+  } else {
+    minFilter = null; // Default fallback
+  }
+  
   showThumbnails = loadState('showThumbnails') !== false; // Default to true
   thumbnailHeight = loadState('thumbnailHeight') || 64;
   isMaximized = loadState('isMaximized') || false;
@@ -575,17 +587,17 @@ function updateMobileScoreBar(score) {
   
   if (!mobileScoreBtn) return; // Mobile score bar not present
   
-  // Update score button display
+  // Update score button display with SVG icons
   if (score === -1) {
-    mobileScoreBtn.textContent = '✕';
+    mobileScoreBtn.innerHTML = svgMobileReject();
     mobileScoreBtn.className = 'mobile-score-btn active';
     mobileScoreBtn.title = 'Rejected';
   } else if (score === 0 || !score) {
-    mobileScoreBtn.textContent = '★';
+    mobileScoreBtn.innerHTML = svgMobileStarEmpty();
     mobileScoreBtn.className = 'mobile-score-btn';
     mobileScoreBtn.title = 'Rate media';
   } else {
-    mobileScoreBtn.textContent = '★'.repeat(score);
+    mobileScoreBtn.innerHTML = svgMobileStarFilled(score);
     mobileScoreBtn.className = 'mobile-score-btn active';
     mobileScoreBtn.title = `${score} star${score > 1 ? 's' : ''}`;
   }
@@ -631,8 +643,6 @@ function updateMobileScorePopover(score) {
   const popover = document.getElementById('mobile-score-popover');
   if (!popover) return;
   
-  console.log('Updating mobile score popover for score:', score);
-  
   // Clear all selected states
   popover.querySelectorAll('.mobile-score-option').forEach(btn => {
     btn.classList.remove('selected');
@@ -648,8 +658,6 @@ function updateMobileScorePopover(score) {
   const starButtons = popover.querySelectorAll('.mobile-score-option.star-btn');
   const currentScore = score > 0 ? score : 0;
   
-  console.log('Found', starButtons.length, 'star buttons, current score:', currentScore);
-  
   starButtons.forEach((btn, index) => {
     const starValue = index + 1; // stars are 1-5
     btn.classList.remove('filled');
@@ -657,10 +665,8 @@ function updateMobileScorePopover(score) {
     if (starValue <= currentScore) {
       btn.classList.add('filled');
       btn.textContent = '★'; // Filled star
-      console.log('Star', starValue, 'filled');
     } else {
       btn.textContent = '☆'; // Unfilled star
-      console.log('Star', starValue, 'unfilled');
     }
   });
 }
@@ -1114,6 +1120,11 @@ document.getElementById('min_filter').addEventListener('change', () => {
   } else {
     minFilter = parseInt(val);
   }
+  
+  // Save the filter state to cookies
+  const filterValue = minFilter === null ? 'none' : (minFilter === 'unrated' ? 'unrated' : String(minFilter));
+  saveState('minFilter', filterValue);
+  
   fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(minFilter==='unrated'?'unrated':('>='+minFilter))), name: '' })});
   applyFilter(); renderSidebar(); show(0);
 });
