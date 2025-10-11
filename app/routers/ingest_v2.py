@@ -308,7 +308,6 @@ async def process_files_background(session_id: str, files: List[Path], parameter
         
         for i, file_path in enumerate(files):
             session["current_file"] = file_path.name
-            session["progress"] = int((i / len(files)) * 100)
             
             try:
                 # Process single file
@@ -326,12 +325,18 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                     session["stats"]["scores_imported"] += 1
                 if file_data.get("nsfw_label"):
                     session["stats"]["nsfw_detected"] += 1
+                
+                # Update progress after processing the file
+                session["progress"] = int(((i + 1) / len(files)) * 100)
                     
             except Exception as e:
                 error_msg = f"Error processing {file_path.name}: {str(e)}"
                 session["errors"].append(error_msg)
                 session["stats"]["errors"] += 1
                 logging.error(error_msg)
+                
+                # Update progress even on error
+                session["progress"] = int(((i + 1) / len(files)) * 100)
         
         session["status"] = "completed"
         session["progress"] = 100
