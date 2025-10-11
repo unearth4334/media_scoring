@@ -1042,6 +1042,7 @@ aside#sidebar {
     border-radius: 8px; /* Slightly less rounded for mobile */
     transition: all 0.3s ease;
     overflow: visible; /* Allow controls to scroll horizontally */
+    box-sizing: border-box; /* Include padding and border in width calculation */
   }
   
   /* Hide sidebar when toolbar is collapsed */
