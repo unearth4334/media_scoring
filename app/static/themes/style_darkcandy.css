@@ -1104,3 +1104,92 @@ aside#sidebar {
     min-height: 0;
   }
 }
+
+/* =========================================================
+   MOBILE MENU POPOVER (for mobile toolbar)
+   --------------------------------------------------------- */
+.mobile-menu-popover {
+  position: fixed;
+  bottom: 64px; /* Above mobile scorebar */
+  right: 16px;
+  background: rgba(30, 20, 35, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #ff1493;
+  border-radius: 12px;
+  padding: 12px;
+  display: none;
+  z-index: 1002;
+  box-shadow: 0 8px 32px rgba(255, 20, 147, 0.3);
+  min-width: 200px;
+}
+
+.mobile-menu-popover.active {
+  display: block;
+  animation: popoverSlideUp 0.2s ease-out;
+}
+
+.mobile-menu-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 4px;
+  color: #fff;
+}
+
+.mobile-menu-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+/* Toggle switch for mobile menu */
+.mobile-toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+}
+
+.mobile-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.mobile-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #4a3a5a;
+  transition: 0.3s;
+  border-radius: 26px;
+  border: 1px solid #6a4a7a;
+}
+
+.mobile-toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: #fff;
+  transition: 0.3s;
+  border-radius: 50%;
+}
+
+.mobile-toggle-switch input:checked + .mobile-toggle-slider {
+  background-color: #ff1493;
+  border-color: #ff1493;
+}
+
+.mobile-toggle-switch input:checked + .mobile-toggle-slider:before {
+  transform: translateX(22px);
+}
+
+.mobile-toggle-switch input:focus + .mobile-toggle-slider {
+  box-shadow: 0 0 1px #ff1493;
+}

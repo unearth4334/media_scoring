@@ -149,7 +149,8 @@ async def filter_videos(request: FilterRequest):
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
                     "file_type": media_file.file_type,
                     "extension": media_file.extension,
-                    "file_size": media_file.file_size or 0
+                    "file_size": media_file.file_size or 0,
+                    "nsfw": media_file.nsfw or False
                 })
             
             return {
@@ -185,7 +186,8 @@ def _get_files_from_filesystem(state):
             "path": str(p),  # Full path
             "created_at": None,  # Not available from filesystem
             "file_type": "video" if p.suffix.lower() == ".mp4" else "image",
-            "extension": p.suffix.lower()
+            "extension": p.suffix.lower(),
+            "nsfw": False  # Not available from filesystem
         })
     return items
 
@@ -213,7 +215,8 @@ def _get_files_from_database(state):
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
                     "file_type": media_file.file_type,
-                    "extension": media_file.extension
+                    "extension": media_file.extension,
+                    "nsfw": media_file.nsfw or False
                 })
     except Exception as e:
         state.logger.error(f"Failed to get media files from database: {e}")
@@ -416,6 +419,46 @@ async def update_score(req: Request):
     except Exception as e:
         state.logger.error(f"SCORE UPDATE FAILED: file={name} score={score} error={e}")
         raise HTTPException(500, f"Failed to update score: {str(e)}")
+
+
+@router.post("/nsfw")
+async def update_nsfw(req: Request):
+    """Update NSFW status for a media file."""
+    state = get_state()
+    data = await req.json()
+    name = data.get("name")
+    nsfw = bool(data.get("nsfw", False))
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality is required for NSFW updates")
+    
+    try:
+        db_service = state.get_database_service()
+        if db_service is None:
+            raise HTTPException(503, "Database service not available")
+            
+        with db_service as db:
+            # Find the media file by filename
+            media_file = db.session.query(MediaFile).filter(
+                MediaFile.filename == name
+            ).first()
+            
+            if not media_file:
+                raise HTTPException(404, f"File '{name}' not found in database")
+            
+            # Update NSFW status
+            media_file.nsfw = nsfw
+            media_file.nsfw_label = nsfw
+            db.session.commit()
+            
+            state.logger.info(f"NSFW UPDATE SUCCESS: file={name} nsfw={nsfw}")
+            return {"ok": True, "nsfw": nsfw}
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        state.logger.error(f"NSFW UPDATE FAILED: file={name} nsfw={nsfw} error={e}")
+        raise HTTPException(500, f"Failed to update NSFW status: {str(e)}")
 
 
 @router.post("/key")

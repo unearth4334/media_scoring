@@ -637,6 +637,19 @@ function updateMobileScoreBar(score) {
   
   // Update popover selected state
   updateMobileScorePopover(score);
+  
+  // Update mobile menu state
+  updateMobileMenuState();
+}
+
+function updateMobileMenuState() {
+  const currentVideo = filtered[idx];
+  const nsfwToggle = document.getElementById('mobile-nsfw-toggle');
+  
+  if (!nsfwToggle || !currentVideo) return;
+  
+  // Update NSFW toggle state based on current video
+  nsfwToggle.checked = currentVideo.nsfw || false;
 }
 
 function updateMobileScorePopover(score) {
@@ -678,12 +691,19 @@ function initializeMobileScoreBar() {
   const mobileNextBtn = document.getElementById('mobile-next-btn');
   const mobileDownloadBtn = document.getElementById('mobile-download-btn');
   const mobileMaximizeBtn = document.getElementById('mobile-maximize-btn');
+  const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+  const mobileMenuPopover = document.getElementById('mobile-menu-popover');
+  const mobileNsfwToggle = document.getElementById('mobile-nsfw-toggle');
   
   if (!mobileScoreBtn || !mobilePopover) return;
   
   // Score button toggle popover
   mobileScoreBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    // Close menu popover if open
+    if (mobileMenuPopover) {
+      mobileMenuPopover.classList.remove('active');
+    }
     mobilePopover.classList.toggle('active');
   });
   
@@ -732,17 +752,46 @@ function initializeMobileScoreBar() {
     mobileMaximizeBtn.addEventListener('click', toggleMaximize);
   }
   
-  // Close popover when clicking outside
+  // Menu button toggle popover
+  if (mobileMenuBtn && mobileMenuPopover) {
+    mobileMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Close score popover if open
+      mobilePopover.classList.remove('active');
+      mobileMenuPopover.classList.toggle('active');
+    });
+  }
+  
+  // NSFW toggle handler
+  if (mobileNsfwToggle) {
+    mobileNsfwToggle.addEventListener('change', (e) => {
+      const currentVideo = filtered[idx];
+      if (currentVideo) {
+        const nsfw = e.target.checked;
+        updateNsfwStatus(currentVideo.name, nsfw);
+      }
+    });
+  }
+  
+  // Close popovers when clicking outside
   document.addEventListener('click', (e) => {
     if (!mobilePopover.contains(e.target) && !mobileScoreBtn.contains(e.target)) {
       mobilePopover.classList.remove('active');
     }
+    if (mobileMenuPopover && !mobileMenuPopover.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
+      mobileMenuPopover.classList.remove('active');
+    }
   });
   
-  // Close popover on escape key
+  // Close popovers on escape key
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && mobilePopover.classList.contains('active')) {
-      mobilePopover.classList.remove('active');
+    if (e.key === 'Escape') {
+      if (mobilePopover.classList.contains('active')) {
+        mobilePopover.classList.remove('active');
+      }
+      if (mobileMenuPopover && mobileMenuPopover.classList.contains('active')) {
+        mobileMenuPopover.classList.remove('active');
+      }
     }
   });
 }
@@ -1057,6 +1106,49 @@ async function postScore(score){
     console.error('Network error updating score:', error);
   }
 }
+
+async function updateNsfwStatus(filename, nsfw) {
+  try {
+    const response = await fetch('/api/nsfw', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ name: filename, nsfw: nsfw })
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to update NSFW status:', response.status, response.statusText);
+      // Revert toggle on failure
+      const toggle = document.getElementById('mobile-nsfw-toggle');
+      if (toggle) toggle.checked = !nsfw;
+      return;
+    }
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error('NSFW update failed:', result);
+      // Revert toggle on failure
+      const toggle = document.getElementById('mobile-nsfw-toggle');
+      if (toggle) toggle.checked = !nsfw;
+      return;
+    }
+    
+    // Update local state if API call succeeded
+    const source = videos.find(x => x.name === filename);
+    if (source) source.nsfw = nsfw;
+    const v = filtered[idx];
+    if (v && v.name === filename) {
+      v.nsfw = nsfw;
+    }
+    
+    console.log('NSFW status updated:', filename, nsfw);
+  } catch (error) {
+    console.error('Network error updating NSFW status:', error);
+    // Revert toggle on failure
+    const toggle = document.getElementById('mobile-nsfw-toggle');
+    if (toggle) toggle.checked = !nsfw;
+  }
+}
+
 async function postKey(key){
   const v = filtered[idx];
   await fetch("/api/key", {
