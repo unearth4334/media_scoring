@@ -328,6 +328,33 @@
       color: #888;
       margin-top: 5px;
     }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      /* Fix width issues for directory and pattern inputs on mobile */
+      .form-group-inline {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+      }
+
+      .form-group-inline input[type="text"] {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .browse-btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .form-group input[type="text"],
+      .form-group input[type="number"],
+      .form-group select {
+        min-width: 0;
+        max-width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
