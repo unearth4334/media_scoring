@@ -218,7 +218,7 @@
       height: 100%;
       background: linear-gradient(90deg, #4a90e2, #28a745);
       width: 0%;
-      transition: width 0.3s ease;
+      transition: width 0.3s ease-out;
     }
 
     .progress-info {
@@ -232,6 +232,7 @@
       font-size: 0.9em;
       color: var(--accent-color, #4a90e2);
       margin: 5px 0;
+      transition: opacity 0.15s ease-in-out;
     }
 
     .stats-grid {
@@ -252,6 +253,42 @@
       font-size: 1.5em;
       font-weight: bold;
       color: var(--accent-color, #4a90e2);
+      transition: transform 0.2s ease-out;
+    }
+
+    .stat-number.updated {
+      animation: pulse 0.3s ease-out;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    /* Live streaming indicator */
+    .progress-section.streaming::before {
+      content: '🔴 LIVE';
+      position: absolute;
+      top: -10px;
+      right: 10px;
+      background: #ff4444;
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.8em;
+      font-weight: bold;
+      animation: blink 1.5s infinite;
+      z-index: 10;
+    }
+
+    .progress-section {
+      position: relative;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
     }
 
     .stat-label {
@@ -799,6 +836,7 @@
     let currentSessionId = null;
     let processingTimer = null;
     let commitTimer = null;
+    let progressEventSource = null;
     let currentPath = '';
     let selectedPath = '';
 
@@ -867,8 +905,8 @@
         updateWorkflowStep(2);
         showSection('progress-section');
         
-        // Start polling for progress
-        startProgressPolling();
+        // Start real-time progress streaming
+        startProgressStreaming();
 
       } catch (error) {
         alert(`Error: ${error.message}`);
@@ -877,53 +915,108 @@
       }
     }
 
-    function startProgressPolling() {
-      processingTimer = setInterval(async () => {
+    function startProgressStreaming() {
+      // Close any existing stream
+      if (progressEventSource) {
+        progressEventSource.close();
+      }
+
+      // Add streaming indicator
+      const progressSection = document.querySelector('.progress-section');
+      if (progressSection) {
+        progressSection.classList.add('streaming');
+      }
+
+      // Create new EventSource for SSE streaming
+      progressEventSource = new EventSource(`/api/ingest/stream/${currentSessionId}`);
+
+      progressEventSource.onmessage = function(event) {
         try {
-          const response = await fetch(`/api/ingest/status/${currentSessionId}`);
-          if (!response.ok) {
-            throw new Error('Failed to get status');
+          const status = JSON.parse(event.data);
+          
+          // Skip keepalive messages
+          if (status.keepalive) {
+            return;
           }
 
-          const status = await response.json();
           updateProgressDisplay(status);
 
           if (status.status === 'completed') {
-            clearInterval(processingTimer);
+            progressEventSource.close();
+            progressEventSource = null;
+            progressSection?.classList.remove('streaming');
             showPreviewSection();
           } else if (status.status === 'error') {
-            clearInterval(processingTimer);
+            progressEventSource.close();
+            progressEventSource = null;
+            progressSection?.classList.remove('streaming');
             showError(`Processing failed: ${status.error || 'Unknown error'}`);
           }
 
         } catch (error) {
-          console.error('Error polling status:', error);
+          console.error('Error parsing SSE data:', error);
         }
-      }, 1000);
+      };
+
+      progressEventSource.onerror = function(event) {
+        console.error('SSE connection error:', event);
+        
+        // Try to reconnect after a delay (EventSource handles this automatically)
+        // If connection fails repeatedly, fall back to polling as last resort
+        setTimeout(() => {
+          if (progressEventSource && progressEventSource.readyState === EventSource.CLOSED) {
+            console.log('Attempting to reconnect SSE stream...');
+            startProgressStreaming();
+          }
+        }, 5000);
+      };
+
+      progressEventSource.onopen = function(event) {
+        console.log('SSE connection established');
+      };
     }
 
     function updateProgressDisplay(status) {
+      // Update progress text
       document.getElementById('progress-text').textContent = 
         `Processing ${status.processed_files}/${status.total_files} files`;
       document.getElementById('progress-percentage').textContent = `${status.progress}%`;
-      document.getElementById('progress-bar').style.width = `${status.progress}%`;
       
+      // Smooth progress bar animation
+      const progressBar = document.getElementById('progress-bar');
+      progressBar.style.width = `${status.progress}%`;
+      
+      // Update current file with fade effect
       if (status.current_file) {
-        document.getElementById('current-file').textContent = `Current: ${status.current_file}`;
+        const currentFileEl = document.getElementById('current-file');
+        currentFileEl.style.opacity = '0.5';
+        setTimeout(() => {
+          currentFileEl.textContent = `Current: ${status.current_file}`;
+          currentFileEl.style.opacity = '1';
+        }, 150);
       }
 
-      // Update stats
+      // Update stats with pulse animation on change
       const stats = status.stats;
-      document.getElementById('stat-processed').textContent = stats.processed_files;
-      document.getElementById('stat-metadata').textContent = stats.metadata_extracted;
-      document.getElementById('stat-keywords').textContent = stats.keywords_added;
-      document.getElementById('stat-scores').textContent = stats.scores_imported;
-      document.getElementById('stat-nsfw').textContent = stats.nsfw_detected;
-      document.getElementById('stat-errors').textContent = stats.errors;
+      updateStatWithAnimation('stat-processed', stats.processed_files);
+      updateStatWithAnimation('stat-metadata', stats.metadata_extracted);
+      updateStatWithAnimation('stat-keywords', stats.keywords_added);
+      updateStatWithAnimation('stat-scores', stats.scores_imported);
+      updateStatWithAnimation('stat-nsfw', stats.nsfw_detected);
+      updateStatWithAnimation('stat-errors', stats.errors);
 
       // Show errors if any
       if (status.errors && status.errors.length > 0) {
         showErrors(status.errors);
+      }
+    }
+
+    function updateStatWithAnimation(elementId, newValue) {
+      const el = document.getElementById(elementId);
+      if (el && el.textContent !== String(newValue)) {
+        el.classList.add('updated');
+        el.textContent = newValue;
+        setTimeout(() => el.classList.remove('updated'), 300);
       }
     }
 
@@ -1218,6 +1311,14 @@
     document.addEventListener('DOMContentLoaded', () => {
       updateWorkflowStep(1);
       showSection('parameters-form');
+    });
+
+    // Cleanup SSE connection when page is unloaded
+    window.addEventListener('beforeunload', () => {
+      if (progressEventSource) {
+        progressEventSource.close();
+        progressEventSource = null;
+      }
     });
   </script>
 </body>

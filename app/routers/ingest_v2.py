@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Any
 import shutil
 
 from fastapi import APIRouter, Request, HTTPException, BackgroundTasks
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
@@ -28,6 +28,9 @@ templates = Jinja2Templates(directory="app/templates")
 
 # In-memory storage for processing sessions
 processing_sessions: Dict[str, Dict] = {}
+
+# Event queues for SSE progress streaming
+progress_queues: Dict[str, asyncio.Queue] = {}
 
 
 class IngestParameters(BaseModel):
@@ -209,6 +212,71 @@ async def get_processing_status(session_id: str):
     }
 
 
+@router.get("/api/ingest/stream/{session_id}")
+async def stream_progress(session_id: str):
+    """Stream real-time progress updates via Server-Sent Events."""
+    if session_id not in processing_sessions:
+        raise HTTPException(404, "Session not found")
+    
+    # Create event queue for this client
+    event_queue = asyncio.Queue()
+    progress_queues[session_id] = event_queue
+    
+    async def event_generator():
+        try:
+            # Send initial status
+            initial_status = get_session_status(processing_sessions[session_id])
+            yield f"data: {json.dumps(initial_status)}\n\n"
+            
+            # Stream updates
+            while True:
+                try:
+                    # Wait for update with timeout for keepalive
+                    update = await asyncio.wait_for(event_queue.get(), timeout=30.0)
+                    yield f"data: {json.dumps(update)}\n\n"
+                    
+                    # Check if processing is complete
+                    if update.get("status") in ["completed", "error"]:
+                        break
+                        
+                except asyncio.TimeoutError:
+                    # Send keepalive
+                    yield "data: {\"keepalive\": true}\n\n"
+                    
+        except asyncio.CancelledError:
+            # Client disconnected
+            pass
+        finally:
+            # Cleanup queue
+            if session_id in progress_queues:
+                del progress_queues[session_id]
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # Disable nginx buffering
+        }
+    )
+
+
+def get_session_status(session: Dict) -> Dict:
+    """Extract current session status for streaming."""
+    return {
+        "session_id": session["session_id"],
+        "status": session["status"],
+        "progress": session["progress"],
+        "total_files": session["total_files"],
+        "current_file": session["current_file"],
+        "processed_files": session["processed_files"],
+        "stats": session["stats"],
+        "errors": session["errors"][-5:],  # Last 5 errors for streaming
+        "timestamp": datetime.now().isoformat()
+    }
+
+
 @router.get("/api/ingest/report/{session_id}")
 async def get_preview_report(session_id: str):
     """Generate and serve the HTML preview report."""
@@ -287,6 +355,10 @@ async def cleanup_session(session_id: str):
     if session_id in processing_sessions:
         del processing_sessions[session_id]
     
+    # Clean up SSE progress queue
+    if session_id in progress_queues:
+        del progress_queues[session_id]
+    
     # Clean up any temporary files
     temp_dir = Path(tempfile.gettempdir()) / "media_scoring_reports"
     if temp_dir.exists():
@@ -300,14 +372,25 @@ async def cleanup_session(session_id: str):
 
 
 async def process_files_background(session_id: str, files: List[Path], parameters: IngestParameters):
-    """Background task to process files."""
+    """Background task to process files with real-time streaming."""
     session = processing_sessions[session_id]
+    
+    def emit_update():
+        """Emit progress update to SSE stream."""
+        if session_id in progress_queues:
+            try:
+                status = get_session_status(session)
+                progress_queues[session_id].put_nowait(status)
+            except Exception as e:
+                logging.warning(f"Failed to emit update for session {session_id}: {e}")
     
     try:
         session["status"] = "processing"
+        emit_update()  # Emit initial processing status
         
         for i, file_path in enumerate(files):
             session["current_file"] = file_path.name
+            emit_update()  # Emit when starting new file
             
             try:
                 # Process single file
@@ -328,22 +411,26 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 
                 # Update progress after processing file
                 session["progress"] = int(((i + 1) / len(files)) * 100)
+                emit_update()  # Emit after each file is processed
                     
             except Exception as e:
                 error_msg = f"Error processing {file_path.name}: {str(e)}"
                 session["errors"].append(error_msg)
                 session["stats"]["errors"] += 1
                 logging.error(error_msg)
+                emit_update()  # Emit when error occurs
         
         session["status"] = "completed"
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
+        emit_update()  # Emit completion status
         
     except Exception as e:
         session["status"] = "error"
         session["error"] = str(e)
         session["end_time"] = datetime.now().isoformat()
         logging.error(f"Processing failed for session {session_id}: {e}")
+        emit_update()  # Emit error status
 
 
 async def process_single_file(file_path: Path, parameters: IngestParameters) -> Dict[str, Any]:
