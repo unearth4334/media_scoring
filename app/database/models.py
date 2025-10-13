@@ -35,7 +35,8 @@ class MediaFile(Base):
     nsfw_threshold = Column(Float, nullable=True)  # Threshold used for classification
     media_file_id = Column(String(64), nullable=True)  # SHA256 hash of exact pixel content
     phash = Column(String(64), nullable=True)  # Perceptual hash for similarity detection
-    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    original_created_at = Column(DateTime, nullable=True)  # Original file creation date from filesystem/EXIF
+    created_at = Column(DateTime, default=dt.datetime.utcnow)  # Database record creation
     updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
     last_accessed = Column(DateTime)
     
@@ -54,6 +55,7 @@ class MediaFile(Base):
         Index('idx_media_file_id', 'media_file_id'),
         Index('idx_media_phash', 'phash'),
         # Enhanced indexes for sorting performance
+        Index('idx_media_original_created_at', 'original_created_at'),
         Index('idx_media_created_at', 'created_at'),
         Index('idx_media_file_size', 'file_size'),
         Index('idx_media_filename', 'filename'),

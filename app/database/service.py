@@ -174,7 +174,13 @@ class DatabaseService:
         if sort_field == "name":
             query = query.order_by(sort_func(MediaFile.filename))
         elif sort_field == "date":
-            query = query.order_by(sort_func(MediaFile.created_at), MediaFile.filename)
+            # Use original_created_at if available, fallback to created_at
+            query = query.order_by(
+                sort_func(MediaFile.original_created_at.is_(None)), 
+                sort_func(MediaFile.original_created_at), 
+                sort_func(MediaFile.created_at), 
+                MediaFile.filename
+            )
         elif sort_field == "size": 
             query = query.order_by(sort_func(MediaFile.file_size), MediaFile.filename)
         elif sort_field == "rating":
@@ -197,6 +203,12 @@ class DatabaseService:
     def store_media_metadata(self, file_path: Path, metadata: Dict) -> MediaMetadata:
         """Store or update metadata for a media file."""
         media_file = self.get_or_create_media_file(file_path)
+        
+        # Update MediaFile's original_created_at if provided and not already set
+        if 'original_created_at' in metadata and metadata['original_created_at'] is not None:
+            if media_file.original_created_at is None:
+                from datetime import datetime
+                media_file.original_created_at = datetime.fromtimestamp(metadata['original_created_at'])
         
         # Check if metadata already exists
         existing_metadata = self.session.query(MediaMetadata).filter(

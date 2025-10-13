@@ -2,6 +2,7 @@
 
 import json
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, List
 from enum import Enum
@@ -147,6 +148,7 @@ async def filter_videos(request: FilterRequest):
                     "score": media_file.score or 0,
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                    "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
                     "file_type": media_file.file_type,
                     "extension": media_file.extension,
                     "file_size": media_file.file_size or 0,
@@ -179,12 +181,20 @@ def _get_files_from_filesystem(state):
     """Get media files from file system (original behavior)."""
     items = []
     for p in state.file_list:
+        # Get file modification time as best approximation of creation date
+        try:
+            stat = p.stat()
+            original_created_at = datetime.fromtimestamp(stat.st_mtime).isoformat()
+        except (OSError, ValueError):
+            original_created_at = None
+            
         items.append({
             "name": p.name,
             "url": f"/media/{p.name}",
             "score": read_score(p) if read_score(p) is not None else 0,
             "path": str(p),  # Full path
             "created_at": None,  # Not available from filesystem
+            "original_created_at": original_created_at,  # Use file modification time
             "file_type": "video" if p.suffix.lower() == ".mp4" else "image",
             "extension": p.suffix.lower(),
             "nsfw": False  # Not available from filesystem
@@ -214,6 +224,7 @@ def _get_files_from_database(state):
                     "score": media_file.score or 0,
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                    "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
                     "file_type": media_file.file_type,
                     "extension": media_file.extension,
                     "nsfw": media_file.nsfw or False

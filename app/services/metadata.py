@@ -3,7 +3,10 @@
 import hashlib
 import json
 import logging
+import os
+import platform
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
 
@@ -22,6 +25,66 @@ except ImportError:
     imagehash = None
 
 logger = logging.getLogger(__name__)
+
+
+def extract_original_creation_date(file_path: Path, stat_result) -> Optional[float]:
+    """Extract the original creation date of a media file from various sources."""
+    creation_times = []
+    
+    try:
+        # Try to get file creation time (platform dependent)
+        if platform.system() == "Windows":
+            # Windows has st_ctime as creation time
+            creation_times.append(stat_result.st_ctime)
+        elif platform.system() == "Darwin":  # macOS
+            # macOS has st_birthtime for creation time (if available)
+            if hasattr(stat_result, 'st_birthtime'):
+                creation_times.append(stat_result.st_birthtime)
+        
+        # Always include modification time as fallback
+        creation_times.append(stat_result.st_mtime)
+        
+        # For images, try to extract EXIF creation date
+        if file_path.suffix.lower() in {".jpg", ".jpeg"}:
+            exif_date = extract_exif_creation_date(file_path)
+            if exif_date:
+                creation_times.append(exif_date)
+        
+        # Return the earliest (oldest) date found
+        if creation_times:
+            return min(creation_times)
+            
+    except Exception as e:
+        logger.warning(f"Failed to extract creation date for {file_path}: {e}")
+    
+    return None
+
+
+def extract_exif_creation_date(file_path: Path) -> Optional[float]:
+    """Extract creation date from EXIF data for JPEG images."""
+    try:
+        if Image is None:
+            return None
+            
+        from PIL.ExifTags import TAGS
+        
+        with Image.open(file_path) as img:
+            exif_data = img.getexif()
+            if exif_data:
+                # Look for DateTime tags
+                for tag_id, value in exif_data.items():
+                    tag = TAGS.get(tag_id, tag_id)
+                    if tag in ["DateTime", "DateTimeOriginal", "DateTimeDigitized"]:
+                        # Parse datetime string like "2024:12:08 15:30:45"
+                        try:
+                            dt = datetime.strptime(str(value), "%Y:%m:%d %H:%M:%S")
+                            return dt.timestamp()
+                        except ValueError:
+                            continue
+    except Exception as e:
+        logger.debug(f"Could not extract EXIF date from {file_path}: {e}")
+    
+    return None
 
 
 def extract_and_store_metadata(file_path: Path) -> Optional[Dict[str, Any]]:
@@ -53,6 +116,9 @@ def extract_metadata(file_path: Path) -> Dict[str, Any]:
         stat = file_path.stat()
         metadata['file_size'] = stat.st_size
         metadata['file_modified_at'] = stat.st_mtime
+        
+        # Extract original creation date from various sources
+        metadata['original_created_at'] = extract_original_creation_date(file_path, stat)
         
         if ext == ".mp4":
             metadata.update(extract_video_metadata(file_path))
