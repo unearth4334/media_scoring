@@ -294,16 +294,28 @@
         <span class="mobile-toggle-slider"></span>
       </label>
     </div>
+    <button class="mobile-menu-item mobile-menu-button" id="mobile-info-btn">
+      <span class="mobile-menu-icon">ℹ️</span>
+      <span class="mobile-menu-label">View Info</span>
+    </button>
+  </div>
+
+  <!-- Desktop Menu Popover -->
+  <div class="desktop-menu-popover" id="desktop-menu-popover" style="display: none;">
+    <button class="desktop-menu-item" id="desktop-info-btn">
+      <span class="desktop-menu-icon">ℹ️</span>
+      <span class="desktop-menu-label">View Info</span>
+    </button>
   </div>
 
   <!-- Info Pane Overlay -->
-  <div id="info-pane" class="info-pane" style="display: none;">
+  <div id="info-pane" class="info-pane">
     <div class="info-pane-header">
       <h3>Media Information</h3>
       <button id="close-info-pane" class="close-btn">×</button>
     </div>
-    <div class="info-pane-content">
-      <!-- Dynamic content will be populated here -->
+    <div class="info-pane-content" id="info-pane-content">
+      <div class="info-loading">Loading...</div>
     </div>
   </div>
 

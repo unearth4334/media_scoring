@@ -1524,33 +1524,393 @@ if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFilt
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);
 
-// Info Pane Toggle and Populate
+/* =========================================================
+   INFO PANE FUNCTIONALITY
+   --------------------------------------------------------- */
+
+let currentMediaInfo = null;
+let infoPaneVisible = false;
+
+// Info pane elements
 const infoPane = document.getElementById('info-pane');
-const closeInfoPane = document.getElementById('close-info-pane');
+const closeInfoPaneBtn = document.getElementById('close-info-pane');
+const desktopMenuBtn = document.getElementById('desktop-menu-btn');
+const desktopMenuPopover = document.getElementById('desktop-menu-popover');
+const desktopInfoBtn = document.getElementById('desktop-info-btn');
+const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+const mobileMenuPopover = document.getElementById('mobile-menu-popover');
+const mobileInfoBtn = document.getElementById('mobile-info-btn');
 
-// Function to toggle the info pane
-function toggleInfoPane(mediaInfo) {
-    if (infoPane.style.display === 'none') {
-        populateInfoPane(mediaInfo);
-        infoPane.style.display = 'block';
-    } else {
-        infoPane.style.display = 'none';
+// Fetch media information from backend
+async function fetchMediaInfo(filename) {
+  try {
+    const response = await fetch(`/api/media/info/${encodeURIComponent(filename)}`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media info: ${response.statusText}`);
     }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching media info:', error);
+    return null;
+  }
 }
 
-// Function to populate the info pane dynamically
-function populateInfoPane(mediaInfo) {
-    const content = infoPane.querySelector('.info-pane-content');
-    content.innerHTML = '';
-
-    for (const [key, value] of Object.entries(mediaInfo)) {
-        const infoItem = document.createElement('div');
-        infoItem.innerHTML = `<strong>${key}:</strong> ${value}`;
-        content.appendChild(infoItem);
-    }
+// Format file size
+function formatFileSize(bytes) {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
-// Close button functionality
-closeInfoPane.addEventListener('click', () => {
+// Format duration
+function formatDuration(seconds) {
+  if (!seconds) return 'N/A';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  
+  if (h > 0) {
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  }
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+// Format date
+function formatDate(isoString) {
+  if (!isoString) return 'N/A';
+  try {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return isoString;
+  }
+}
+
+// Format resolution
+function formatResolution(resolution) {
+  if (!resolution) return 'N/A';
+  const mp = (resolution / 1000000).toFixed(1);
+  return `${mp} MP`;
+}
+
+// Format score as stars
+function formatScore(score) {
+  if (score === null || score === undefined || score === 0) return '☆☆☆☆☆ (Unrated)';
+  if (score === -1) return '✕ (Rejected)';
+  
+  const filled = '★'.repeat(score);
+  const empty = '☆'.repeat(5 - score);
+  return `${filled}${empty} (${score}/5)`;
+}
+
+// Create info item HTML
+function createInfoItem(label, value, isPath = false) {
+  const item = document.createElement('div');
+  item.className = 'info-item';
+  
+  const labelDiv = document.createElement('div');
+  labelDiv.className = 'info-label';
+  labelDiv.textContent = label;
+  
+  const valueDiv = document.createElement('div');
+  valueDiv.className = isPath ? 'info-value info-value-path' : 'info-value';
+  
+  if (isPath && value) {
+    const pathSpan = document.createElement('span');
+    pathSpan.textContent = value;
+    pathSpan.style.flex = '1';
+    pathSpan.style.overflow = 'hidden';
+    pathSpan.style.textOverflow = 'ellipsis';
+    
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'info-copy-btn';
+    copyBtn.textContent = 'Copy';
+    copyBtn.onclick = () => {
+      navigator.clipboard.writeText(value).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+      });
+    };
+    
+    valueDiv.appendChild(pathSpan);
+    valueDiv.appendChild(copyBtn);
+  } else if (label === 'Score') {
+    valueDiv.innerHTML = `<span class="info-stars">${value}</span>`;
+  } else {
+    valueDiv.textContent = value;
+  }
+  
+  item.appendChild(labelDiv);
+  item.appendChild(valueDiv);
+  return item;
+}
+
+// Create metadata section
+function createMetadataSection(title, data) {
+  const section = document.createElement('div');
+  section.className = 'info-metadata-section';
+  
+  const toggle = document.createElement('button');
+  toggle.className = 'info-metadata-toggle';
+  toggle.innerHTML = `<span>${title}</span><span>▼</span>`;
+  
+  const content = document.createElement('div');
+  content.className = 'info-metadata-content';
+  
+  if (typeof data === 'object' && data !== null) {
+    for (const [key, value] of Object.entries(data)) {
+      const metaItem = document.createElement('div');
+      metaItem.className = 'info-metadata-item';
+      
+      const keySpan = document.createElement('span');
+      keySpan.className = 'info-metadata-key';
+      keySpan.textContent = key + ':';
+      
+      const valueSpan = document.createElement('span');
+      valueSpan.className = 'info-metadata-value';
+      valueSpan.textContent = typeof value === 'object' ? JSON.stringify(value) : value;
+      
+      metaItem.appendChild(keySpan);
+      metaItem.appendChild(valueSpan);
+      content.appendChild(metaItem);
+    }
+  } else {
+    content.textContent = String(data);
+  }
+  
+  toggle.onclick = () => {
+    content.classList.toggle('expanded');
+    toggle.querySelector('span:last-child').textContent = content.classList.contains('expanded') ? '▲' : '▼';
+  };
+  
+  section.appendChild(toggle);
+  section.appendChild(content);
+  return section;
+}
+
+// Populate info pane with media data
+function populateInfoPane(mediaData) {
+  const content = document.getElementById('info-pane-content');
+  content.innerHTML = '';
+  
+  if (!mediaData) {
+    content.innerHTML = '<div class="info-loading">Failed to load media information</div>';
+    return;
+  }
+  
+  // Get configured categories (for now, show all available)
+  const categories = [
+    'filename',
+    'file_size',
+    'dimensions',
+    'duration',
+    'creation_date',
+    'modified_date',
+    'file_path',
+    'file_type',
+    'resolution',
+    'aspect_ratio',
+    'frame_rate',
+    'bitrate',
+    'codec',
+    'score',
+    'metadata'
+  ];
+  
+  for (const category of categories) {
+    let value = null;
+    let label = category.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    
+    switch (category) {
+      case 'filename':
+        value = mediaData.filename || 'N/A';
+        break;
+      case 'file_size':
+        value = formatFileSize(mediaData.file_size || 0);
+        break;
+      case 'dimensions':
+        if (mediaData.dimensions) {
+          value = `${mediaData.dimensions.width}×${mediaData.dimensions.height}`;
+        } else {
+          value = 'N/A';
+        }
+        break;
+      case 'duration':
+        if (mediaData.duration) {
+          value = formatDuration(mediaData.duration);
+        } else {
+          continue; // Skip if not available
+        }
+        break;
+      case 'creation_date':
+        value = formatDate(mediaData.creation_date);
+        break;
+      case 'modified_date':
+        value = formatDate(mediaData.modified_date);
+        break;
+      case 'file_path':
+        value = mediaData.file_path || 'N/A';
+        content.appendChild(createInfoItem(label, value, true));
+        continue;
+      case 'file_type':
+        value = (mediaData.file_type || 'unknown').toUpperCase();
+        break;
+      case 'resolution':
+        if (mediaData.resolution) {
+          value = formatResolution(mediaData.resolution);
+        } else {
+          continue;
+        }
+        break;
+      case 'aspect_ratio':
+        value = mediaData.aspect_ratio || 'N/A';
+        break;
+      case 'frame_rate':
+        if (mediaData.frame_rate) {
+          value = `${Math.round(mediaData.frame_rate)} fps`;
+        } else {
+          continue;
+        }
+        break;
+      case 'bitrate':
+        if (mediaData.bitrate) {
+          value = formatFileSize(mediaData.bitrate) + 'ps';
+        } else {
+          continue;
+        }
+        break;
+      case 'codec':
+        value = mediaData.codec || 'N/A';
+        break;
+      case 'score':
+        value = formatScore(mediaData.score);
+        break;
+      case 'metadata':
+        if (mediaData.metadata) {
+          // Add expandable metadata sections
+          if (mediaData.metadata.exif) {
+            content.appendChild(createMetadataSection('EXIF Data', mediaData.metadata.exif));
+          }
+          if (mediaData.metadata.png_text) {
+            content.appendChild(createMetadataSection('PNG Metadata', mediaData.metadata.png_text));
+          }
+          if (mediaData.metadata.generation_params) {
+            content.appendChild(createMetadataSection('Generation Parameters', mediaData.metadata.generation_params));
+          }
+        }
+        continue;
+      default:
+        continue;
+    }
+    
+    if (value !== null) {
+      content.appendChild(createInfoItem(label, value));
+    }
+  }
+}
+
+// Toggle info pane
+async function toggleInfoPane() {
+  if (infoPaneVisible) {
+    closeInfoPane();
+  } else {
+    await openInfoPane();
+  }
+}
+
+// Open info pane
+async function openInfoPane() {
+  if (!currentFileName) {
+    alert('No media file selected');
+    return;
+  }
+  
+  infoPane.classList.add('visible');
+  infoPane.style.display = 'block';
+  infoPaneVisible = true;
+  
+  // Show loading state
+  const content = document.getElementById('info-pane-content');
+  content.innerHTML = '<div class="info-loading">Loading...</div>';
+  
+  // Fetch and populate data
+  const mediaInfo = await fetchMediaInfo(currentFileName);
+  if (mediaInfo) {
+    currentMediaInfo = mediaInfo;
+    populateInfoPane(mediaInfo);
+  }
+  
+  // Close menus
+  closeDesktopMenu();
+  closeMobileMenu();
+}
+
+// Close info pane
+function closeInfoPane() {
+  infoPane.classList.remove('visible');
+  setTimeout(() => {
     infoPane.style.display = 'none';
+  }, 300);
+  infoPaneVisible = false;
+}
+
+// Desktop menu toggle
+function toggleDesktopMenu() {
+  if (desktopMenuPopover.style.display === 'none' || !desktopMenuPopover.style.display) {
+    desktopMenuPopover.style.display = 'block';
+  } else {
+    closeDesktopMenu();
+  }
+}
+
+function closeDesktopMenu() {
+  desktopMenuPopover.style.display = 'none';
+}
+
+// Mobile menu functions (enhance existing)
+function closeMobileMenu() {
+  if (mobileMenuPopover) {
+    mobileMenuPopover.classList.remove('visible');
+  }
+}
+
+// Event listeners
+if (closeInfoPaneBtn) {
+  closeInfoPaneBtn.addEventListener('click', closeInfoPane);
+}
+
+if (desktopMenuBtn) {
+  desktopMenuBtn.addEventListener('click', toggleDesktopMenu);
+}
+
+if (desktopInfoBtn) {
+  desktopInfoBtn.addEventListener('click', openInfoPane);
+}
+
+if (mobileInfoBtn) {
+  mobileInfoBtn.addEventListener('click', openInfoPane);
+}
+
+// Close info pane with ESC key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && infoPaneVisible) {
+    closeInfoPane();
+  }
+});
+
+// Close menus when clicking outside
+document.addEventListener('click', (e) => {
+  if (desktopMenuPopover && desktopMenuPopover.style.display === 'block') {
+    if (!desktopMenuPopover.contains(e.target) && !desktopMenuBtn.contains(e.target)) {
+      closeDesktopMenu();
+    }
+  }
 });

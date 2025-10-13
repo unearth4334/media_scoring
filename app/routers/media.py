@@ -17,6 +17,11 @@ from ..services.thumbnails import start_thumbnail_generation
 from ..utils.png_chunks import read_png_parameters_text
 from ..database.models import MediaFile
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 
 class SortField(str, Enum):
     """Valid sort fields for media files."""
@@ -548,3 +553,189 @@ async def list_sibling_directories(path: str = ""):
         return {"directories": directories, "current_path": str(target_path), "parent_path": str(parent_path)}
     except Exception as e:
         raise HTTPException(500, f"Failed to list sibling directories: {str(e)}")
+
+
+@router.get("/info/{name:path}")
+def get_media_info(name: str):
+    """Get comprehensive information about a media file for the info pane."""
+    state = get_state()
+    
+    # Find the file
+    target = None
+    media_file = None
+    
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        target = Path(media_file.file_path)
+                        if not target.exists():
+                            # Try container path translation
+                            if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                                if media_file.file_path.startswith(state.settings.user_path_prefix):
+                                    container_path = media_file.file_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                    target = Path(container_path)
+        except Exception as e:
+            state.logger.error(f"Database error when looking up file info: {e}")
+    
+    if target is None or not target.exists():
+        target = (state.video_dir / name).resolve()
+        try:
+            target.relative_to(state.video_dir)
+        except Exception:
+            raise HTTPException(403, "Forbidden path")
+        
+        if not target.exists() or not target.is_file():
+            raise HTTPException(404, "File not found")
+    
+    # Gather file information
+    info = {}
+    stat = target.stat()
+    ext = target.suffix.lower()
+    
+    # Basic file information
+    info["filename"] = target.name
+    info["file_size"] = stat.st_size
+    info["file_path"] = str(target)
+    info["file_type"] = ext[1:] if ext else "unknown"
+    info["modified_date"] = datetime.fromtimestamp(stat.st_mtime).isoformat()
+    
+    # Get creation date (platform specific)
+    try:
+        if hasattr(stat, 'st_birthtime'):  # macOS
+            info["creation_date"] = datetime.fromtimestamp(stat.st_birthtime).isoformat()
+        else:  # Linux/Windows
+            info["creation_date"] = datetime.fromtimestamp(stat.st_ctime).isoformat()
+    except Exception:
+        info["creation_date"] = None
+    
+    # Get score
+    info["score"] = read_score(target) if read_score(target) is not None else 0
+    
+    # Get dimensions, duration, and other media-specific info
+    if ext == ".mp4":
+        try:
+            cmd = [
+                "ffprobe", "-v", "error",
+                "-select_streams", "video:0",
+                "-show_entries", "stream=width,height,r_frame_rate,duration,bit_rate,codec_name",
+                "-of", "json", str(target)
+            ]
+            cp = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            ffprobe_info = json.loads(cp.stdout or "{}")
+            if isinstance(ffprobe_info, dict) and ffprobe_info.get("streams"):
+                stream = ffprobe_info["streams"][0]
+                
+                width = stream.get("width")
+                height = stream.get("height")
+                if width and height:
+                    info["dimensions"] = {"width": int(width), "height": int(height)}
+                    info["resolution"] = int(width) * int(height)
+                    # Calculate aspect ratio
+                    from math import gcd
+                    g = gcd(int(width), int(height))
+                    info["aspect_ratio"] = f"{int(width)//g}:{int(height)//g}"
+                
+                if "duration" in stream:
+                    info["duration"] = float(stream["duration"])
+                
+                if "r_frame_rate" in stream:
+                    fps_parts = stream["r_frame_rate"].split("/")
+                    if len(fps_parts) == 2 and int(fps_parts[1]) != 0:
+                        info["frame_rate"] = int(fps_parts[0]) / int(fps_parts[1])
+                
+                if "bit_rate" in stream:
+                    info["bitrate"] = int(stream["bit_rate"])
+                
+                if "codec_name" in stream:
+                    info["codec"] = stream["codec_name"]
+        except Exception as e:
+            state.logger.error(f"Failed to get video info: {e}")
+    
+    elif ext in {".png", ".jpg", ".jpeg"}:
+        try:
+            if Image is not None:
+                with Image.open(target) as im:
+                    width, height = im.size
+                    info["dimensions"] = {"width": int(width), "height": int(height)}
+                    info["resolution"] = int(width) * int(height)
+                    
+                    # Calculate aspect ratio
+                    from math import gcd
+                    g = gcd(int(width), int(height))
+                    info["aspect_ratio"] = f"{int(width)//g}:{int(height)//g}"
+                    
+                    # Get EXIF data
+                    exif_data = {}
+                    if hasattr(im, '_getexif') and im._getexif():
+                        from PIL import ExifTags
+                        exif = im._getexif()
+                        for tag_id, value in exif.items():
+                            tag = ExifTags.TAGS.get(tag_id, tag_id)
+                            exif_data[tag] = str(value)
+                    
+                    if exif_data:
+                        info["metadata"] = {"exif": exif_data}
+            
+            # Get PNG text parameters
+            if ext == ".png":
+                png_text = read_png_parameters_text(target)
+                if png_text:
+                    if "metadata" not in info:
+                        info["metadata"] = {}
+                    info["metadata"]["png_text"] = png_text
+        except Exception as e:
+            state.logger.error(f"Failed to get image info: {e}")
+    
+    # Get database metadata if available
+    if media_file:
+        if media_file.original_created_at:
+            info["creation_date"] = media_file.original_created_at.isoformat()
+        
+        # Add database metadata
+        try:
+            with state.get_database_service() as db:
+                db_metadata = db.get_media_metadata(target)
+                if db_metadata:
+                    # Override with database values if available
+                    if db_metadata.width and db_metadata.height:
+                        info["dimensions"] = {"width": db_metadata.width, "height": db_metadata.height}
+                        info["resolution"] = db_metadata.width * db_metadata.height
+                    
+                    if db_metadata.duration:
+                        info["duration"] = db_metadata.duration
+                    
+                    if db_metadata.frame_rate:
+                        info["frame_rate"] = db_metadata.frame_rate
+                    
+                    # Add AI generation parameters
+                    generation_params = {}
+                    if db_metadata.prompt:
+                        generation_params["prompt"] = db_metadata.prompt
+                    if db_metadata.negative_prompt:
+                        generation_params["negative_prompt"] = db_metadata.negative_prompt
+                    if db_metadata.model_name:
+                        generation_params["model"] = db_metadata.model_name
+                    if db_metadata.sampler:
+                        generation_params["sampler"] = db_metadata.sampler
+                    if db_metadata.steps:
+                        generation_params["steps"] = db_metadata.steps
+                    if db_metadata.cfg_scale:
+                        generation_params["cfg_scale"] = db_metadata.cfg_scale
+                    if db_metadata.seed:
+                        generation_params["seed"] = db_metadata.seed
+                    
+                    if generation_params:
+                        if "metadata" not in info:
+                            info["metadata"] = {}
+                        info["metadata"]["generation_params"] = generation_params
+        except Exception as e:
+            state.logger.error(f"Failed to get database metadata: {e}")
+    
+    return info

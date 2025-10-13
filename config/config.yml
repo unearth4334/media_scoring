@@ -30,13 +30,23 @@ info_pane:
   enabled: true  # Enable or disable the info pane overlay
   categories:
     - filename       # Display the filename of the media
-    - file_size      # Display the file size
-    - dimensions     # Display the dimensions (e.g., width x height)
-    - duration       # Display the duration (for videos)
-    - creation_date  # Display the creation date
-    - metadata       # Display additional metadata (e.g., EXIF for images)
+    - file_size      # Display the file size (formatted, e.g., "2.5 MB")
+    - dimensions     # Display the dimensions (e.g., "1920x1080")
+    - duration       # Display the duration (for videos, e.g., "00:02:34")
+    - creation_date  # Display the original creation date
+    - modified_date  # Display the last modified date
+    - file_path      # Display the full file path
+    - file_type      # Display the file type/extension
+    - resolution     # Display resolution details
+    - aspect_ratio   # Display aspect ratio (e.g., "16:9")
+    - frame_rate     # Display frame rate (for videos)
+    - bitrate        # Display bitrate (for videos)
+    - codec          # Display codec information
+    - score          # Display the current score/rating
+    - metadata       # Display additional metadata (EXIF, workflow, etc.)
   default_categories:
     - filename
     - file_size
     - dimensions
     - creation_date
+    - score
