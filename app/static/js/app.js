@@ -127,6 +127,15 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize mobile score bar
   setTimeout(initializeMobileScoreBar, 100);
+  
+  // Ensure the desktop menu button is visible and functional
+  const desktopMenuBtn = document.getElementById('desktop-menu-btn');
+  if (desktopMenuBtn) {
+    desktopMenuBtn.style.display = 'inline-block';
+    desktopMenuBtn.addEventListener('click', () => {
+      alert('More options clicked!'); // Placeholder for actual functionality
+    });
+  }
 });
 
 let videos = [];
