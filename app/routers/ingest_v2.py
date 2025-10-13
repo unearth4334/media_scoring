@@ -180,6 +180,9 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         }
     }
     
+    # Initialize progress queue for SSE streaming
+    progress_queues[session_id] = asyncio.Queue()
+    
     # Start background processing
     background_tasks.add_task(process_files_background, session_id, files, request.parameters)
     
@@ -218,9 +221,11 @@ async def stream_progress(session_id: str):
     if session_id not in processing_sessions:
         raise HTTPException(404, "Session not found")
     
-    # Create event queue for this client
-    event_queue = asyncio.Queue()
-    progress_queues[session_id] = event_queue
+    # Get existing event queue for this session
+    if session_id not in progress_queues:
+        raise HTTPException(404, "Progress stream not available for this session")
+    
+    event_queue = progress_queues[session_id]
     
     async def event_generator():
         try:
@@ -245,11 +250,11 @@ async def stream_progress(session_id: str):
                     
         except asyncio.CancelledError:
             # Client disconnected
-            pass
+            logging.info(f"SSE client disconnected for session {session_id}")
         finally:
-            # Cleanup queue
-            if session_id in progress_queues:
-                del progress_queues[session_id]
+            # Note: Don't delete the queue here as it might still be needed by background task
+            # Queue cleanup happens in cleanup_session endpoint
+            logging.info(f"SSE stream ended for session {session_id}")
     
     return StreamingResponse(
         event_generator(),
@@ -381,10 +386,16 @@ async def process_files_background(session_id: str, files: List[Path], parameter
             try:
                 status = get_session_status(session)
                 progress_queues[session_id].put_nowait(status)
+                logging.info(f"Emitted update for session {session_id}: progress={status['progress']}%, processed={status['processed_files']}/{status['total_files']}")
             except Exception as e:
-                logging.warning(f"Failed to emit update for session {session_id}: {e}")
+                logging.error(f"Failed to emit update for session {session_id}: {e}")
+        else:
+            logging.warning(f"No progress queue found for session {session_id}")
     
     try:
+        # Small delay to allow SSE client to connect before starting processing
+        await asyncio.sleep(0.5)
+        
         session["status"] = "processing"
         emit_update()  # Emit initial processing status
         
@@ -412,6 +423,9 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 # Update progress after processing file
                 session["progress"] = int(((i + 1) / len(files)) * 100)
                 emit_update()  # Emit after each file is processed
+                
+                # Small delay between files to make progress visible
+                await asyncio.sleep(0.1)
                     
             except Exception as e:
                 error_msg = f"Error processing {file_path.name}: {str(e)}"

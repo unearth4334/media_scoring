@@ -139,20 +139,52 @@ deploy_via_git() {
     # Switch to target branch if different
     if [[ "$current_branch" != "$branch" ]]; then
         log_info "Switching from ${current_branch} to ${branch}"
-        git checkout "$branch" || {
-            log_error "Failed to switch to branch ${branch}"
-            exit 1
-        }
+        
+        # Check if there are local changes
+        if ! git diff --quiet || ! git diff --cached --quiet; then
+            log_warning "Local changes detected in remote repository"
+            log_warning "These changes will be discarded to match the remote branch exactly"
+            
+            # Show what files have changes
+            log_info "Files with local changes:"
+            git diff --name-only HEAD
+            git diff --cached --name-only
+            
+            log_info "Discarding local changes and switching to ${branch}..."
+            
+            # Reset any staged changes
+            git reset --hard HEAD || {
+                log_error "Failed to reset staged changes"
+                exit 1
+            }
+            
+            # Force checkout to target branch
+            git checkout -f "$branch" || {
+                log_error "Failed to force switch to branch ${branch}"
+                exit 1
+            }
+        else
+            git checkout "$branch" || {
+                log_error "Failed to switch to branch ${branch}"
+                exit 1
+            }
+        fi
     fi
     
     # Get commit info before pull
     local old_commit=$(git rev-parse HEAD)
     
-    # Pull latest changes
+    # Pull latest changes and reset to match remote exactly
     log_info "Pulling latest changes for branch ${branch}..."
     git pull origin "$branch" || {
         log_error "Failed to pull latest changes"
         exit 1
+    }
+    
+    # Ensure we match the remote branch exactly (discard any local changes)
+    log_info "Ensuring deployment matches remote branch exactly..."
+    git reset --hard "origin/${branch}" || {
+        log_warning "Failed to reset to origin/${branch}, continuing anyway..."
     }
     
     # Get commit info after pull

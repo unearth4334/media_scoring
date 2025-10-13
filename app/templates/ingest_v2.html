@@ -933,20 +933,24 @@
       progressEventSource.onmessage = function(event) {
         try {
           const status = JSON.parse(event.data);
+          console.log('SSE received:', status);
           
           // Skip keepalive messages
           if (status.keepalive) {
+            console.log('SSE keepalive received');
             return;
           }
 
           updateProgressDisplay(status);
 
           if (status.status === 'completed') {
+            console.log('Processing completed, closing SSE');
             progressEventSource.close();
             progressEventSource = null;
             progressSection?.classList.remove('streaming');
             showPreviewSection();
           } else if (status.status === 'error') {
+            console.log('Processing error, closing SSE');
             progressEventSource.close();
             progressEventSource = null;
             progressSection?.classList.remove('streaming');
@@ -954,12 +958,13 @@
           }
 
         } catch (error) {
-          console.error('Error parsing SSE data:', error);
+          console.error('Error parsing SSE data:', error, 'Raw data:', event.data);
         }
       };
 
       progressEventSource.onerror = function(event) {
         console.error('SSE connection error:', event);
+        console.log('SSE readyState:', progressEventSource.readyState);
         
         // Try to reconnect after a delay (EventSource handles this automatically)
         // If connection fails repeatedly, fall back to polling as last resort
@@ -972,7 +977,7 @@
       };
 
       progressEventSource.onopen = function(event) {
-        console.log('SSE connection established');
+        console.log('SSE connection established for session:', currentSessionId);
       };
     }
 
