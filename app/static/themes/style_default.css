@@ -343,10 +343,20 @@ input[type="text"] {
   border: 1px solid #555;
   border-radius: 8px;
   color: #eee;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
 }
 .menu-item:hover {
+  background: #3a3a3a;
+  border-color: #777;
+  color: #eee;
+}
+
+.menu-item-clickable {
+  cursor: pointer;
+}
+
+.menu-item-clickable:hover {
   background: #3a3a3a;
   border-color: #ff6b35;
   color: #ff6b35;
@@ -1560,4 +1570,215 @@ body.maximized .mobile-scorebar {
 
 .mobile-toggle-switch input:focus + .mobile-toggle-slider {
   box-shadow: 0 0 1px #00bcd4;
+}
+
+/* =========================================================
+   INFO PANE OVERLAY
+   --------------------------------------------------------- */
+.info-pane {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 350px;
+  max-height: calc(100vh - 100px);
+  background: #1a1a1a;
+  border: 1px solid #00bcd4;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 188, 212, 0.3);
+  z-index: 2001;
+  overflow: hidden;
+  display: none;
+}
+
+.info-pane.visible {
+  display: block;
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.info-pane-header {
+  background: linear-gradient(135deg, #00bcd4, #0097a7);
+  padding: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: #fff;
+}
+
+.info-pane-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.info-pane-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+.info-pane-close:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.info-pane-content {
+  padding: 15px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+
+.info-loading {
+  text-align: center;
+  padding: 20px;
+  color: #888;
+  font-style: italic;
+}
+
+.info-item {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #00bcd4;
+  font-size: 12px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.info-value {
+  color: #e0e0e0;
+  font-size: 14px;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.info-value-code {
+  font-family: monospace;
+  font-size: 13px;
+  background: #2a2a2a;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.info-metadata {
+  margin-top: 8px;
+}
+
+.info-metadata-section {
+  margin-top: 8px;
+  padding: 8px;
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.info-metadata-title {
+  font-weight: bold;
+  color: #00bcd4;
+  font-size: 11px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.info-metadata-content {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #ccc;
+}
+
+.info-score-stars {
+  color: #ffd700;
+  font-size: 16px;
+  letter-spacing: 2px;
+}
+
+.info-copy-btn {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #00bcd4;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+  margin-left: 8px;
+  transition: all 0.2s;
+}
+
+.info-copy-btn:hover {
+  background: #3a3a3a;
+  border-color: #00bcd4;
+}
+
+/* Mobile menu clickable item */
+.mobile-menu-clickable {
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.mobile-menu-clickable:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu-icon {
+  font-size: 18px;
+}
+
+/* Mobile styles for info pane */
+@media (max-width: 768px) {
+  .info-pane {
+    top: 0;
+    right: 0;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+  
+  .info-pane.visible {
+    animation: slideInUp 0.3s ease-out;
+  }
+  
+  @keyframes slideInUp {
+    from {
+      opacity: 0;
+      transform: translateY(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  
+  .info-pane-content {
+    max-height: calc(100vh - 70px);
+  }
 }

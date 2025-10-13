@@ -355,6 +355,166 @@ def get_media_metadata(name: str):
     return metadata
 
 
+@router.get("/media/{name:path}/info")
+def get_media_info(name: str):
+    """Get comprehensive information about a media file for the info pane."""
+    state = get_state()
+    target = (state.video_dir / name).resolve()
+    
+    try:
+        target.relative_to(state.video_dir)
+    except Exception:
+        raise HTTPException(403, "Forbidden path")
+    
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "File not found")
+    
+    # Get file stats
+    stat = target.stat()
+    
+    # Initialize response
+    info = {
+        "filename": target.name,
+        "file_size": stat.st_size,
+        "file_path": str(target),
+        "file_type": target.suffix.lstrip('.').upper() or "Unknown",
+        "creation_date": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+        "modified_date": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        "score": None,
+        "dimensions": None,
+        "duration": None,
+        "resolution": None,
+        "aspect_ratio": None,
+        "frame_rate": None,
+        "bitrate": None,
+        "codec": None,
+        "metadata": {}
+    }
+    
+    # Get score
+    score_val = read_score(target)
+    if score_val != 0:
+        info["score"] = score_val
+    
+    # Get metadata from database if available
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                db_metadata = db.get_media_metadata(target)
+                if db_metadata:
+                    if db_metadata.width and db_metadata.height:
+                        info["dimensions"] = {"width": db_metadata.width, "height": db_metadata.height}
+                        info["resolution"] = db_metadata.width * db_metadata.height
+                        # Calculate aspect ratio
+                        from math import gcd
+                        g = gcd(db_metadata.width, db_metadata.height)
+                        info["aspect_ratio"] = f"{db_metadata.width//g}:{db_metadata.height//g}"
+                    
+                    if db_metadata.duration:
+                        info["duration"] = db_metadata.duration
+                    
+                    if db_metadata.frame_rate:
+                        info["frame_rate"] = db_metadata.frame_rate
+                    
+                    # Add metadata fields
+                    if db_metadata.png_text:
+                        try:
+                            info["metadata"]["png_text"] = json.loads(db_metadata.png_text)
+                        except json.JSONDecodeError:
+                            info["metadata"]["png_text"] = db_metadata.png_text
+                    
+                    # Add AI generation parameters
+                    generation_params = {}
+                    for field in ["prompt", "negative_prompt", "model_name", "sampler", "steps", "cfg_scale", "seed"]:
+                        value = getattr(db_metadata, field, None)
+                        if value:
+                            generation_params[field] = value
+                    
+                    if generation_params:
+                        info["metadata"]["generation_params"] = generation_params
+        except Exception as e:
+            state.logger.error(f"Failed to get metadata from database: {e}")
+    
+    # Fallback: Extract metadata directly from file if not in database
+    ext = target.suffix.lower()
+    if ext == ".mp4" and not info["dimensions"]:
+        try:
+            # Get video metadata using ffprobe
+            cmd = [
+                "ffprobe", "-v", "error",
+                "-select_streams", "video:0",
+                "-show_entries", "stream=width,height,duration,r_frame_rate,bit_rate,codec_name",
+                "-of", "json", str(target)
+            ]
+            cp = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            ffprobe_info = json.loads(cp.stdout or "{}")
+            
+            if isinstance(ffprobe_info, dict) and ffprobe_info.get("streams"):
+                stream = ffprobe_info["streams"][0]
+                
+                w = stream.get("width")
+                h = stream.get("height")
+                if w and h:
+                    info["dimensions"] = {"width": int(w), "height": int(h)}
+                    info["resolution"] = int(w) * int(h)
+                    from math import gcd
+                    g = gcd(int(w), int(h))
+                    info["aspect_ratio"] = f"{int(w)//g}:{int(h)//g}"
+                
+                duration = stream.get("duration")
+                if duration:
+                    info["duration"] = float(duration)
+                
+                frame_rate = stream.get("r_frame_rate")
+                if frame_rate and "/" in frame_rate:
+                    num, denom = frame_rate.split("/")
+                    info["frame_rate"] = float(num) / float(denom)
+                
+                bitrate = stream.get("bit_rate")
+                if bitrate:
+                    info["bitrate"] = int(bitrate)
+                
+                codec = stream.get("codec_name")
+                if codec:
+                    info["codec"] = codec
+        except Exception as e:
+            state.logger.error(f"Failed to extract video metadata: {e}")
+    
+    elif ext in {".png", ".jpg", ".jpeg"} and not info["dimensions"]:
+        try:
+            if Image is None:
+                state.logger.warning("Pillow not installed, cannot extract image metadata")
+            else:
+                with Image.open(target) as im:
+                    info["dimensions"] = {"width": int(im.width), "height": int(im.height)}
+                    info["resolution"] = int(im.width) * int(im.height)
+                    from math import gcd
+                    g = gcd(int(im.width), int(im.height))
+                    info["aspect_ratio"] = f"{int(im.width)//g}:{int(im.height)//g}"
+                    
+                    # Get EXIF data if available
+                    if hasattr(im, '_getexif') and im._getexif():
+                        exif_data = {}
+                        for tag_id, value in im._getexif().items():
+                            # Convert tag ID to name
+                            if hasattr(Image, 'ExifTags'):
+                                from PIL.ExifTags import TAGS
+                                tag_name = TAGS.get(tag_id, tag_id)
+                                exif_data[tag_name] = str(value)
+                        if exif_data:
+                            info["metadata"]["exif"] = exif_data
+            
+            # For PNG files, try to get parameters text
+            if ext == ".png":
+                txt = read_png_parameters_text(target)
+                if txt and "png_text" not in info["metadata"]:
+                    info["metadata"]["png_text"] = txt
+        except Exception as e:
+            state.logger.error(f"Failed to extract image metadata: {e}")
+    
+    return info
+
+
 @router.post("/score")
 async def update_score(req: Request):
     """Update score for a media file."""
