@@ -1898,6 +1898,20 @@ document.addEventListener('DOMContentLoaded', function() {
     closeBtn.addEventListener('click', closeInfoPane);
   }
   
+  // Desktop: menu item
+  const desktopViewInfo = document.getElementById('desktop-view-info');
+  if (desktopViewInfo) {
+    desktopViewInfo.addEventListener('click', async function() {
+      // Close desktop menu
+      const menuOverlay = document.getElementById('menu-overlay');
+      if (menuOverlay) {
+        menuOverlay.classList.remove('active');
+      }
+      // Open info pane
+      await openInfoPane();
+    });
+  }
+  
   // Mobile: menu item
   const mobileViewInfo = document.getElementById('mobile-view-info');
   if (mobileViewInfo) {

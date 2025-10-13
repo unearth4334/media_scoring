@@ -343,10 +343,20 @@ input[type="text"] {
   border: 1px solid #555;
   border-radius: 8px;
   color: #eee;
-  cursor: pointer;
+  cursor: default;
   transition: all 0.2s ease;
 }
 .menu-item:hover {
+  background: #3a3a3a;
+  border-color: #777;
+  color: #eee;
+}
+
+.menu-item-clickable {
+  cursor: pointer;
+}
+
+.menu-item-clickable:hover {
   background: #3a3a3a;
   border-color: #ff6b35;
   color: #ff6b35;
