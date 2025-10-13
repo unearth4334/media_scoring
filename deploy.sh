@@ -268,13 +268,31 @@ docker_destroy() {
     echo
     
     if [[ $REPLY =~ ^[Yy]$ ]]; then
-        log_info "Destroying containers and volumes"
+        log_info "Destroying containers and volumes for ${PROJECT_NAME}"
         
         local docker_cmd="/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker"
-        ssh ${QNAP_HOST} "cd ${REMOTE_PATH} && ${docker_cmd} compose down -v"
-        ssh ${QNAP_HOST} "${docker_cmd} volume prune -f"
         
-        log_success "Containers and volumes destroyed successfully"
+        # Stop and remove containers and networks defined in docker-compose.yml
+        ssh ${QNAP_HOST} "cd ${REMOTE_PATH} && ${docker_cmd} compose down -v"
+        
+        # Remove only project-specific volumes (those prefixed with project name)
+        log_info "Checking for project-specific volumes to remove..."
+        local volumes_to_remove=$(ssh ${QNAP_HOST} "${docker_cmd} volume ls -q --filter name=${PROJECT_NAME}")
+        
+        if [[ -n "$volumes_to_remove" ]]; then
+            log_info "Found project volumes to remove:"
+            echo "$volumes_to_remove"
+            
+            # Remove each volume
+            for volume in $volumes_to_remove; do
+                log_info "Removing volume: $volume"
+                ssh ${QNAP_HOST} "${docker_cmd} volume rm $volume" || log_warning "Failed to remove volume $volume"
+            done
+        else
+            log_info "No project-specific volumes found to remove"
+        fi
+        
+        log_success "Containers and volumes for ${PROJECT_NAME} destroyed successfully"
     else
         log_info "Operation cancelled"
     fi
