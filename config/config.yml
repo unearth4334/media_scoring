@@ -24,3 +24,32 @@ database_log_level: INFO        # Log level for database operations (DEBUG, INFO
 schema_file: schema.yml       # YAML file defining database schema structure
 auto_migrate: false           # Automatically apply schema migrations (use with caution in production)
 validate_schema: true         # Validate schema file on startup
+
+# Info pane settings
+info_pane:
+  enabled: true  # Enable or disable the info pane overlay
+  categories:
+    # List of all available information categories
+    - filename       # Display the filename of the media
+    - file_size      # Display the file size (formatted, e.g., "2.5 MB")
+    - dimensions     # Display the dimensions (e.g., "1920x1080")
+    - duration       # Display the duration (for videos, e.g., "00:02:34")
+    - creation_date  # Display the original creation date
+    - modified_date  # Display the last modified date
+    - file_path      # Display the full file path
+    - file_type      # Display the file type/extension
+    - resolution     # Display resolution details
+    - aspect_ratio   # Display aspect ratio (e.g., "16:9")
+    - frame_rate     # Display frame rate (for videos)
+    - bitrate        # Display bitrate (for videos)
+    - codec          # Display codec information
+    - score          # Display the current score/rating
+    - metadata       # Display additional metadata (EXIF, workflow, etc.)
+  
+  # Default categories to show (user can customize)
+  default_categories:
+    - filename
+    - file_size
+    - dimensions
+    - creation_date
+    - score

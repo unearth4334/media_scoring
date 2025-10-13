@@ -2,9 +2,26 @@
 
 import os
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 import yaml
+
+
+class InfoPaneSettings(BaseModel):
+    """Info pane configuration settings."""
+    enabled: bool = Field(default=True, description="Enable or disable the info pane overlay")
+    categories: List[str] = Field(
+        default=[
+            "filename", "file_size", "dimensions", "duration", "creation_date",
+            "modified_date", "file_path", "file_type", "resolution", "aspect_ratio",
+            "frame_rate", "bitrate", "codec", "score", "metadata"
+        ],
+        description="List of all available information categories"
+    )
+    default_categories: List[str] = Field(
+        default=["filename", "file_size", "dimensions", "creation_date", "score"],
+        description="Default categories to show"
+    )
 
 
 class Settings(BaseModel):
@@ -42,6 +59,9 @@ class Settings(BaseModel):
     schema_file: Optional[Path] = Field(default=None, description="YAML schema file for database structure")
     auto_migrate: bool = Field(default=False, description="Automatically apply schema migrations")
     validate_schema: bool = Field(default=True, description="Validate schema on startup")
+    
+    # Info pane settings
+    info_pane: InfoPaneSettings = Field(default_factory=InfoPaneSettings, description="Info pane configuration")
     
     @field_validator('dir', mode='before')
     @classmethod

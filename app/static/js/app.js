@@ -1509,3 +1509,416 @@ const extractFilteredBtn = document.getElementById("extract_filtered");
 if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);
+
+/* =========================================================
+   INFO PANE FUNCTIONALITY
+   --------------------------------------------------------- */
+
+// Current media info cache
+let currentMediaInfo = null;
+
+// Fetch media information from backend
+async function fetchMediaInfo(filename) {
+  try {
+    const response = await fetch(`/api/media/${encodeURIComponent(filename)}/info`);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch media info: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching media info:', error);
+    return null;
+  }
+}
+
+// Format file size
+function formatFileSize(bytes) {
+  if (!bytes || bytes === 0) return 'N/A';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let size = bytes;
+  let unitIndex = 0;
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024;
+    unitIndex++;
+  }
+  return `${size.toFixed(2)} ${units[unitIndex]}`;
+}
+
+// Format duration (seconds to HH:MM:SS)
+function formatDuration(seconds) {
+  if (!seconds || seconds === 0) return 'N/A';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  
+  if (hours > 0) {
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+
+// Format date
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch (error) {
+    return dateString;
+  }
+}
+
+// Format resolution (pixels to megapixels)
+function formatResolution(pixels) {
+  if (!pixels || pixels === 0) return 'N/A';
+  const mp = (pixels / 1000000).toFixed(2);
+  return `${mp} MP`;
+}
+
+// Format bitrate
+function formatBitrate(bitrate) {
+  if (!bitrate || bitrate === 0) return 'N/A';
+  const mbps = (bitrate / 1000000).toFixed(2);
+  return `${mbps} Mbps`;
+}
+
+// Format frame rate
+function formatFrameRate(fps) {
+  if (!fps || fps === 0) return 'N/A';
+  return `${fps.toFixed(2)} fps`;
+}
+
+// Generate star rating display
+function formatStarRating(score) {
+  if (!score || score === 0) return '<span style="color: #888;">Not rated</span>';
+  const stars = '★'.repeat(score) + '☆'.repeat(5 - score);
+  return `<span class="info-score-stars">${stars}</span> <span style="color: #888;">(${score}/5)</span>`;
+}
+
+// Populate info pane with media data
+function populateInfoPane(mediaData) {
+  const contentDiv = document.getElementById('info-pane-content');
+  if (!contentDiv) return;
+  
+  // Clear loading state
+  contentDiv.innerHTML = '';
+  
+  // Get default categories (for now, using hardcoded defaults - could be fetched from config)
+  const defaultCategories = [
+    'filename', 'file_size', 'dimensions', 'creation_date', 'score'
+  ];
+  
+  // Build HTML for each category
+  defaultCategories.forEach(category => {
+    let itemHtml = '';
+    
+    switch (category) {
+      case 'filename':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">Filename</span>
+            <span class="info-value info-value-code">${escapeHtml(mediaData.filename || 'N/A')}</span>
+          </div>
+        `;
+        break;
+        
+      case 'file_size':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">File Size</span>
+            <span class="info-value">${formatFileSize(mediaData.file_size)}</span>
+          </div>
+        `;
+        break;
+        
+      case 'dimensions':
+        if (mediaData.dimensions) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Dimensions</span>
+              <span class="info-value">${mediaData.dimensions.width} × ${mediaData.dimensions.height}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'duration':
+        if (mediaData.duration) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Duration</span>
+              <span class="info-value">${formatDuration(mediaData.duration)}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'creation_date':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">Creation Date</span>
+            <span class="info-value">${formatDate(mediaData.creation_date)}</span>
+          </div>
+        `;
+        break;
+        
+      case 'modified_date':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">Modified Date</span>
+            <span class="info-value">${formatDate(mediaData.modified_date)}</span>
+          </div>
+        `;
+        break;
+        
+      case 'file_path':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">File Path</span>
+            <span class="info-value info-value-code" style="word-break: break-all;">${escapeHtml(mediaData.file_path || 'N/A')}</span>
+          </div>
+        `;
+        break;
+        
+      case 'file_type':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">File Type</span>
+            <span class="info-value">${mediaData.file_type || 'N/A'}</span>
+          </div>
+        `;
+        break;
+        
+      case 'resolution':
+        if (mediaData.resolution) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Resolution</span>
+              <span class="info-value">${formatResolution(mediaData.resolution)}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'aspect_ratio':
+        if (mediaData.aspect_ratio) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Aspect Ratio</span>
+              <span class="info-value">${mediaData.aspect_ratio}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'frame_rate':
+        if (mediaData.frame_rate) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Frame Rate</span>
+              <span class="info-value">${formatFrameRate(mediaData.frame_rate)}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'bitrate':
+        if (mediaData.bitrate) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Bitrate</span>
+              <span class="info-value">${formatBitrate(mediaData.bitrate)}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'codec':
+        if (mediaData.codec) {
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Codec</span>
+              <span class="info-value">${mediaData.codec}</span>
+            </div>
+          `;
+        }
+        break;
+        
+      case 'score':
+        itemHtml = `
+          <div class="info-item">
+            <span class="info-label">Score</span>
+            <span class="info-value">${formatStarRating(mediaData.score)}</span>
+          </div>
+        `;
+        break;
+        
+      case 'metadata':
+        if (mediaData.metadata && Object.keys(mediaData.metadata).length > 0) {
+          let metadataHtml = '<div class="info-metadata">';
+          
+          // PNG text / generation parameters
+          if (mediaData.metadata.generation_params) {
+            const params = mediaData.metadata.generation_params;
+            metadataHtml += `
+              <div class="info-metadata-section">
+                <div class="info-metadata-title">Generation Parameters</div>
+                <div class="info-metadata-content">
+                  ${params.prompt ? `<div><strong>Prompt:</strong> ${escapeHtml(params.prompt)}</div>` : ''}
+                  ${params.negative_prompt ? `<div><strong>Negative:</strong> ${escapeHtml(params.negative_prompt)}</div>` : ''}
+                  ${params.model_name ? `<div><strong>Model:</strong> ${params.model_name}</div>` : ''}
+                  ${params.sampler ? `<div><strong>Sampler:</strong> ${params.sampler}</div>` : ''}
+                  ${params.steps ? `<div><strong>Steps:</strong> ${params.steps}</div>` : ''}
+                  ${params.cfg_scale ? `<div><strong>CFG Scale:</strong> ${params.cfg_scale}</div>` : ''}
+                  ${params.seed ? `<div><strong>Seed:</strong> ${params.seed}</div>` : ''}
+                </div>
+              </div>
+            `;
+          }
+          
+          // EXIF data
+          if (mediaData.metadata.exif) {
+            metadataHtml += `
+              <div class="info-metadata-section">
+                <div class="info-metadata-title">EXIF Data</div>
+                <div class="info-metadata-content">
+                  ${Object.entries(mediaData.metadata.exif).map(([key, value]) => 
+                    `<div><strong>${key}:</strong> ${escapeHtml(String(value))}</div>`
+                  ).join('')}
+                </div>
+              </div>
+            `;
+          }
+          
+          // PNG text
+          if (mediaData.metadata.png_text && typeof mediaData.metadata.png_text === 'string') {
+            metadataHtml += `
+              <div class="info-metadata-section">
+                <div class="info-metadata-title">PNG Metadata</div>
+                <div class="info-metadata-content" style="white-space: pre-wrap; font-family: monospace; font-size: 11px; max-height: 200px; overflow-y: auto;">
+                  ${escapeHtml(mediaData.metadata.png_text)}
+                </div>
+              </div>
+            `;
+          }
+          
+          metadataHtml += '</div>';
+          itemHtml = `
+            <div class="info-item">
+              <span class="info-label">Metadata</span>
+              ${metadataHtml}
+            </div>
+          `;
+        }
+        break;
+    }
+    
+    if (itemHtml) {
+      contentDiv.innerHTML += itemHtml;
+    }
+  });
+  
+  // If no content was added, show a message
+  if (contentDiv.innerHTML === '') {
+    contentDiv.innerHTML = '<div class="info-loading">No information available</div>';
+  }
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// Toggle info pane
+async function toggleInfoPane() {
+  const infoPane = document.getElementById('info-pane');
+  if (!infoPane) return;
+  
+  if (infoPane.classList.contains('visible')) {
+    closeInfoPane();
+  } else {
+    await openInfoPane();
+  }
+}
+
+// Open info pane
+async function openInfoPane() {
+  const infoPane = document.getElementById('info-pane');
+  if (!infoPane) return;
+  
+  // Get current media filename
+  if (filtered.length === 0 || idx < 0 || idx >= filtered.length) {
+    console.warn('No media selected');
+    return;
+  }
+  
+  const currentMedia = filtered[idx];
+  const filename = currentMedia.name;
+  
+  // Show loading state
+  infoPane.classList.add('visible');
+  const contentDiv = document.getElementById('info-pane-content');
+  if (contentDiv) {
+    contentDiv.innerHTML = '<div class="info-loading">Loading...</div>';
+  }
+  
+  // Fetch and populate data
+  const mediaInfo = await fetchMediaInfo(filename);
+  if (mediaInfo) {
+    currentMediaInfo = mediaInfo;
+    populateInfoPane(mediaInfo);
+  } else {
+    if (contentDiv) {
+      contentDiv.innerHTML = '<div class="info-loading">Failed to load media information</div>';
+    }
+  }
+}
+
+// Close info pane
+function closeInfoPane() {
+  const infoPane = document.getElementById('info-pane');
+  if (!infoPane) return;
+  infoPane.classList.remove('visible');
+  currentMediaInfo = null;
+}
+
+// Event listeners for info pane
+document.addEventListener('DOMContentLoaded', function() {
+  // Desktop: close button
+  const closeBtn = document.getElementById('info-pane-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', closeInfoPane);
+  }
+  
+  // Mobile: menu item
+  const mobileViewInfo = document.getElementById('mobile-view-info');
+  if (mobileViewInfo) {
+    mobileViewInfo.addEventListener('click', async function() {
+      // Close mobile menu
+      const mobileMenuPopover = document.getElementById('mobile-menu-popover');
+      if (mobileMenuPopover) {
+        mobileMenuPopover.classList.remove('visible');
+      }
+      // Open info pane
+      await openInfoPane();
+    });
+  }
+  
+  // ESC key to close
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const infoPane = document.getElementById('info-pane');
+      if (infoPane && infoPane.classList.contains('visible')) {
+        closeInfoPane();
+      }
+    }
+  });
+});
