@@ -147,6 +147,15 @@ deploy_via_git() {
     # Ensure deployment destination is clean - discard any local changes
     log_info "Ensuring deployment matches remote branch exactly..."
     
+    # Switch to target branch if different (force checkout to discard local changes)
+    if [[ "$current_branch" != "$branch" ]]; then
+        log_info "Switching from ${current_branch} to ${branch}"
+        git checkout -f "$branch" || {
+            log_error "Failed to switch to branch ${branch}"
+            exit 1
+        }
+    fi
+    
     # Reset any local changes to ensure clean state
     git reset --hard HEAD || {
         log_error "Failed to reset local changes"
@@ -158,15 +167,6 @@ deploy_via_git() {
         log_error "Failed to clean untracked files"
         exit 1
     }
-    
-    # Switch to target branch if different
-    if [[ "$current_branch" != "$branch" ]]; then
-        log_info "Switching from ${current_branch} to ${branch}"
-        git checkout "$branch" || {
-            log_error "Failed to switch to branch ${branch}"
-            exit 1
-        }
-    fi
     
     # Get commit info before pull
     local old_commit=$(git rev-parse HEAD)
