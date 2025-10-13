@@ -1523,3 +1523,34 @@ const extractFilteredBtn = document.getElementById("extract_filtered");
 if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
 window.addEventListener("load", loadVideos);
+
+// Info Pane Toggle and Populate
+const infoPane = document.getElementById('info-pane');
+const closeInfoPane = document.getElementById('close-info-pane');
+
+// Function to toggle the info pane
+function toggleInfoPane(mediaInfo) {
+    if (infoPane.style.display === 'none') {
+        populateInfoPane(mediaInfo);
+        infoPane.style.display = 'block';
+    } else {
+        infoPane.style.display = 'none';
+    }
+}
+
+// Function to populate the info pane dynamically
+function populateInfoPane(mediaInfo) {
+    const content = infoPane.querySelector('.info-pane-content');
+    content.innerHTML = '';
+
+    for (const [key, value] of Object.entries(mediaInfo)) {
+        const infoItem = document.createElement('div');
+        infoItem.innerHTML = `<strong>${key}:</strong> ${value}`;
+        content.appendChild(infoItem);
+    }
+}
+
+// Close button functionality
+closeInfoPane.addEventListener('click', () => {
+    infoPane.style.display = 'none';
+});

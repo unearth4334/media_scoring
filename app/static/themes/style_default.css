@@ -1590,3 +1590,40 @@ body.maximized .mobile-scorebar {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Info Pane Overlay */
+.info-pane {
+  position: fixed;
+  top: 10%;
+  right: 10%;
+  width: 300px;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.info-pane-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: #00bcd4;
+  color: #fff;
+}
+
+.info-pane-content {
+  padding: 10px;
+  font-size: 14px;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #fff;
+}
