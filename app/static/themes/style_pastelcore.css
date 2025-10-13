@@ -1181,3 +1181,33 @@ aside#sidebar {
 .mobile-toggle-switch input:focus + .mobile-toggle-slider {
   box-shadow: 0 0 1px #87ceeb;
 }
+
+/* =========================================================
+   DESKTOP ACTION BUTTONS
+   --------------------------------------------------------- */
+.desktop-action-btn {
+  width: 40px !important;
+  height: 40px !important;
+  font-size: 28px !important;
+  background: transparent;
+  border: 1px solid #a8c2e8;
+  border-radius: 4px;
+  color: #5a7fa8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.8;
+}
+
+.desktop-action-btn:hover,
+.desktop-action-btn:active {
+  background: rgba(135, 206, 235, 0.2);
+  opacity: 1;
+}
+
+.desktop-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+

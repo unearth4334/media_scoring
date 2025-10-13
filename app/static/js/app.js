@@ -127,15 +127,6 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Initialize mobile score bar
   setTimeout(initializeMobileScoreBar, 100);
-  
-  // Ensure the desktop menu button is visible and functional
-  const desktopMenuBtn = document.getElementById('desktop-menu-btn');
-  if (desktopMenuBtn) {
-    desktopMenuBtn.style.display = 'inline-block';
-    desktopMenuBtn.addEventListener('click', () => {
-      alert('More options clicked!'); // Placeholder for actual functionality
-    });
-  }
 });
 
 let videos = [];
@@ -540,11 +531,14 @@ function renderScoreBar(score){
   
   html += `</div>`;
   html += `<div style="display:flex; gap:8px; align-items:center;">`;
-  html += `<button id="media-download-btn" class="maximize-btn" title="Download current media" disabled>`;
+  html += `<button id="media-download-btn" class="desktop-action-btn" title="Download current media" disabled>`;
   html += svgDownload();
   html += `</button>`;
-  html += `<button id="maximize-btn" class="maximize-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
+  html += `<button id="maximize-btn" class="desktop-action-btn" title="${isMaximized ? 'Return to actual size' : 'Maximize media'}">`;
   html += isMaximized ? svgMinimize() : svgMaximize();
+  html += `</button>`;
+  html += `<button id="desktop-menu-btn" class="desktop-action-btn" title="More options">`;
+  html += svgMenu();
   html += `</button>`;
   html += `</div>`;
   html += `</div>`;
@@ -557,6 +551,17 @@ function renderScoreBar(score){
   const maximizeBtn = document.getElementById('maximize-btn');
   if (maximizeBtn) {
     maximizeBtn.addEventListener('click', toggleMaximize);
+  }
+  
+  // Desktop menu button - open the menu overlay
+  const desktopMenuBtn = document.getElementById('desktop-menu-btn');
+  if (desktopMenuBtn) {
+    desktopMenuBtn.addEventListener('click', () => {
+      const menuOverlay = document.getElementById('menu-overlay');
+      if (menuOverlay) {
+        menuOverlay.classList.add('active');
+      }
+    });
   }
   
   // Attach event listener to clickable reject icon
