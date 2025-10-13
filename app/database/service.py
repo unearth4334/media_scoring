@@ -149,11 +149,17 @@ class DatabaseService:
                     extensions.append(ext)
             query = query.filter(MediaFile.extension.in_(extensions))
         
-        # Apply date filters using created_at
+        # Apply date filters using original_created_at with fallback to created_at
         if start_date is not None:
-            query = query.filter(MediaFile.created_at >= start_date)
+            # Use original creation date if available, otherwise fall back to database creation date
+            query = query.filter(
+                func.coalesce(MediaFile.original_created_at, MediaFile.created_at) >= start_date
+            )
         if end_date is not None:
-            query = query.filter(MediaFile.created_at <= end_date)
+            # Use original creation date if available, otherwise fall back to database creation date
+            query = query.filter(
+                func.coalesce(MediaFile.original_created_at, MediaFile.created_at) <= end_date
+            )
         
         # Apply NSFW filter
         if nsfw_filter and nsfw_filter != 'all':
