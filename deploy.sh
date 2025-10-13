@@ -126,6 +126,14 @@ deploy_via_git() {
         exit 1
     }
     
+    # Check for local changes in deployment destination (should never happen in production)
+    if ! git diff --quiet || ! git diff --cached --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+        log_warning "Deployment destination has local changes that will be discarded:"
+        git status --porcelain || true
+        log_warning "These changes will be permanently lost during deployment!"
+        log_warning "Deployment destinations should only receive changes from remote."
+    fi
+    
     # Ensure we're on the correct branch and pull latest changes
     log_info "Fetching latest changes..."
     git fetch origin || {
@@ -135,6 +143,21 @@ deploy_via_git() {
     
     # Get current branch
     local current_branch=$(git rev-parse --abbrev-ref HEAD)
+    
+    # Ensure deployment destination is clean - discard any local changes
+    log_info "Ensuring deployment matches remote branch exactly..."
+    
+    # Reset any local changes to ensure clean state
+    git reset --hard HEAD || {
+        log_error "Failed to reset local changes"
+        exit 1
+    }
+    
+    # Clean any untracked files
+    git clean -fd || {
+        log_error "Failed to clean untracked files"
+        exit 1
+    }
     
     # Switch to target branch if different
     if [[ "$current_branch" != "$branch" ]]; then
@@ -148,10 +171,10 @@ deploy_via_git() {
     # Get commit info before pull
     local old_commit=$(git rev-parse HEAD)
     
-    # Pull latest changes
-    log_info "Pulling latest changes for branch ${branch}..."
-    git pull origin "$branch" || {
-        log_error "Failed to pull latest changes"
+    # Force reset to match remote exactly
+    log_info "Forcing deployment to match remote ${branch} exactly..."
+    git reset --hard "origin/${branch}" || {
+        log_error "Failed to reset to remote branch"
         exit 1
     }
     
@@ -170,7 +193,7 @@ deploy_via_git() {
     
     if [[ "$old_commit" != "$new_commit" ]]; then
         echo -e "${BLUE}  ├─${NC} Updated: ${old_commit:0:8} → ${new_commit:0:8}"
-        echo -e "${BLUE}  └─${NC} Changes deployed"
+        echo -e "${BLUE}  └─${NC} Deployment now matches remote exactly"
     else
         echo -e "${BLUE}  └─${NC} Already up to date"
     fi
