@@ -358,6 +358,17 @@ def get_media_metadata(name: str):
 @router.get("/media/info/{name:path}")
 def get_media_info(name: str):
     """Get comprehensive information about a media file for the info pane."""
+    return _get_media_info_impl(name)
+
+
+@router.get("/media/{name:path}/info")
+def get_media_info_legacy(name: str):
+    """Legacy endpoint for backward compatibility. Get comprehensive information about a media file for the info pane."""
+    return _get_media_info_impl(name)
+
+
+def _get_media_info_impl(name: str):
+    """Implementation for getting media info."""
     state = get_state()
     target = (state.video_dir / name).resolve()
     
