@@ -693,22 +693,21 @@ async def update_score(req: Request):
                             state.logger.error(f"File '{name}' not found in database")
                             raise HTTPException(404, f"File '{name}' not found in database")
                     
-                    if media_file:
-                        # Translate database path (host path) to container path
-                        db_path = media_file.file_path
-                        
-                        # Check if we need to translate from host path to container path
-                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
-                            # Replace host path prefix with container path
-                            if db_path.startswith(state.settings.user_path_prefix):
-                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
-                                target = Path(container_path)
-                            else:
-                                target = Path(db_path)
+                    # Translate database path (host path) to container path
+                    db_path = media_file.file_path
+                    
+                    # Check if we need to translate from host path to container path
+                    if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                        # Replace host path prefix with container path
+                        if db_path.startswith(state.settings.user_path_prefix):
+                            container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                            target = Path(container_path)
                         else:
                             target = Path(db_path)
-                        
-                        state.logger.info(f"Found file in database: {db_path} -> {target}")
+                    else:
+                        target = Path(db_path)
+                    
+                    state.logger.info(f"Found file in database: {db_path} -> {target}")
             else:
                 raise HTTPException(503, "Database service not available")
         except Exception as e:
