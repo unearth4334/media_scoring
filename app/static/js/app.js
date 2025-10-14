@@ -1520,7 +1520,7 @@ let currentMediaInfo = null;
 // Fetch media information from backend
 async function fetchMediaInfo(filename) {
   try {
-    const response = await fetch(`/api/media/${encodeURIComponent(filename)}/info`);
+    const response = await fetch(`/api/media/info/${encodeURIComponent(filename)}`);
     if (!response.ok) {
       throw new Error(`Failed to fetch media info: ${response.status}`);
     }

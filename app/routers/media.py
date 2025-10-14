@@ -355,7 +355,7 @@ def get_media_metadata(name: str):
     return metadata
 
 
-@router.get("/media/{name:path}/info")
+@router.get("/media/info/{name:path}")
 def get_media_info(name: str):
     """Get comprehensive information about a media file for the info pane."""
     state = get_state()
