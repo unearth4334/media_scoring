@@ -663,22 +663,35 @@ async def update_score(req: Request):
     state = get_state()
     data = await req.json()
     name = data.get("name")
+    media_file_id = data.get("media_file_id")  # New: support media_file_id
     score = int(data.get("score", 0))
     
     # Initialize variables for database mode
     media_file = None
     db_path = None
     
-    # If database is enabled, find the file by its filename in the database
+    # If database is enabled, find the file by its media_file_id or filename in the database
     if state.database_enabled:
         try:
             db_service = state.get_database_service()
             if db_service:
                 with db_service as db:
-                    # Find the media file by filename
-                    media_file = db.session.query(MediaFile).filter(
-                        MediaFile.filename == name
-                    ).first()
+                    # Prefer media_file_id lookup if available
+                    if media_file_id:
+                        media_file = db.session.query(MediaFile).filter(
+                            MediaFile.media_file_id == media_file_id
+                        ).first()
+                        if not media_file:
+                            state.logger.error(f"File with media_file_id '{media_file_id}' not found in database")
+                            raise HTTPException(404, f"File with media_file_id not found in database")
+                    else:
+                        # Fallback to filename lookup
+                        media_file = db.session.query(MediaFile).filter(
+                            MediaFile.filename == name
+                        ).first()
+                        if not media_file:
+                            state.logger.error(f"File '{name}' not found in database")
+                            raise HTTPException(404, f"File '{name}' not found in database")
                     
                     if media_file:
                         # Translate database path (host path) to container path
@@ -696,9 +709,6 @@ async def update_score(req: Request):
                             target = Path(db_path)
                         
                         state.logger.info(f"Found file in database: {db_path} -> {target}")
-                    else:
-                        state.logger.error(f"File '{name}' not found in database")
-                        raise HTTPException(404, f"File '{name}' not found in database")
             else:
                 raise HTTPException(503, "Database service not available")
         except Exception as e:
@@ -740,6 +750,7 @@ async def update_nsfw(req: Request):
     state = get_state()
     data = await req.json()
     name = data.get("name")
+    media_file_id = data.get("media_file_id")  # New: support media_file_id
     nsfw = bool(data.get("nsfw", False))
     
     if not state.database_enabled:
@@ -751,26 +762,33 @@ async def update_nsfw(req: Request):
             raise HTTPException(503, "Database service not available")
             
         with db_service as db:
-            # Find the media file by filename
-            media_file = db.session.query(MediaFile).filter(
-                MediaFile.filename == name
-            ).first()
-            
-            if not media_file:
-                raise HTTPException(404, f"File '{name}' not found in database")
+            # Prefer media_file_id lookup if available
+            if media_file_id:
+                media_file = db.session.query(MediaFile).filter(
+                    MediaFile.media_file_id == media_file_id
+                ).first()
+                if not media_file:
+                    raise HTTPException(404, f"File with media_file_id not found in database")
+            else:
+                # Fallback to filename lookup
+                media_file = db.session.query(MediaFile).filter(
+                    MediaFile.filename == name
+                ).first()
+                if not media_file:
+                    raise HTTPException(404, f"File '{name}' not found in database")
             
             # Update NSFW status
             media_file.nsfw = nsfw
             media_file.nsfw_label = nsfw
             db.session.commit()
             
-            state.logger.info(f"NSFW UPDATE SUCCESS: file={name} nsfw={nsfw}")
+            state.logger.info(f"NSFW UPDATE SUCCESS: file={name or media_file_id} nsfw={nsfw}")
             return {"ok": True, "nsfw": nsfw}
             
     except HTTPException:
         raise
     except Exception as e:
-        state.logger.error(f"NSFW UPDATE FAILED: file={name} nsfw={nsfw} error={e}")
+        state.logger.error(f"NSFW UPDATE FAILED: file={name or media_file_id} nsfw={nsfw} error={e}")
         raise HTTPException(500, f"Failed to update NSFW status: {str(e)}")
 
 

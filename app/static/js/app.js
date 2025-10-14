@@ -768,7 +768,7 @@ function initializeMobileScoreBar() {
       const currentVideo = filtered[idx];
       if (currentVideo) {
         const nsfw = e.target.checked;
-        updateNsfwStatus(currentVideo.name, nsfw);
+        updateNsfwStatus(currentVideo.name, nsfw, currentVideo.media_file_id);
       }
     });
   }
@@ -1077,10 +1077,16 @@ async function postScore(score){
   if (!v) return;
   
   try {
+    // Include media_file_id if available for more reliable lookup
+    const payload = { name: v.name, score: score };
+    if (v.media_file_id) {
+      payload.media_file_id = v.media_file_id;
+    }
+    
     const response = await fetch('/api/score', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ name: v.name, score: score })
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
@@ -1112,12 +1118,18 @@ async function postScore(score){
   }
 }
 
-async function updateNsfwStatus(filename, nsfw) {
+async function updateNsfwStatus(filename, nsfw, mediaFileId = null) {
   try {
+    // Include media_file_id if available for more reliable lookup
+    const payload = { name: filename, nsfw: nsfw };
+    if (mediaFileId) {
+      payload.media_file_id = mediaFileId;
+    }
+    
     const response = await fetch('/api/nsfw', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name: filename, nsfw: nsfw })
+      body: JSON.stringify(payload)
     });
     
     if (!response.ok) {
