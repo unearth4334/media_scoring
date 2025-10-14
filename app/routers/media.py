@@ -152,7 +152,8 @@ async def filter_videos(request: FilterRequest):
                     "file_type": media_file.file_type,
                     "extension": media_file.extension,
                     "file_size": media_file.file_size or 0,
-                    "nsfw": media_file.nsfw or False
+                    "nsfw": media_file.nsfw or False,
+                    "media_file_id": media_file.media_file_id  # Add unique identifier
                 })
             
             return {
@@ -227,7 +228,8 @@ def _get_files_from_database(state):
                     "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
                     "file_type": media_file.file_type,
                     "extension": media_file.extension,
-                    "nsfw": media_file.nsfw or False
+                    "nsfw": media_file.nsfw or False,
+                    "media_file_id": media_file.media_file_id  # Add unique identifier
                 })
     except Exception as e:
         state.logger.error(f"Failed to get media files from database: {e}")
@@ -259,6 +261,51 @@ async def scan_directory(req: Request):
         "pattern": state.file_pattern, 
         "count": len(file_list)
     }
+
+
+@router.get("/meta/by-id/{media_file_id}")
+def get_media_metadata_by_id(media_file_id: str):
+    """Get metadata for a media file by its media_file_id (SHA256 hash)."""
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality required for media_file_id lookup")
+    
+    try:
+        with state.get_database_service() as db:
+            db_metadata = db.get_media_metadata_by_id(media_file_id)
+            if not db_metadata:
+                raise HTTPException(404, "Media file not found")
+            
+            # Convert database metadata to response format
+            metadata = {
+                "width": db_metadata.width,
+                "height": db_metadata.height,
+                "duration": db_metadata.duration,
+                "frame_rate": db_metadata.frame_rate,
+                "color_mode": db_metadata.color_mode,
+                "has_alpha": db_metadata.has_alpha,
+            }
+            
+            # Add PNG text if available
+            if db_metadata.png_text:
+                try:
+                    metadata["png_text"] = json.loads(db_metadata.png_text)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Add AI parameters if available
+            for field in ["prompt", "negative_prompt", "model_name", "sampler", "steps", "cfg_scale", "seed"]:
+                value = getattr(db_metadata, field, None)
+                if value:
+                    metadata[field] = value
+            
+            return metadata
+    except HTTPException:
+        raise
+    except Exception as e:
+        state.logger.error(f"Failed to get metadata by ID: {e}")
+        raise HTTPException(500, f"Failed to retrieve metadata: {str(e)}")
 
 
 @router.get("/meta/{name:path}")
@@ -353,6 +400,90 @@ def get_media_metadata(name: str):
             state.logger.error(f"Failed to store metadata in database: {e}")
     
     return metadata
+
+
+@router.get("/media/info/by-id/{media_file_id}")
+def get_media_info_by_id(media_file_id: str):
+    """Get comprehensive information about a media file by its media_file_id."""
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality required for media_file_id lookup")
+    
+    try:
+        with state.get_database_service() as db:
+            media_file = db.get_media_file_by_id(media_file_id)
+            if not media_file:
+                raise HTTPException(404, "Media file not found")
+            
+            # Get the file path and construct info
+            target = Path(media_file.file_path)
+            
+            if not target.exists() or not target.is_file():
+                raise HTTPException(404, "File not found on disk")
+            
+            # Get file stats
+            stat = target.stat()
+            
+            # Initialize response
+            info = {
+                "filename": target.name,
+                "file_size": stat.st_size,
+                "file_path": str(target),
+                "file_type": target.suffix.lstrip('.').upper() or "Unknown",
+                "creation_date": datetime.fromtimestamp(stat.st_ctime).isoformat(),
+                "modified_date": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                "score": media_file.score,
+                "dimensions": None,
+                "duration": None,
+                "resolution": None,
+                "aspect_ratio": None,
+                "frame_rate": None,
+                "bitrate": None,
+                "codec": None,
+                "metadata": {}
+            }
+            
+            # Get metadata from database
+            db_metadata = db.get_media_metadata_by_id(media_file_id)
+            if db_metadata:
+                if db_metadata.width and db_metadata.height:
+                    info["dimensions"] = {"width": db_metadata.width, "height": db_metadata.height}
+                    info["resolution"] = db_metadata.width * db_metadata.height
+                    # Calculate aspect ratio
+                    from math import gcd
+                    g = gcd(db_metadata.width, db_metadata.height)
+                    info["aspect_ratio"] = f"{db_metadata.width//g}:{db_metadata.height//g}"
+                
+                if db_metadata.duration:
+                    info["duration"] = db_metadata.duration
+                
+                if db_metadata.frame_rate:
+                    info["frame_rate"] = db_metadata.frame_rate
+                
+                # Add metadata fields
+                if db_metadata.png_text:
+                    try:
+                        info["metadata"]["png_text"] = json.loads(db_metadata.png_text)
+                    except json.JSONDecodeError:
+                        info["metadata"]["png_text"] = db_metadata.png_text
+                
+                # Add AI generation parameters
+                generation_params = {}
+                for field in ["prompt", "negative_prompt", "model_name", "sampler", "steps", "cfg_scale", "seed"]:
+                    value = getattr(db_metadata, field, None)
+                    if value:
+                        generation_params[field] = value
+                
+                if generation_params:
+                    info["metadata"]["generation_params"] = generation_params
+            
+            return info
+    except HTTPException:
+        raise
+    except Exception as e:
+        state.logger.error(f"Failed to get media info by ID: {e}")
+        raise HTTPException(500, f"Failed to retrieve media info: {str(e)}")
 
 
 @router.get("/media/info/{name:path}")

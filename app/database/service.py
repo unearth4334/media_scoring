@@ -293,6 +293,20 @@ class DatabaseService:
             MediaFile.file_path == file_path_str
         ).first()
     
+    @log_db_operation("get_media_file_by_id")
+    def get_media_file_by_id(self, media_file_id: str) -> Optional[MediaFile]:
+        """Get a media file by its media_file_id (SHA256 hash)."""
+        return self.session.query(MediaFile).filter(
+            MediaFile.media_file_id == media_file_id
+        ).first()
+    
+    @log_db_operation("get_media_metadata_by_id")
+    def get_media_metadata_by_id(self, media_file_id: str) -> Optional[MediaMetadata]:
+        """Get metadata for a media file by its media_file_id."""
+        return self.session.query(MediaMetadata).join(MediaFile).filter(
+            MediaFile.media_file_id == media_file_id
+        ).first()
+    
     # Keyword Operations
     
     @log_db_operation("add_keywords")

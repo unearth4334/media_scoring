@@ -949,7 +949,12 @@ function show(i){
     }
   };
   
-  fetch('/api/meta/' + encodeURIComponent(v.name))
+  // Prefer media_file_id if available for metadata fetch
+  const metaUrl = v.media_file_id 
+    ? '/api/meta/by-id/' + encodeURIComponent(v.media_file_id)
+    : '/api/meta/' + encodeURIComponent(v.name);
+  
+  fetch(metaUrl)
     .then(r => r.ok ? r.json() : null)
     .then(meta => {
       if (meta && meta.width && meta.height) {
@@ -1518,9 +1523,17 @@ window.addEventListener("load", loadVideos);
 let currentMediaInfo = null;
 
 // Fetch media information from backend
-async function fetchMediaInfo(filename) {
+async function fetchMediaInfo(filename, mediaFileId = null) {
   try {
-    const response = await fetch(`/api/media/info/${encodeURIComponent(filename)}`);
+    // Prefer media_file_id if available (more reliable for files in subdirectories)
+    let url;
+    if (mediaFileId) {
+      url = `/api/media/info/by-id/${encodeURIComponent(mediaFileId)}`;
+    } else {
+      url = `/api/media/info/${encodeURIComponent(filename)}`;
+    }
+    
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to fetch media info: ${response.status}`);
     }
@@ -1862,6 +1875,7 @@ async function openInfoPane() {
   
   const currentMedia = filtered[idx];
   const filename = currentMedia.name;
+  const mediaFileId = currentMedia.media_file_id || null;
   
   // Show loading state
   infoPane.classList.add('visible');
@@ -1870,8 +1884,8 @@ async function openInfoPane() {
     contentDiv.innerHTML = '<div class="info-loading">Loading...</div>';
   }
   
-  // Fetch and populate data
-  const mediaInfo = await fetchMediaInfo(filename);
+  // Fetch and populate data - prefer media_file_id
+  const mediaInfo = await fetchMediaInfo(filename, mediaFileId);
   if (mediaInfo) {
     currentMediaInfo = mediaInfo;
     populateInfoPane(mediaInfo);
