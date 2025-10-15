@@ -268,6 +268,7 @@
     <button class="mobile-nav-btn" id="mobile-prev-btn" title="Previous media">‹</button>
     <button class="mobile-score-btn" id="mobile-score-btn" title="Rate media">★</button>
     <button class="mobile-nav-btn" id="mobile-next-btn" title="Next media">›</button>
+    <button class="mobile-action-btn" id="mobile-zoom-btn" title="Zoom image" style="display: none;">🔍</button>
     <button class="mobile-action-btn" id="mobile-download-btn" title="Download media" disabled>↓</button>
     <button class="mobile-action-btn" id="mobile-maximize-btn" title="Maximize media">⤢</button>
     <button class="mobile-action-btn" id="mobile-menu-btn" title="More options">⋯</button>
@@ -283,6 +284,17 @@
       <button class="mobile-score-option star-btn" data-score="3" title="3 stars">☆</button>
       <button class="mobile-score-option star-btn" data-score="4" title="4 stars">☆</button>
       <button class="mobile-score-option star-btn" data-score="5" title="5 stars">☆</button>
+    </div>
+  </div>
+
+  <!-- Mobile Zoom Popover -->
+  <div class="mobile-zoom-popover" id="mobile-zoom-popover">
+    <div class="mobile-zoom-controls">
+      <input type="range" id="mobile-zoom-slider" min="100" max="500" value="100" step="10" class="mobile-zoom-slider">
+      <button class="mobile-zoom-fit-btn" id="mobile-zoom-fit-btn" title="Fit to pane">⊞</button>
+    </div>
+    <div class="mobile-zoom-label">
+      <span id="mobile-zoom-value">100%</span>
     </div>
   </div>
 

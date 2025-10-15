@@ -1209,16 +1209,28 @@ aside#sidebar {
     max-width: 100%;
     overflow: hidden;
     box-sizing: border-box;
+    position: relative;
+    width: 100vw; /* Full viewport width for better mobile experience */
+    margin: 0 -8px; /* Compensate for any padding */
   }
   
   /* Make media content responsive */
-  .video-wrap video,
-  .video-wrap img {
+  .video-wrap video {
     max-width: 100% !important;
     max-height: 50vh !important;
     width: auto !important;  
     height: auto !important;
     object-fit: contain;
+  }
+  
+  /* Image viewport for mobile - allow panning when zoomed */
+  .video-wrap img {
+    max-width: 100% !important;
+    max-height: 60vh !important;
+    width: auto !important;  
+    height: auto !important;
+    object-fit: contain;
+    display: block;
   }
   
   /* Make scorebar responsive */
@@ -1570,6 +1582,103 @@ body.maximized .mobile-scorebar {
 
 .mobile-toggle-switch input:focus + .mobile-toggle-slider {
   box-shadow: 0 0 1px #00bcd4;
+}
+
+/* =========================================================
+   MOBILE ZOOM POPOVER
+   --------------------------------------------------------- */
+.mobile-zoom-popover {
+  position: fixed;
+  bottom: 64px; /* Above mobile scorebar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(24, 24, 24, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 16px;
+  display: none;
+  z-index: 1002;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  min-width: 280px;
+}
+
+.mobile-zoom-popover.active {
+  display: block;
+  animation: popoverSlideUp 0.2s ease-out;
+}
+
+.mobile-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mobile-zoom-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: #555;
+  border-radius: 3px;
+  outline: none;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.mobile-zoom-slider:hover {
+  opacity: 1;
+}
+
+.mobile-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #00bcd4;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-zoom-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #00bcd4;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.mobile-zoom-fit-btn {
+  width: 36px;
+  height: 36px;
+  background: #00bcd4;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mobile-zoom-fit-btn:hover,
+.mobile-zoom-fit-btn:active {
+  background: #0097a7;
+}
+
+.mobile-zoom-label {
+  text-align: center;
+  color: #00bcd4;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* =========================================================
