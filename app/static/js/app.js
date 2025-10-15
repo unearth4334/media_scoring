@@ -927,13 +927,12 @@ function applyAspectRatio(aspectRatio) {
   // Remove any existing aspect ratio class
   videoWrap.classList.remove('aspect-free', 'aspect-1-1', 'aspect-4-3', 'aspect-16-9', 'aspect-21-9', 'aspect-9-16', 'aspect-3-4');
   
+  // Add the new aspect ratio class (CSS handles the styling)
   if (aspectRatio === 'free') {
     videoWrap.classList.add('aspect-free');
-    videoWrap.style.aspectRatio = '';
   } else {
     const className = 'aspect-' + aspectRatio.replace(':', '-');
     videoWrap.classList.add(className);
-    videoWrap.style.aspectRatio = aspectRatio.replace(':', ' / ');
   }
 }
 
