@@ -499,6 +499,58 @@ aside#sidebar {
    MEDIA PANE (leave functional buttons as-is except structure)
    --------------------------------------------------------- */
 .video-wrap { background: #000; padding: 8px; border-radius: 12px; position: relative; }
+
+/* Aspect ratio styles for mobile */
+@media (max-width: 768px) {
+  .video-wrap.aspect-1-1 {
+    aspect-ratio: 1 / 1;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-4-3 {
+    aspect-ratio: 4 / 3;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-16-9 {
+    aspect-ratio: 16 / 9;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-21-9 {
+    aspect-ratio: 21 / 9;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-9-16 {
+    aspect-ratio: 9 / 16;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-3-4 {
+    aspect-ratio: 3 / 4;
+    max-width: 100%;
+    margin: 0 auto;
+  }
+  
+  .video-wrap.aspect-free {
+    aspect-ratio: unset;
+  }
+  
+  /* Ensure content fits within aspect ratio container */
+  .video-wrap[class*="aspect-"] img,
+  .video-wrap[class*="aspect-"] video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
 .overlay-top-left { position: absolute; top: 12px; left: 12px; display: flex; gap: 8px; z-index: 5; }
 
 /* EXCLUDED: overlay button kept as-is */
@@ -1674,12 +1726,100 @@ body.maximized .mobile-scorebar {
   background: #0097a7;
 }
 
-.mobile-zoom-label {
-  text-align: center;
+.mobile-zoom-aspect-btn {
+  width: 36px;
+  height: 36px;
+  background: #00bcd4;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mobile-zoom-aspect-btn:hover,
+.mobile-zoom-aspect-btn:active {
+  background: #0097a7;
+}
+
+.mobile-zoom-aspect {
+  display: none;
+}
+
+.mobile-zoom-aspect-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.mobile-zoom-aspect-title {
   color: #00bcd4;
   font-size: 14px;
   font-weight: 500;
 }
+
+.mobile-zoom-aspect-close {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid #555;
+  border-radius: 6px;
+  color: #999;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mobile-zoom-aspect-close:hover,
+.mobile-zoom-aspect-close:active {
+  background: #555;
+  color: #fff;
+  border-color: #777;
+}
+
+.mobile-zoom-aspect-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #00bcd4 #333;
+}
+
+.mobile-zoom-aspect-pills::-webkit-scrollbar {
+  height: 6px;
+}
+
+.mobile-zoom-aspect-pills::-webkit-scrollbar-track {
+  background: #333;
+  border-radius: 3px;
+}
+
+.mobile-zoom-aspect-pills::-webkit-scrollbar-thumb {
+  background: #00bcd4;
+  border-radius: 3px;
+}
+
+.mobile-zoom-aspect-pills::-webkit-scrollbar-thumb:hover {
+  background: #0097a7;
+}
+
+.aspect-pill {
+  flex-shrink: 0;
+}
+
 
 /* =========================================================
    INFO PANE OVERLAY
