@@ -1181,3 +1181,100 @@ aside#sidebar {
 .mobile-toggle-switch input:focus + .mobile-toggle-slider {
   box-shadow: 0 0 1px #87ceeb;
 }
+
+/* =========================================================
+   MOBILE ZOOM POPOVER
+   --------------------------------------------------------- */
+.mobile-zoom-popover {
+  position: fixed;
+  bottom: 64px; /* Above mobile scorebar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 250, 245, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid #87ceeb;
+  border-radius: 12px;
+  padding: 16px;
+  display: none;
+  z-index: 1002;
+  box-shadow: 0 8px 32px rgba(135, 206, 235, 0.3);
+  min-width: 280px;
+}
+
+.mobile-zoom-popover.active {
+  display: block;
+  animation: popoverSlideUp 0.2s ease-out;
+}
+
+.mobile-zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.mobile-zoom-slider {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: #e6e6fa;
+  border-radius: 3px;
+  outline: none;
+  opacity: 0.9;
+  transition: opacity 0.2s;
+}
+
+.mobile-zoom-slider:hover {
+  opacity: 1;
+}
+
+.mobile-zoom-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #87ceeb;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(135, 206, 235, 0.3);
+}
+
+.mobile-zoom-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #87ceeb;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 4px rgba(135, 206, 235, 0.3);
+}
+
+.mobile-zoom-fit-btn {
+  width: 36px;
+  height: 36px;
+  background: #87ceeb;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mobile-zoom-fit-btn:hover,
+.mobile-zoom-fit-btn:active {
+  background: #6bb3d9;
+}
+
+.mobile-zoom-label {
+  text-align: center;
+  color: #87ceeb;
+  font-size: 14px;
+  font-weight: 500;
+}
