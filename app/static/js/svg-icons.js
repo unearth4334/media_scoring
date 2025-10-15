@@ -233,3 +233,28 @@ function svgMobileStarFilled(score) {
   <text x="16" y="19" text-anchor="middle" font-size="14" font-weight="700" fill="rgba(24, 24, 24, 0.95)">${score}</text>
 </svg>`;
 }
+
+/**
+ * Magnifying glass icon for zoom functionality
+ * @returns {string} SVG markup
+ */
+function svgMagnifyingGlass() {
+  return `
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <circle cx="11" cy="11" r="6" stroke="currentColor" stroke-width="2"/>
+  <path d="M15 15l5 5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+  <path d="M11 8v6M8 11h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+</svg>`;
+}
+
+/**
+ * Fit to pane icon (equals sign in a frame)
+ * @returns {string} SVG markup
+ */
+function svgFitToPane() {
+  return `
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+  <rect x="3" y="3" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" rx="2"/>
+  <path d="M8 9h8M8 15h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+</svg>`;
+}
