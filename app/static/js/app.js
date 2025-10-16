@@ -146,7 +146,7 @@ let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
 let userPathPrefix = null; // User's local mount path for NAS (for clipboard path translation)
 let currentZoom = 100; // Current zoom level for mobile image viewing (percentage)
-let currentRotation = 0; // Current rotation angle for mobile image viewing (0 or 90 degrees)
+let currentRotation = 0; // Current rotation angle for mobile image viewing (0 or -90 degrees)
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
