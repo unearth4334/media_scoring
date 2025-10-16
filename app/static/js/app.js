@@ -908,6 +908,10 @@ function applyImageZoom(zoomPercent) {
   if (!imgview || imgview.style.display === 'none') return;
   if (!isMobileDevice()) return; // Only apply zoom on mobile
   
+  // Ensure we're working with an image, not a video
+  const currentMedia = filtered[idx];
+  if (!currentMedia || !isImageName(currentMedia.name)) return;
+  
   const scale = zoomPercent / 100;
   
   // Apply transform for zoom and rotation with transform-origin at top-left
@@ -934,6 +938,10 @@ function toggleImageRotation() {
   
   if (!imgview || imgview.style.display === 'none') return;
   if (!isMobileDevice()) return; // Only apply on mobile
+  
+  // Ensure we're working with an image, not a video
+  const currentMedia = filtered[idx];
+  if (!currentMedia || !isImageName(currentMedia.name)) return;
   
   // Toggle rotation between 0 and 90 degrees
   currentRotation = currentRotation === 0 ? 90 : 0;
