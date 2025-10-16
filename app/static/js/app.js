@@ -817,9 +817,11 @@ function initializeMobileScoreBar() {
     // Fit to pane button handler
     if (mobileZoomFitBtn) {
       mobileZoomFitBtn.addEventListener('click', () => {
-        currentZoom = 100;
-        mobileZoomSlider.value = 100;
-        applyImageZoom(100);
+        // Calculate the zoom needed to fit the image width (or height if rotated) to the pane
+        const fitZoom = calculateFitToWidthZoom();
+        currentZoom = fitZoom;
+        mobileZoomSlider.value = fitZoom;
+        applyImageZoom(fitZoom);
       });
     }
     
@@ -909,6 +911,55 @@ function initializeMobileScoreBar() {
 function isCurrentMediaAnImage() {
   const currentMedia = filtered[idx];
   return currentMedia && isImageName(currentMedia.name);
+}
+
+function calculateFitToWidthZoom() {
+  const imgview = document.getElementById('imgview');
+  const videoWrap = document.querySelector('.video-wrap');
+  
+  if (!imgview || imgview.style.display === 'none') return 100;
+  if (!isMobileDevice()) return 100;
+  if (!isCurrentMediaAnImage()) return 100;
+  
+  // Get the natural image dimensions
+  const imageWidth = imgview.naturalWidth;
+  const imageHeight = imgview.naturalHeight;
+  
+  if (!imageWidth || !imageHeight) return 100;
+  
+  // Get the video-wrap dimensions (excluding padding)
+  const videoWrapRect = videoWrap.getBoundingClientRect();
+  const computedStyle = window.getComputedStyle(videoWrap);
+  const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+  const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+  const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
+  
+  // Determine the available width for the image
+  let availableDimension = wrapWidth;
+  
+  // Calculate the zoom percentage needed to fit
+  // The image is displayed with max-width/max-height constraints initially,
+  // so we need to calculate based on the actual rendered size
+  const currentRenderedWidth = imgview.offsetWidth;
+  const currentRenderedHeight = imgview.offsetHeight;
+  
+  let currentDisplayedDimension;
+  if (currentRotation === 90) {
+    // When rotated 90 degrees, the image height becomes the horizontal dimension
+    currentDisplayedDimension = currentRenderedHeight;
+  } else {
+    // Normal orientation: fit image width to wrap width
+    currentDisplayedDimension = currentRenderedWidth;
+  }
+  
+  // Calculate zoom to fit available dimension
+  if (currentDisplayedDimension > 0) {
+    const zoomPercent = (availableDimension / currentDisplayedDimension) * 100;
+    // Clamp to reasonable values (min 50%, max 500%)
+    return Math.max(50, Math.min(500, zoomPercent));
+  }
+  
+  return 100;
 }
 
 function applyImageZoom(zoomPercent) {
