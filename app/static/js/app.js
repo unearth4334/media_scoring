@@ -778,8 +778,12 @@ function initializeMobileScoreBar() {
   const mobileZoomBtn = document.getElementById('mobile-zoom-btn');
   const mobileZoomPopover = document.getElementById('mobile-zoom-popover');
   const mobileZoomSlider = document.getElementById('mobile-zoom-slider');
-  const mobileZoomValue = document.getElementById('mobile-zoom-value');
   const mobileZoomFitBtn = document.getElementById('mobile-zoom-fit-btn');
+  const mobileZoomAspectBtn = document.getElementById('mobile-zoom-aspect-btn');
+  const mobileZoomMain = document.getElementById('mobile-zoom-main');
+  const mobileZoomAspect = document.getElementById('mobile-zoom-aspect');
+  const mobileZoomAspectClose = document.getElementById('mobile-zoom-aspect-close');
+  const mobileZoomAspectPills = document.getElementById('mobile-zoom-aspect-pills');
   
   if (mobileZoomBtn && mobileZoomPopover && mobileZoomSlider) {
     // Zoom button toggle popover
@@ -791,15 +795,16 @@ function initializeMobileScoreBar() {
         mobileMenuPopover.classList.remove('active');
       }
       mobileZoomPopover.classList.toggle('active');
+      // Reset to main view when opening
+      if (mobileZoomPopover.classList.contains('active')) {
+        showZoomMainView();
+      }
     });
     
     // Zoom slider handler
     mobileZoomSlider.addEventListener('input', (e) => {
       const zoomValue = parseInt(e.target.value);
       currentZoom = zoomValue;
-      if (mobileZoomValue) {
-        mobileZoomValue.textContent = zoomValue + '%';
-      }
       applyImageZoom(zoomValue);
     });
     
@@ -808,11 +813,53 @@ function initializeMobileScoreBar() {
       mobileZoomFitBtn.addEventListener('click', () => {
         currentZoom = 100;
         mobileZoomSlider.value = 100;
-        if (mobileZoomValue) {
-          mobileZoomValue.textContent = '100%';
-        }
         applyImageZoom(100);
       });
+    }
+    
+    // Aspect ratio button handler
+    if (mobileZoomAspectBtn) {
+      mobileZoomAspectBtn.addEventListener('click', () => {
+        showZoomAspectView();
+      });
+    }
+    
+    // Aspect ratio close button handler
+    if (mobileZoomAspectClose) {
+      mobileZoomAspectClose.addEventListener('click', () => {
+        showZoomMainView();
+      });
+    }
+    
+    // Aspect ratio pill handlers
+    if (mobileZoomAspectPills) {
+      mobileZoomAspectPills.querySelectorAll('.aspect-pill').forEach(pill => {
+        pill.addEventListener('click', () => {
+          // Update active state
+          mobileZoomAspectPills.querySelectorAll('.aspect-pill').forEach(p => p.classList.remove('active'));
+          pill.classList.add('active');
+          
+          // Apply aspect ratio
+          const aspectRatio = pill.dataset.aspect;
+          applyAspectRatio(aspectRatio);
+        });
+      });
+    }
+  }
+  
+  // Helper function to show main zoom view
+  function showZoomMainView() {
+    if (mobileZoomMain && mobileZoomAspect) {
+      mobileZoomMain.style.display = 'block';
+      mobileZoomAspect.style.display = 'none';
+    }
+  }
+  
+  // Helper function to show aspect ratio view
+  function showZoomAspectView() {
+    if (mobileZoomMain && mobileZoomAspect) {
+      mobileZoomMain.style.display = 'none';
+      mobileZoomAspect.style.display = 'block';
     }
   }
   
@@ -869,6 +916,23 @@ function applyImageZoom(zoomPercent) {
       videoWrap.style.overflow = 'hidden';
       videoWrap.style.touchAction = 'auto';
     }
+  }
+}
+
+function applyAspectRatio(aspectRatio) {
+  const videoWrap = document.querySelector('.video-wrap');
+  if (!videoWrap) return;
+  if (!isMobileDevice()) return; // Only apply on mobile
+  
+  // Remove any existing aspect ratio class
+  videoWrap.classList.remove('aspect-free', 'aspect-1-1', 'aspect-4-3', 'aspect-16-9', 'aspect-21-9', 'aspect-9-16', 'aspect-3-4');
+  
+  // Add the new aspect ratio class (CSS handles the styling)
+  if (aspectRatio === 'free') {
+    videoWrap.classList.add('aspect-free');
+  } else {
+    const className = 'aspect-' + aspectRatio.replace(':', '-');
+    videoWrap.classList.add(className);
   }
 }
 

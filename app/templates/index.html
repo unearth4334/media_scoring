@@ -289,12 +289,30 @@
 
   <!-- Mobile Zoom Popover -->
   <div class="mobile-zoom-popover" id="mobile-zoom-popover">
-    <div class="mobile-zoom-controls">
-      <input type="range" id="mobile-zoom-slider" min="100" max="500" value="100" step="10" class="mobile-zoom-slider">
-      <button class="mobile-zoom-fit-btn" id="mobile-zoom-fit-btn" title="Fit to pane">⊞</button>
+    <!-- Main zoom controls view -->
+    <div class="mobile-zoom-main" id="mobile-zoom-main">
+      <div class="mobile-zoom-controls">
+        <input type="range" id="mobile-zoom-slider" min="100" max="500" value="100" step="10" class="mobile-zoom-slider">
+        <button class="mobile-zoom-fit-btn" id="mobile-zoom-fit-btn" title="Fit to pane">⊞</button>
+        <button class="mobile-zoom-aspect-btn" id="mobile-zoom-aspect-btn" title="Aspect ratio">▭</button>
+      </div>
     </div>
-    <div class="mobile-zoom-label">
-      <span id="mobile-zoom-value">100%</span>
+    
+    <!-- Aspect ratio selection view -->
+    <div class="mobile-zoom-aspect" id="mobile-zoom-aspect" style="display: none;">
+      <div class="mobile-zoom-aspect-header">
+        <span class="mobile-zoom-aspect-title">Aspect Ratio</span>
+        <button class="mobile-zoom-aspect-close" id="mobile-zoom-aspect-close" title="Close">✕</button>
+      </div>
+      <div class="mobile-zoom-aspect-pills" id="mobile-zoom-aspect-pills">
+        <button class="pill aspect-pill active" data-aspect="free" title="Free aspect">Free</button>
+        <button class="pill aspect-pill" data-aspect="1:1" title="Square (1:1)">1:1</button>
+        <button class="pill aspect-pill" data-aspect="4:3" title="Standard (4:3)">4:3</button>
+        <button class="pill aspect-pill" data-aspect="16:9" title="Widescreen (16:9)">16:9</button>
+        <button class="pill aspect-pill" data-aspect="21:9" title="Ultrawide (21:9)">21:9</button>
+        <button class="pill aspect-pill" data-aspect="9:16" title="Portrait (9:16)">9:16</button>
+        <button class="pill aspect-pill" data-aspect="3:4" title="Portrait (3:4)">3:4</button>
+      </div>
     </div>
   </div>
 
