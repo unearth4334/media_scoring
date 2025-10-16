@@ -45,8 +45,12 @@ function restoreAppState() {
   const savedMinFilter = loadState('minFilter');
   if (savedMinFilter === 'none' || savedMinFilter === null) {
     minFilter = null;
+  } else if (savedMinFilter === 'rejected') {
+    minFilter = 'rejected';
   } else if (savedMinFilter === 'unrated') {
     minFilter = 'unrated';
+  } else if (savedMinFilter === 'unrated_and_above') {
+    minFilter = 'unrated_and_above';
   } else if (!isNaN(parseInt(savedMinFilter))) {
     minFilter = parseInt(savedMinFilter);
   } else {
@@ -1020,8 +1024,12 @@ function renderSidebar(){
 function applyFilter(){
   if (minFilter === null) {
     filtered = videos.slice();
+  } else if (minFilter === 'rejected') {
+    filtered = videos.filter(v => v.score === -1);
   } else if (minFilter === 'unrated') {
     filtered = videos.filter(v => !v.score || v.score === 0);
+  } else if (minFilter === 'unrated_and_above') {
+    filtered = videos.filter(v => !v.score || v.score >= 0);
   } else {
     filtered = videos.filter(v => (v.score||0) >= minFilter);
   }
@@ -1029,8 +1037,12 @@ function applyFilter(){
   let label;
   if (minFilter === null) {
     label = 'No filter';
+  } else if (minFilter === 'rejected') {
+    label = 'Rejected only';
   } else if (minFilter === 'unrated') {
     label = 'Unrated only';
+  } else if (minFilter === 'unrated_and_above') {
+    label = 'Unrated and above';
   } else {
     label = 'rating ≥ ' + minFilter;
   }
@@ -1419,17 +1431,21 @@ document.getElementById('min_filter').addEventListener('change', () => {
   const val = document.getElementById('min_filter').value;
   if (val === 'none') {
     minFilter = null;
+  } else if (val === 'rejected') {
+    minFilter = 'rejected';
   } else if (val === 'unrated') {
     minFilter = 'unrated';
+  } else if (val === 'unrated_and_above') {
+    minFilter = 'unrated_and_above';
   } else {
     minFilter = parseInt(val);
   }
   
   // Save the filter state to cookies
-  const filterValue = minFilter === null ? 'none' : (minFilter === 'unrated' ? 'unrated' : String(minFilter));
+  const filterValue = minFilter === null ? 'none' : (typeof minFilter === 'string' ? minFilter : String(minFilter));
   saveState('minFilter', filterValue);
   
-  fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(minFilter==='unrated'?'unrated':('>='+minFilter))), name: '' })});
+  fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(typeof minFilter === 'string'?minFilter:('>='+minFilter))), name: '' })});
   applyFilter(); renderSidebar(); show(0);
 });
 document.getElementById('dir').addEventListener('keydown', (e) => {
