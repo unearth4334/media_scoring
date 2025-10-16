@@ -497,8 +497,12 @@ function applySearchToolbarFilter(pillType) {
       document.getElementById('min_filter').value = newValue;
       if (newValue === 'none') {
         minFilter = null;
+      } else if (newValue === 'rejected') {
+        minFilter = 'rejected';
       } else if (newValue === 'unrated') {
         minFilter = 'unrated';
+      } else if (newValue === 'unrated_and_above') {
+        minFilter = 'unrated_and_above';
       } else {
         minFilter = parseInt(newValue);
       }
@@ -605,7 +609,9 @@ function updatePillValues() {
   const ratingPill = document.getElementById('pill-rating');
   const ratingLabels = {
     'none': 'All',
+    'rejected': 'Rejected',
     'unrated': 'Unrated',
+    'unrated_and_above': 'Unrated+',
     '1': '★1+',
     '2': '★2+',
     '3': '★3+',
@@ -760,8 +766,12 @@ function syncBackwardCompatibility() {
     const val = minFilterSelect.value;
     if (val === 'none') {
       minFilter = null;
+    } else if (val === 'rejected') {
+      minFilter = 'rejected';
     } else if (val === 'unrated') {
       minFilter = 'unrated';
+    } else if (val === 'unrated_and_above') {
+      minFilter = 'unrated_and_above';
     } else if (!isNaN(parseInt(val))) {
       minFilter = parseInt(val);
     } else {
@@ -855,8 +865,13 @@ async function applyDatabaseFilters() {
     
     // Add rating filters
     if (searchToolbarFilters.rating !== 'none') {
-      if (searchToolbarFilters.rating === 'unrated') {
+      if (searchToolbarFilters.rating === 'rejected') {
+        filterRequest.min_score = -1;
+        filterRequest.max_score = -1;
+      } else if (searchToolbarFilters.rating === 'unrated') {
         filterRequest.max_score = 0;
+      } else if (searchToolbarFilters.rating === 'unrated_and_above') {
+        filterRequest.min_score = 0;
       } else {
         filterRequest.min_score = parseInt(searchToolbarFilters.rating);
       }
@@ -913,8 +928,12 @@ function applyClientSideFilters() {
   
   // Apply rating filter
   if (minFilter !== null) {
-    if (minFilter === 'unrated') {
+    if (minFilter === 'rejected') {
+      currentFiltered = currentFiltered.filter(v => v.score === -1);
+    } else if (minFilter === 'unrated') {
       currentFiltered = currentFiltered.filter(v => !v.score || v.score === 0);
+    } else if (minFilter === 'unrated_and_above') {
+      currentFiltered = currentFiltered.filter(v => !v.score || v.score >= 0);
     } else {
       currentFiltered = currentFiltered.filter(v => (v.score||0) >= minFilter);
     }
@@ -943,8 +962,12 @@ function applyClientSideFilters() {
     let filterParts = [];
     
     if (minFilter !== null) {
-      if (minFilter === 'unrated') {
+      if (minFilter === 'rejected') {
+        filterParts.push('rejected only');
+      } else if (minFilter === 'unrated') {
         filterParts.push('unrated only');
+      } else if (minFilter === 'unrated_and_above') {
+        filterParts.push('unrated and above');
       } else {
         filterParts.push(`rating ≥ ${minFilter}`);
       }
