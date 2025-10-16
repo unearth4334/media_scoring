@@ -39,7 +39,12 @@ class StatePersistence {
       'videoVolume': { type: 'number', default: 0.5 },
       'videoPlaybackRate': { type: 'number', default: 1.0 },
       'autoPlayVideo': { type: 'boolean', default: false },
-      'loopVideo': { type: 'boolean', default: false }
+      'loopVideo': { type: 'boolean', default: false },
+      
+      // Image view settings
+      'imageZoomRatio': { type: 'number', default: 1.0 },
+      'imageRotation': { type: 'number', default: 0 },
+      'imageAspectRatio': { type: 'string', default: 'free' }
     };
   }
   
