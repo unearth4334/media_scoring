@@ -929,22 +929,13 @@ function calculateFitToWidthZoom() {
   
   // Get the video-wrap dimensions (excluding padding)
   const videoWrapRect = videoWrap.getBoundingClientRect();
-  const wrapWidth = videoWrapRect.width - 16; // Account for 8px padding on each side
-  const wrapHeight = videoWrapRect.height - 16;
+  const computedStyle = window.getComputedStyle(videoWrap);
+  const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+  const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+  const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
   
   // Determine which dimension to fit based on rotation
-  let targetDimension, availableDimension;
-  
-  if (currentRotation === 90) {
-    // When rotated 90 degrees, the image height becomes the horizontal dimension
-    // So we fit the image height to the wrap width
-    targetDimension = imageHeight;
-    availableDimension = wrapWidth;
-  } else {
-    // Normal orientation: fit image width to wrap width
-    targetDimension = imageWidth;
-    availableDimension = wrapWidth;
-  }
+  let availableDimension = wrapWidth;
   
   // Calculate the zoom percentage needed to fit
   // The image is displayed with max-width/max-height constraints initially,
@@ -954,8 +945,10 @@ function calculateFitToWidthZoom() {
   
   let currentDisplayedDimension;
   if (currentRotation === 90) {
+    // When rotated 90 degrees, the image height becomes the horizontal dimension
     currentDisplayedDimension = currentRenderedHeight;
   } else {
+    // Normal orientation: fit image width to wrap width
     currentDisplayedDimension = currentRenderedWidth;
   }
   
