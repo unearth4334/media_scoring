@@ -1251,6 +1251,8 @@ aside#sidebar {
   z-index: 1002;
   box-shadow: 0 8px 32px rgba(135, 206, 235, 0.3);
   min-width: 280px;
+  max-width: calc(100vw - 32px); /* Fit within screen width with padding */
+  box-sizing: border-box;
 }
 
 .mobile-zoom-popover.active {
@@ -1363,19 +1365,12 @@ aside#sidebar {
 .mobile-zoom-aspect-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.mobile-zoom-aspect-title {
-  color: #87ceeb;
-  font-size: 14px;
-  font-weight: 500;
+  gap: 12px;
 }
 
 .mobile-zoom-aspect-close {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   background: transparent;
   border: 1px solid #d4b8c9;
   border-radius: 6px;
@@ -1398,6 +1393,7 @@ aside#sidebar {
 
 .mobile-zoom-aspect-pills {
   display: flex;
+  flex: 1;
   gap: 8px;
   overflow-x: auto;
   overflow-y: hidden;
@@ -1405,6 +1401,7 @@ aside#sidebar {
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: #87ceeb #efe0ef;
+  scroll-behavior: smooth;
 }
 
 .mobile-zoom-aspect-pills::-webkit-scrollbar {
