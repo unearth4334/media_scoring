@@ -944,8 +944,8 @@ function calculateFitToWidthZoom() {
   const currentRenderedHeight = imgview.offsetHeight;
   
   let currentDisplayedDimension;
-  if (currentRotation === 90) {
-    // When rotated 90 degrees, the image height becomes the horizontal dimension
+  if (currentRotation === -90) {
+    // When rotated -90 degrees, the image height becomes the horizontal dimension
     currentDisplayedDimension = currentRenderedHeight;
   } else {
     // Normal orientation: fit image width to wrap width
@@ -972,8 +972,8 @@ function applyImageZoom(zoomPercent) {
   
   const scale = zoomPercent / 100;
   
-  // Apply transform for zoom and rotation with transform-origin at top-left
-  imgview.style.transformOrigin = 'top left';
+  // Apply transform for zoom and rotation with transform-origin at center
+  imgview.style.transformOrigin = 'center';
   imgview.style.transform = `scale(${scale}) rotate(${currentRotation}deg)`;
   
   // Enable touch panning when zoomed in
@@ -998,12 +998,12 @@ function toggleImageRotation() {
   if (!isMobileDevice()) return; // Only apply on mobile
   if (!isCurrentMediaAnImage()) return; // Ensure we're working with an image, not a video
   
-  // Toggle rotation between 0 and 90 degrees
-  currentRotation = currentRotation === 0 ? 90 : 0;
+  // Toggle rotation between 0 and -90 degrees (counterclockwise)
+  currentRotation = currentRotation === 0 ? -90 : 0;
   
   // Update button state
   if (mobileZoomRotateBtn) {
-    if (currentRotation === 90) {
+    if (currentRotation === -90) {
       mobileZoomRotateBtn.classList.add('rotated');
     } else {
       mobileZoomRotateBtn.classList.remove('rotated');
