@@ -142,6 +142,7 @@ let showThumbnails = true; // user preference for showing thumbnails
 let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for toggle buttons
 let userPathPrefix = null; // User's local mount path for NAS (for clipboard path translation)
 let currentZoom = 100; // Current zoom level for mobile image viewing (percentage)
+let currentRotation = 0; // Current rotation angle for mobile image viewing (0 or 90 degrees)
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -780,6 +781,7 @@ function initializeMobileScoreBar() {
   const mobileZoomSlider = document.getElementById('mobile-zoom-slider');
   const mobileZoomFitBtn = document.getElementById('mobile-zoom-fit-btn');
   const mobileZoomAspectBtn = document.getElementById('mobile-zoom-aspect-btn');
+  const mobileZoomRotateBtn = document.getElementById('mobile-zoom-rotate-btn');
   const mobileZoomMain = document.getElementById('mobile-zoom-main');
   const mobileZoomAspect = document.getElementById('mobile-zoom-aspect');
   const mobileZoomAspectClose = document.getElementById('mobile-zoom-aspect-close');
@@ -821,6 +823,13 @@ function initializeMobileScoreBar() {
     if (mobileZoomAspectBtn) {
       mobileZoomAspectBtn.addEventListener('click', () => {
         showZoomAspectView();
+      });
+    }
+    
+    // Rotation button handler
+    if (mobileZoomRotateBtn) {
+      mobileZoomRotateBtn.addEventListener('click', () => {
+        toggleImageRotation();
       });
     }
     
@@ -901,9 +910,9 @@ function applyImageZoom(zoomPercent) {
   
   const scale = zoomPercent / 100;
   
-  // Apply transform for zoom with transform-origin at top-left
+  // Apply transform for zoom and rotation with transform-origin at top-left
   imgview.style.transformOrigin = 'top left';
-  imgview.style.transform = `scale(${scale})`;
+  imgview.style.transform = `scale(${scale}) rotate(${currentRotation}deg)`;
   
   // Enable touch panning when zoomed in
   if (scale > 1) {
@@ -917,6 +926,29 @@ function applyImageZoom(zoomPercent) {
       videoWrap.style.touchAction = 'auto';
     }
   }
+}
+
+function toggleImageRotation() {
+  const imgview = document.getElementById('imgview');
+  const mobileZoomRotateBtn = document.getElementById('mobile-zoom-rotate-btn');
+  
+  if (!imgview || imgview.style.display === 'none') return;
+  if (!isMobileDevice()) return; // Only apply on mobile
+  
+  // Toggle rotation between 0 and 90 degrees
+  currentRotation = currentRotation === 0 ? 90 : 0;
+  
+  // Update button state
+  if (mobileZoomRotateBtn) {
+    if (currentRotation === 90) {
+      mobileZoomRotateBtn.classList.add('rotated');
+    } else {
+      mobileZoomRotateBtn.classList.remove('rotated');
+    }
+  }
+  
+  // Apply the rotation with current zoom
+  applyImageZoom(currentZoom);
 }
 
 function applyAspectRatio(aspectRatio) {
@@ -1002,14 +1034,17 @@ function showMedia(url, name){
   const vtag = document.getElementById('player');
   const itag = document.getElementById('imgview');
   const mobileZoomBtn = document.getElementById('mobile-zoom-btn');
+  const mobileZoomRotateBtn = document.getElementById('mobile-zoom-rotate-btn');
   const videoWrap = document.querySelector('.video-wrap');
   
-  // Reset zoom state when switching media
+  // Reset zoom and rotation state when switching media
   currentZoom = 100;
+  currentRotation = 0;
   const mobileZoomSlider = document.getElementById('mobile-zoom-slider');
   const mobileZoomValue = document.getElementById('mobile-zoom-value');
   if (mobileZoomSlider) mobileZoomSlider.value = 100;
   if (mobileZoomValue) mobileZoomValue.textContent = '100%';
+  if (mobileZoomRotateBtn) mobileZoomRotateBtn.classList.remove('rotated');
   
   if (isVideoName(name)){
     itag.style.display = 'none'; itag.removeAttribute('src');
