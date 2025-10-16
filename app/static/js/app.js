@@ -934,7 +934,7 @@ function calculateFitToWidthZoom() {
   const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
   const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
   
-  // Determine which dimension to fit based on rotation
+  // Determine the available width for the image
   let availableDimension = wrapWidth;
   
   // Calculate the zoom percentage needed to fit
