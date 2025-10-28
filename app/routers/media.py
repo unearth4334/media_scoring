@@ -265,22 +265,69 @@ async def scan_directory(req: Request):
 def get_media_metadata(name: str):
     """Get metadata for a media file."""
     state = get_state()
-    target = (state.video_dir / name).resolve()
     
+    # Initialize variables for database mode
+    media_file = None
+    db_path = None
+    
+    # If database is enabled, find the file by its filename in the database
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    # Find the media file by filename
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        # Get the database path (host path)
+                        db_path = media_file.file_path
+                        
+                        # Check if we need to translate from host path to container path
+                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                            # Replace host path prefix with container path
+                            if db_path.startswith(state.settings.user_path_prefix):
+                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                target = Path(container_path)
+                            else:
+                                target = Path(db_path)
+                        else:
+                            target = Path(db_path)
+                        
+                        state.logger.info(f"Found file in database for metadata: {db_path} -> {target}")
+                    else:
+                        # File not in database, fall back to filesystem lookup
+                        state.logger.warning(f"File '{name}' not found in database, falling back to filesystem")
+                        target = (state.video_dir / name).resolve()
+            else:
+                # Database service not available, use filesystem
+                target = (state.video_dir / name).resolve()
+        except Exception as e:
+            state.logger.error(f"Database error when looking up file for metadata: {e}")
+            # Fall back to filesystem lookup
+            target = (state.video_dir / name).resolve()
+    else:
+        # Original filesystem behavior
+        target = (state.video_dir / name).resolve()
+    
+    # Security check
     try:
         target.relative_to(state.video_dir)
     except Exception:
         raise HTTPException(403, "Forbidden path")
     
     if not target.exists() or not target.is_file():
-        raise HTTPException(404, "File not found")
+        raise HTTPException(404, f"File not found: {target}")
 
     # First check if we have metadata in database
     metadata = {}
-    if state.database_enabled:
+    if state.database_enabled and media_file:
         try:
             with state.get_database_service() as db:
-                db_metadata = db.get_media_metadata(target)
+                # Use the database path for lookup to ensure we find the metadata
+                db_metadata = db.get_media_metadata(Path(db_path) if db_path else target)
                 if db_metadata:
                     # Convert database metadata to response format
                     metadata = {
@@ -359,15 +406,61 @@ def get_media_metadata(name: str):
 def get_media_info(name: str):
     """Get comprehensive information about a media file for the info pane."""
     state = get_state()
-    target = (state.video_dir / name).resolve()
     
+    # Initialize variables for database mode
+    media_file = None
+    db_path = None
+    
+    # If database is enabled, find the file by its filename in the database
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    # Find the media file by filename
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        # Get the database path (host path)
+                        db_path = media_file.file_path
+                        
+                        # Check if we need to translate from host path to container path
+                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                            # Replace host path prefix with container path
+                            if db_path.startswith(state.settings.user_path_prefix):
+                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                target = Path(container_path)
+                            else:
+                                target = Path(db_path)
+                        else:
+                            target = Path(db_path)
+                        
+                        state.logger.info(f"Found file in database for info: {db_path} -> {target}")
+                    else:
+                        # File not in database, fall back to filesystem lookup
+                        state.logger.warning(f"File '{name}' not found in database, falling back to filesystem")
+                        target = (state.video_dir / name).resolve()
+            else:
+                # Database service not available, use filesystem
+                target = (state.video_dir / name).resolve()
+        except Exception as e:
+            state.logger.error(f"Database error when looking up file for info: {e}")
+            # Fall back to filesystem lookup
+            target = (state.video_dir / name).resolve()
+    else:
+        # Original filesystem behavior
+        target = (state.video_dir / name).resolve()
+    
+    # Security check
     try:
         target.relative_to(state.video_dir)
     except Exception:
         raise HTTPException(403, "Forbidden path")
     
     if not target.exists() or not target.is_file():
-        raise HTTPException(404, "File not found")
+        raise HTTPException(404, f"File not found: {target}")
     
     # Get file stats
     stat = target.stat()
