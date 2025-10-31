@@ -463,16 +463,64 @@ class DatabaseService:
             return False
     
     @log_db_operation("find_similar_files_by_hash")
-    def find_similar_files_by_hash(self, target_hash: str, threshold: int = 5) -> List[MediaFile]:
-        """Find files with similar perceptual hashes."""
+    def find_similar_files_by_hash(self, target_hash: str, threshold: int = 5,
+                                   file_types: Optional[List[str]] = None,
+                                   min_score: Optional[int] = None,
+                                   max_score: Optional[int] = None,
+                                   start_date: Optional[datetime] = None,
+                                   end_date: Optional[datetime] = None,
+                                   nsfw_filter: Optional[str] = None) -> List[Tuple[MediaFile, int]]:
+        """Find files with similar perceptual hashes.
+        
+        Returns a list of tuples (MediaFile, distance) for similar files.
+        """
         try:
             import imagehash
             from PIL import Image as PILImage
             
-            # Get all files with perceptual hashes
-            files_with_hashes = self.session.query(MediaFile).filter(
+            # Build query with filters
+            query = self.session.query(MediaFile).filter(
                 MediaFile.phash.isnot(None)
-            ).all()
+            )
+            
+            # Apply file type filters
+            if file_types:
+                extensions = []
+                for ext in file_types:
+                    if not ext.startswith('.'):
+                        extensions.append(f'.{ext}')
+                    else:
+                        extensions.append(ext)
+                query = query.filter(MediaFile.extension.in_(extensions))
+            
+            # Apply score filters
+            if min_score is not None:
+                query = query.filter(MediaFile.score >= min_score)
+            if max_score is not None:
+                query = query.filter(MediaFile.score <= max_score)
+            
+            # Apply date filters
+            if start_date is not None:
+                query = query.filter(
+                    func.coalesce(MediaFile.original_created_at, MediaFile.created_at) >= start_date
+                )
+            if end_date is not None:
+                query = query.filter(
+                    func.coalesce(MediaFile.original_created_at, MediaFile.created_at) <= end_date
+                )
+            
+            # Apply NSFW filter
+            if nsfw_filter and nsfw_filter != 'all':
+                if nsfw_filter == 'sfw':
+                    query = query.filter(
+                        (MediaFile.nsfw == False) | (MediaFile.nsfw_label == False)
+                    )
+                elif nsfw_filter == 'nsfw':
+                    query = query.filter(
+                        (MediaFile.nsfw == True) | (MediaFile.nsfw_label == True)
+                    )
+            
+            files_with_hashes = query.all()
             
             similar_files = []
             target_hash_obj = imagehash.hex_to_hash(target_hash)
@@ -483,7 +531,7 @@ class DatabaseService:
                     # Calculate Hamming distance
                     distance = target_hash_obj - file_hash_obj
                     if distance <= threshold:
-                        similar_files.append(media_file)
+                        similar_files.append((media_file, int(distance)))
                 except Exception as e:
                     logger.debug(f"Error comparing hash for {media_file.filename}: {e}")
                     continue
