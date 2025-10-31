@@ -46,6 +46,12 @@
           <span class="pill-value" id="nsfw-value">All</span>
         </div>
         
+        <!-- Similar Images pill -->
+        <div class="pill pill-similar" id="pill-similar" data-pill="similar">
+          <span class="pill-label">Similar Images</span>
+          <span class="pill-value" id="similar-value">Off</span>
+        </div>
+        
         <!-- Menu button (far right) -->
         <button id="menu-btn" class="menu-btn" title="Open menu">
         </button>
@@ -160,6 +166,57 @@
               <button class="editor-btn editor-apply" id="nsfw-apply">Apply</button>
               <button class="editor-btn editor-clear" id="nsfw-clear">Clear</button>
               <button class="editor-btn editor-close" id="nsfw-close">Close</button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Similar Images editor -->
+        <div class="pill-editor" id="editor-similar" data-editor="similar">
+          <div class="editor-content">
+            <div class="similar-search-methods">
+              <!-- User Path input method -->
+              <div class="similar-input-group">
+                <label for="similar-user-path">User Path:</label>
+                <div class="similar-path-input-wrapper">
+                  <input type="text" id="similar-user-path" placeholder="Paste user path here..." />
+                  <button type="button" class="similar-path-submit-btn" id="similar-path-submit" title="Search by path">▶</button>
+                </div>
+              </div>
+              
+              <!-- Upload method -->
+              <div class="similar-upload-group">
+                <label>Or Upload Image:</label>
+                <input type="file" id="similar-upload-input" accept="image/*" style="display: none;" />
+                <button type="button" class="similar-upload-btn" id="similar-upload-btn">Upload Search Image</button>
+              </div>
+              
+              <!-- Search image preview and info -->
+              <div class="similar-search-image-info" id="similar-search-image-info" style="display: none;">
+                <div class="similar-thumbnail-container">
+                  <img id="similar-thumbnail" src="" alt="Search image" />
+                </div>
+                <div class="similar-phash-info">
+                  <strong>PHASH:</strong> <span id="similar-phash-value"></span>
+                </div>
+              </div>
+              
+              <!-- Results slider -->
+              <div class="similar-results-slider" id="similar-results-slider" style="display: none;">
+                <label for="similar-max-results">Number of results: <span id="similar-max-results-value">10</span></label>
+                <input type="range" id="similar-max-results" min="1" max="50" value="10" step="1" />
+              </div>
+              
+              <!-- Max distance slider -->
+              <div class="similar-distance-slider" id="similar-distance-slider" style="display: none;">
+                <label for="similar-max-distance">Max distance: <span id="similar-max-distance-value">10</span></label>
+                <input type="range" id="similar-max-distance" min="1" max="32" value="10" step="1" />
+              </div>
+            </div>
+            
+            <div class="editor-actions">
+              <button class="editor-btn editor-apply" id="similar-apply">Apply</button>
+              <button class="editor-btn editor-clear" id="similar-clear">Clear</button>
+              <button class="editor-btn editor-close" id="similar-close">Close</button>
             </div>
           </div>
         </div>

@@ -12,7 +12,14 @@ let searchToolbarFilters = {
   rating: 'none',
   dateStart: null,
   dateEnd: null,
-  nsfw: 'all'
+  nsfw: 'all',
+  similar: {
+    active: false,
+    searchImage: null,
+    phash: null,
+    maxResults: 10,
+    maxDistance: 10
+  }
 };
 
 // Function to restore search toolbar state from cookies
@@ -152,7 +159,14 @@ const defaultFilters = {
   rating: 'none',
   dateStart: null,
   dateEnd: null,
-  nsfw: 'all'
+  nsfw: 'all',
+  similar: {
+    active: false,
+    searchImage: null,
+    phash: null,
+    maxResults: 10,
+    maxDistance: 10
+  }
 };
 
 // Check if a filter value has been modified from its default
@@ -178,6 +192,11 @@ function isFilterModified(filterName) {
   if (filterName === 'dateStart' || filterName === 'dateEnd') {
     // Null/empty comparison for dates
     return (current !== null && current !== '') || (defaultValue !== null && defaultValue !== '');
+  }
+  
+  if (filterName === 'similar') {
+    // Check if similar search is active
+    return searchToolbarFilters.similar.active === true;
   }
   
   // Standard comparison for other fields
@@ -456,6 +475,72 @@ function setupEditorActions() {
     });
   }
   
+  // Similar Images editor
+  document.getElementById('similar-apply').addEventListener('click', () => applySearchToolbarFilter('similar'));
+  document.getElementById('similar-clear').addEventListener('click', () => clearFilter('similar'));
+  document.getElementById('similar-close').addEventListener('click', closePillEditor);
+  
+  // Similar Images - User path submit
+  const similarPathSubmit = document.getElementById('similar-path-submit');
+  const similarUserPath = document.getElementById('similar-user-path');
+  if (similarPathSubmit && similarUserPath) {
+    similarPathSubmit.addEventListener('click', async () => {
+      const userPath = similarUserPath.value.trim();
+      if (!userPath) {
+        alert('Please enter a user path');
+        return;
+      }
+      await loadSearchImageByPath(userPath);
+    });
+    
+    // Also allow Enter key in the user path input
+    similarUserPath.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const userPath = similarUserPath.value.trim();
+        if (userPath) {
+          await loadSearchImageByPath(userPath);
+        }
+      }
+    });
+  }
+  
+  // Similar Images - Upload button
+  const similarUploadBtn = document.getElementById('similar-upload-btn');
+  const similarUploadInput = document.getElementById('similar-upload-input');
+  if (similarUploadBtn && similarUploadInput) {
+    similarUploadBtn.addEventListener('click', () => {
+      similarUploadInput.click();
+    });
+    
+    similarUploadInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        await uploadSearchImage(file);
+      }
+    });
+  }
+  
+  // Similar Images - Results slider
+  const similarMaxResults = document.getElementById('similar-max-results');
+  const similarMaxResultsValue = document.getElementById('similar-max-results-value');
+  if (similarMaxResults && similarMaxResultsValue) {
+    similarMaxResults.addEventListener('input', () => {
+      similarMaxResultsValue.textContent = similarMaxResults.value;
+      searchToolbarFilters.similar.maxResults = parseInt(similarMaxResults.value);
+    });
+  }
+  
+  // Similar Images - Distance slider
+  const similarMaxDistance = document.getElementById('similar-max-distance');
+  const similarMaxDistanceValue = document.getElementById('similar-max-distance-value');
+  if (similarMaxDistance && similarMaxDistanceValue) {
+    similarMaxDistance.addEventListener('input', () => {
+      similarMaxDistanceValue.textContent = similarMaxDistance.value;
+      searchToolbarFilters.similar.maxDistance = parseInt(similarMaxDistance.value);
+    });
+  }
+  
   // Enter key support
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && activePillEditor) {
@@ -517,6 +602,14 @@ function applySearchToolbarFilter(pillType) {
       // NSFW filter is already set by the toggle buttons
       // Just need to trigger the update
       break;
+      
+    case 'similar':
+      // Similar filter state is already set when loading search image
+      // Just activate the filter if we have a search image
+      if (searchToolbarFilters.similar.searchImage && searchToolbarFilters.similar.phash) {
+        searchToolbarFilters.similar.active = true;
+      }
+      break;
   }
   
   updatePillValues();
@@ -572,6 +665,26 @@ function clearFilter(pillType) {
         nsfwSfwBtn.classList.remove('active');
         nsfwNsfwBtn.classList.remove('active');
       }
+      break;
+      
+    case 'similar':
+      searchToolbarFilters.similar = {
+        active: false,
+        searchImage: null,
+        phash: null,
+        maxResults: 10,
+        maxDistance: 10
+      };
+      // Clear UI
+      document.getElementById('similar-user-path').value = '';
+      document.getElementById('similar-upload-input').value = '';
+      document.getElementById('similar-search-image-info').style.display = 'none';
+      document.getElementById('similar-results-slider').style.display = 'none';
+      document.getElementById('similar-distance-slider').style.display = 'none';
+      document.getElementById('similar-max-results').value = '10';
+      document.getElementById('similar-max-results-value').textContent = '10';
+      document.getElementById('similar-max-distance').value = '10';
+      document.getElementById('similar-max-distance-value').textContent = '10';
       break;
   }
   
@@ -649,13 +762,25 @@ function updatePillValues() {
     nsfwValue.textContent = nsfwLabels[searchToolbarFilters.nsfw] || 'All';
   }
   
+  // Similar Images
+  const similarValue = document.getElementById('similar-value');
+  const similarPill = document.getElementById('pill-similar');
+  if (similarValue) {
+    if (searchToolbarFilters.similar.active && searchToolbarFilters.similar.phash) {
+      similarValue.textContent = `Top ${searchToolbarFilters.similar.maxResults}`;
+    } else {
+      similarValue.textContent = 'Off';
+    }
+  }
+  
   // Apply modified state classes to pills
   const pillsData = [
     { pill: sortPill, filterName: 'sort' },
     { pill: filetypePill, filterName: 'filetype' },
     { pill: ratingPill, filterName: 'rating' },
     { pill: datePill, filterName: 'dateStart' }, // Check if any date is set
-    { pill: nsfwPill, filterName: 'nsfw' }
+    { pill: nsfwPill, filterName: 'nsfw' },
+    { pill: similarPill, filterName: 'similar' }
   ];
   
   pillsData.forEach(({ pill, filterName }) => {
@@ -793,6 +918,103 @@ window.addEventListener('resize', () => {
   }
 });
 
+// Similar Images - Load search image by user path
+async function loadSearchImageByPath(userPath) {
+  try {
+    const response = await fetch(`/api/search/file-info-by-path?user_path=${encodeURIComponent(userPath)}`);
+    
+    if (!response.ok) {
+      const error = await response.json();
+      alert(`Error: ${error.detail || 'Failed to load image'}`);
+      return;
+    }
+    
+    const data = await response.json();
+    
+    // Update search image state
+    searchToolbarFilters.similar.searchImage = {
+      name: data.name,
+      path: data.path,
+      source: 'path',
+      userPath: userPath
+    };
+    searchToolbarFilters.similar.phash = data.phash;
+    
+    // Display search image info
+    displaySearchImageInfo(data.path, data.phash);
+    
+  } catch (error) {
+    console.error('Failed to load search image by path:', error);
+    alert('Failed to load search image. Please check the path and try again.');
+  }
+}
+
+// Similar Images - Upload search image
+async function uploadSearchImage(file) {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('max_results', searchToolbarFilters.similar.maxResults);
+    formData.append('max_distance', searchToolbarFilters.similar.maxDistance);
+    
+    const response = await fetch('/api/search/similar/by-upload', {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      const error = await response.json();
+      alert(`Error: ${error.detail || 'Failed to upload image'}`);
+      return;
+    }
+    
+    const data = await response.json();
+    
+    // Update search image state
+    searchToolbarFilters.similar.searchImage = {
+      filename: data.search_image.filename,
+      temp_path: data.search_image.temp_path,
+      source: 'upload'
+    };
+    searchToolbarFilters.similar.phash = data.search_image.phash;
+    
+    // Create object URL for uploaded file to display
+    const imageUrl = URL.createObjectURL(file);
+    
+    // Display search image info
+    displaySearchImageInfo(imageUrl, data.search_image.phash);
+    
+  } catch (error) {
+    console.error('Failed to upload search image:', error);
+    alert('Failed to upload search image. Please try again.');
+  }
+}
+
+// Similar Images - Display search image info
+function displaySearchImageInfo(imagePath, phash) {
+  const infoContainer = document.getElementById('similar-search-image-info');
+  const thumbnail = document.getElementById('similar-thumbnail');
+  const phashValue = document.getElementById('similar-phash-value');
+  const resultsSlider = document.getElementById('similar-results-slider');
+  const distanceSlider = document.getElementById('similar-distance-slider');
+  
+  // Set thumbnail - use media endpoint for database paths, or direct URL for uploads
+  if (imagePath.startsWith('blob:')) {
+    thumbnail.src = imagePath;
+  } else {
+    // Extract filename from path for media endpoint
+    const filename = imagePath.split('/').pop();
+    thumbnail.src = `/media/${filename}`;
+  }
+  
+  phashValue.textContent = phash;
+  
+  // Show the info container and sliders
+  infoContainer.style.display = 'block';
+  resultsSlider.style.display = 'block';
+  distanceSlider.style.display = 'block';
+}
+
 // Date preset functionality
 function applyDatePreset(preset) {
   const today = new Date();
@@ -842,6 +1064,12 @@ async function applyDatabaseFilters() {
   console.log('Applying database filters with sort...', searchToolbarFilters);
   
   try {
+    // Check if Similar Images search is active
+    if (searchToolbarFilters.similar.active && searchToolbarFilters.similar.phash) {
+      await applySimilarImagesSearch();
+      return;
+    }
+    
     // Build comprehensive filter request
     const filterRequest = {
       // Existing filters
@@ -919,6 +1147,96 @@ async function applyDatabaseFilters() {
     console.error('Database filter failed:', error);
     // Fallback to client-side filtering
     applyClientSideFilters();
+  }
+}
+
+// Similar Images Search - Apply PHASH similarity search with filters
+async function applySimilarImagesSearch() {
+  console.log('Applying Similar Images search...', searchToolbarFilters.similar);
+  
+  try {
+    // Build request with current filters
+    const searchRequest = {
+      max_results: searchToolbarFilters.similar.maxResults,
+      max_distance: searchToolbarFilters.similar.maxDistance,
+      file_types: searchToolbarFilters.filetype,
+      date_start: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
+      date_end: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
+      nsfw_filter: searchToolbarFilters.nsfw
+    };
+    
+    // Add rating filters
+    if (searchToolbarFilters.rating !== 'none') {
+      if (searchToolbarFilters.rating === 'rejected') {
+        searchRequest.min_score = -1;
+        searchRequest.max_score = -1;
+      } else if (searchToolbarFilters.rating === 'unrated') {
+        searchRequest.max_score = 0;
+      } else if (searchToolbarFilters.rating === 'unrated_and_above') {
+        searchRequest.min_score = 0;
+      } else {
+        searchRequest.min_score = parseInt(searchToolbarFilters.rating);
+      }
+    }
+    
+    let response;
+    
+    // Call the appropriate endpoint based on search source
+    if (searchToolbarFilters.similar.searchImage.source === 'path') {
+      searchRequest.user_path = searchToolbarFilters.similar.searchImage.userPath;
+      response = await fetch('/api/search/similar/by-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(searchRequest)
+      });
+    } else {
+      // For upload, we need to re-upload or use stored PHASH
+      // For now, use the PHASH directly if available
+      searchRequest.phash = searchToolbarFilters.similar.phash;
+      searchRequest.user_path = searchToolbarFilters.similar.searchImage.path || '';
+      response = await fetch('/api/search/similar/by-path', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(searchRequest)
+      });
+    }
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Similar Images search response:', data);
+      
+      // Convert results to video list format
+      videos = data.results.map(result => ({
+        name: result.name,
+        path: result.path,
+        score: result.score,
+        phash: result.phash,
+        distance: result.distance
+      }));
+      
+      filtered = [...videos];
+      
+      console.log('Similar Images results:', filtered.length);
+      
+      // Update display
+      if (typeof renderSidebar === 'function') {
+        renderSidebar();
+      }
+      
+      if (filtered.length > 0) {
+        show(0);
+      } else {
+        show(-1);
+      }
+    } else {
+      console.error('Similar Images search failed:', response.status, response.statusText);
+      const errorText = await response.text();
+      console.error('Error response:', errorText);
+      alert('Similar Images search failed. Please try again.');
+    }
+  } catch (error) {
+    console.error('Similar Images search error:', error);
+    alert('Similar Images search failed. Please try again.');
   }
 }
 
