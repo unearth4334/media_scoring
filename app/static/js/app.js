@@ -1048,16 +1048,18 @@ function updateFreeAspectRatio() {
   let width, height;
   
   // Get dimensions from the currently visible media element
-  if (player && player.style.display !== 'none' && player.videoWidth && player.videoHeight) {
+  if (player && player.style.display !== 'none' && player.readyState >= 1) {
+    // Video element - check readyState to ensure metadata is loaded
     width = player.videoWidth;
     height = player.videoHeight;
-  } else if (imgview && imgview.style.display !== 'none' && imgview.naturalWidth && imgview.naturalHeight) {
+  } else if (imgview && imgview.style.display !== 'none' && imgview.complete) {
+    // Image element - check complete to ensure image is loaded
     width = imgview.naturalWidth;
     height = imgview.naturalHeight;
   }
   
-  // Apply the calculated aspect ratio to the video-wrap
-  if (width && height) {
+  // Apply the calculated aspect ratio to the video-wrap only if dimensions are valid
+  if (width && height && width > 0 && height > 0) {
     videoWrap.style.aspectRatio = `${width} / ${height}`;
   }
 }
@@ -1200,7 +1202,6 @@ function showMedia(url, name){
       if (videoWrap && videoWrap.classList.contains('aspect-free')) {
         updateFreeAspectRatio();
       }
-      itag.removeEventListener('load', updateImageAspect);
     }, { once: true });
     
   } else {
