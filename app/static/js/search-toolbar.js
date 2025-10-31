@@ -1000,11 +1000,12 @@ function displaySearchImageInfo(imagePath, phash) {
   
   // Set thumbnail - use media endpoint for database paths, or direct URL for uploads
   if (imagePath.startsWith('blob:')) {
+    // Uploaded image - use blob URL directly
     thumbnail.src = imagePath;
   } else {
-    // Extract filename from path for media endpoint
-    const filename = imagePath.split('/').pop();
-    thumbnail.src = `/media/${filename}`;
+    // Database image - use the full file path through media endpoint
+    // The media endpoint expects the relative path from the media directory
+    thumbnail.src = `/media/${encodeURIComponent(imagePath.split('/').pop())}`;
   }
   
   phashValue.textContent = phash;
@@ -1190,11 +1191,9 @@ async function applySimilarImagesSearch() {
         body: JSON.stringify(searchRequest)
       });
     } else {
-      // For upload, we need to re-upload or use stored PHASH
-      // For now, use the PHASH directly if available
+      // For upload, use the stored PHASH directly
       searchRequest.phash = searchToolbarFilters.similar.phash;
-      searchRequest.user_path = searchToolbarFilters.similar.searchImage.path || '';
-      response = await fetch('/api/search/similar/by-path', {
+      response = await fetch('/api/search/similar/by-phash', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(searchRequest)

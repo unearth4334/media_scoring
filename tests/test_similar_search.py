@@ -16,6 +16,8 @@ print("=" * 50)
 
 # Test compute_perceptual_hash function
 print("\n1️⃣  Testing PHASH computation...")
+tmp_path = None
+tmp_path2 = None
 try:
     # Create a test image
     from PIL import Image
@@ -64,15 +66,17 @@ try:
         print(f"❌ Hash distance calculation failed: {e}")
         sys.exit(1)
     
-    # Clean up
-    tmp_path.unlink()
-    tmp_path2.unlink()
-    
 except Exception as e:
     print(f"❌ PHASH computation error: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
+finally:
+    # Clean up temporary files
+    if tmp_path and tmp_path.exists():
+        tmp_path.unlink()
+    if tmp_path2 and tmp_path2.exists():
+        tmp_path2.unlink()
 
 print("\n🎉 All PHASH similarity search tests passed!")
 print("\nNote: For full database functionality testing:")

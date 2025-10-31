@@ -304,19 +304,27 @@ async def search_similar_by_path(request: PhashSearchRequest):
         
         # Try to find the file in the database
         with state.get_database_service() as db:
-            # Query by file_path
+            # Query by file_path - use endswith to avoid SQL injection with LIKE
             from ..database.models import MediaFile
+            
+            # Try exact match first
             media_file = db.session.query(MediaFile).filter(
-                MediaFile.file_path.like(f"%{file_path_str}")
-            ).all()
+                MediaFile.file_path == file_path_str
+            ).first()
             
+            # If not found, try ending with the path
             if not media_file:
-                raise HTTPException(404, f"Image not found in database: {file_path_str}")
-            
-            if len(media_file) > 1:
-                raise HTTPException(400, f"Multiple images found matching path: {file_path_str}")
-            
-            media_file = media_file[0]
+                media_files = db.session.query(MediaFile).filter(
+                    MediaFile.file_path.endswith(file_path_str)
+                ).all()
+                
+                if not media_files:
+                    raise HTTPException(404, f"Image not found in database: {file_path_str}")
+                
+                if len(media_files) > 1:
+                    raise HTTPException(400, f"Multiple images found matching path: {file_path_str}")
+                
+                media_file = media_files[0]
             
             if not media_file.phash:
                 raise HTTPException(400, f"Image has no PHASH value in database")
@@ -378,6 +386,74 @@ async def search_similar_by_path(request: PhashSearchRequest):
         raise
     except Exception as e:
         state.logger.error(f"PHASH search by path failed: {e}")
+        raise HTTPException(500, f"PHASH search failed: {str(e)}")
+
+
+@router.post("/similar/by-phash")
+async def search_similar_by_phash(request: PhashSearchRequest):
+    """Search for similar images by PHASH value directly."""
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality is disabled")
+    
+    if not request.phash:
+        raise HTTPException(400, "phash is required")
+    
+    try:
+        # Parse date filters
+        from datetime import datetime
+        start_date = None
+        end_date = None
+        if request.date_start:
+            start_date = datetime.fromisoformat(request.date_start)
+        if request.date_end:
+            end_date = datetime.fromisoformat(request.date_end)
+        
+        # Find similar files with filters
+        with state.get_database_service() as db:
+            similar_files_with_distance = db.find_similar_files_by_hash(
+                request.phash, 
+                threshold=request.max_distance,
+                file_types=request.file_types,
+                min_score=request.min_score,
+                max_score=request.max_score,
+                start_date=start_date,
+                end_date=end_date,
+                nsfw_filter=request.nsfw_filter
+            )
+            
+            results = []
+            for similar_file, distance in similar_files_with_distance:
+                results.append({
+                    "name": similar_file.filename,
+                    "path": similar_file.file_path,
+                    "score": similar_file.score,
+                    "file_type": similar_file.file_type,
+                    "extension": similar_file.extension,
+                    "phash": similar_file.phash,
+                    "distance": distance,
+                    "updated_at": similar_file.updated_at.isoformat() if similar_file.updated_at else None
+                })
+            
+            # Sort by distance
+            results.sort(key=lambda x: x['distance'])
+            
+            # Limit results
+            results = results[:request.max_results]
+            
+            return {
+                "search_image": {
+                    "phash": request.phash
+                },
+                "results": results,
+                "total": len(results)
+            }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        state.logger.error(f"PHASH search by hash failed: {e}")
         raise HTTPException(500, f"PHASH search failed: {str(e)}")
 
 
@@ -507,19 +583,27 @@ async def get_file_info_by_path(user_path: str = Query(...)):
         
         # Try to find the file in the database
         with state.get_database_service() as db:
-            # Query by file_path
+            # Query by file_path - use endswith to avoid SQL injection with LIKE
             from ..database.models import MediaFile
+            
+            # Try exact match first
             media_file = db.session.query(MediaFile).filter(
-                MediaFile.file_path.like(f"%{file_path_str}")
-            ).all()
+                MediaFile.file_path == file_path_str
+            ).first()
             
+            # If not found, try ending with the path
             if not media_file:
-                raise HTTPException(404, f"Image not found in database: {file_path_str}")
-            
-            if len(media_file) > 1:
-                raise HTTPException(400, f"Multiple images found matching path: {file_path_str}")
-            
-            media_file = media_file[0]
+                media_files = db.session.query(MediaFile).filter(
+                    MediaFile.file_path.endswith(file_path_str)
+                ).all()
+                
+                if not media_files:
+                    raise HTTPException(404, f"Image not found in database: {file_path_str}")
+                
+                if len(media_files) > 1:
+                    raise HTTPException(400, f"Multiple images found matching path: {file_path_str}")
+                
+                media_file = media_files[0]
             
             if not media_file.phash:
                 raise HTTPException(400, f"Image has no PHASH value in database")
