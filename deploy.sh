@@ -6,16 +6,13 @@
 ###################################################
 # Example commands:
 #   ./deploy.sh git                                # Deploy main branch via git
-#   ./deploy.sh git --branch develop               # Deploy specific branch via git
-#   ./deploy.sh up                                 # Start containers
-#   ./deploy.sh up --build                         # Start containers with rebuild
-#   ./deploy.sh up --clean                         # Stop existing containers first, then start
-#   ./deploy.sh up --clean --build                 # Stop, rebuild and start containers
-#   ./deploy.sh deploy                             # Full deploy: git pull main + up
-#   ./deploy.sh deploy --build                     # Full deploy with rebuild
-#   ./deploy.sh deploy --clean                     # Full deploy with clean start
-#   ./deploy.sh deploy --branch develop --build    # Deploy specific branch with rebuild
-#   ./deploy.sh logs media_scoring                  # Show logs for media_scoring service
+#   ./deploy.sh git -b develop                     # Deploy specific branch via git
+#   ./deploy.sh up                                 # Start containers (clean + build by default)
+#   ./deploy.sh up --no-build                      # Start containers without rebuild
+#   ./deploy.sh deploy                             # Full deploy: git pull main + up (clean + build)
+#   ./deploy.sh deploy --no-build                  # Full deploy without rebuild
+#   ./deploy.sh deploy -b develop                  # Deploy specific branch with clean + build
+#   ./deploy.sh logs media_scoring                 # Show logs for media_scoring service
 #   ./deploy.sh destroy                            # Destroy all containers and volumes
 #   ./deploy.sh app-logs                           # Show available app logs and recent entries
 #   ./deploy.sh app-logs app.log                   # Show specific log file from volume
@@ -204,8 +201,8 @@ deploy_via_git() {
 
 # Function to start containers
 docker_up() {
-    local build_flag=""
-    local clean_flag=""
+    local build_flag="--build"
+    local clean_flag="--clean"
     local docker_cmd="/share/CACHEDEV1_DATA/.qpkg/container-station/bin/docker"
     
     # Parse arguments
@@ -215,8 +212,16 @@ docker_up() {
                 build_flag="--build"
                 shift
                 ;;
+            --no-build)
+                build_flag=""
+                shift
+                ;;
             --clean)
                 clean_flag="--clean"
+                shift
+                ;;
+            --no-clean)
+                clean_flag=""
                 shift
                 ;;
             *)
@@ -233,7 +238,7 @@ docker_up() {
     
     # Determine what we're doing
     if [[ -n "$build_flag" && -n "$clean_flag" ]]; then
-        log_info "Starting containers with clean and build flags"
+        log_info "Starting containers with clean and build (default)"
     elif [[ -n "$build_flag" ]]; then
         log_info "Starting containers with build flag"
     elif [[ -n "$clean_flag" ]]; then
@@ -338,38 +343,36 @@ show_help() {
     echo "Usage: $0 COMMAND [OPTIONS]"
     echo
     echo "Commands:"
-    echo "  git [--branch NAME]       Deploy via git (default: main branch)"
-    echo "  up [OPTIONS]              Start containers"
-    echo "    --build                 Rebuild containers before starting"
-    echo "    --clean                 Stop existing containers first"
+    echo "  git [-b|--branch NAME]    Deploy via git (default: main branch)"
+    echo "  up [OPTIONS]              Start containers (clean + build by default)"
+    echo "    --no-build              Skip rebuilding containers"
+    echo "    --no-clean              Don't stop existing containers first"
     echo "  down                      Stop containers"
     echo "  destroy                   Stop containers and remove volumes"
     echo "  logs [service]            Show logs (optionally for specific service)"
     echo "  app-logs [file]           Show application logs from log_data volume"
     echo "  status                    Show container status"
-    echo "  deploy [OPTIONS]          Full deploy: git pull + up"
-    echo "    --build                 Rebuild containers"
-    echo "    --clean                 Stop existing containers first"
-    echo "    --branch NAME           Deploy specific branch (default: main)"
+    echo "  deploy [OPTIONS]          Full deploy: git pull + up (clean + build)"
+    echo "    --no-build              Skip rebuilding containers"
+    echo "    --no-clean              Don't stop existing containers first"
+    echo "    -b|--branch NAME        Deploy specific branch (default: main)"
     echo "  help                      Show this help message"
     echo
     echo "Examples:"
     echo "  $0 git                                 # Deploy main branch via git"
-    echo "  $0 git --branch develop                # Deploy specific branch via git"
-    echo "  $0 up                                  # Start containers"
-    echo "  $0 up --build                          # Start containers with rebuild"
-    echo "  $0 up --clean                          # Stop existing containers first, then start"
-    echo "  $0 up --clean --build                  # Stop, rebuild and start containers"
-    echo "  $0 deploy                              # Full deploy: git pull main + up"
-    echo "  $0 deploy --build                      # Full deploy with rebuild"
-    echo "  $0 deploy --clean                      # Full deploy with clean start"
-    echo "  $0 deploy --branch develop --build     # Deploy specific branch with rebuild"
-    echo "  $0 logs media_scoring                   # Show logs for media_scoring service"
+    echo "  $0 git -b develop                      # Deploy specific branch via git"
+    echo "  $0 up                                  # Start containers (clean + build)"
+    echo "  $0 up --no-build                       # Start containers without rebuild"
+    echo "  $0 deploy                              # Full deploy: git pull main + up (clean + build)"
+    echo "  $0 deploy --no-build                   # Full deploy without rebuild"
+    echo "  $0 deploy -b develop                   # Deploy specific branch with clean + build"
+    echo "  $0 logs media_scoring                  # Show logs for media_scoring service"
     echo "  $0 app-logs                            # Show available app logs and recent entries"
     echo "  $0 app-logs app.log                    # Show specific log file from volume"
     echo "  $0 destroy                             # Destroy all containers and volumes"
     echo
     echo "Note: Git deployment requires QNAP directory mounted at ${MOUNTED_PATH}"
+    echo "Note: --clean and --build are enabled by default. Use --no-build or --no-clean to disable."
 }
 
 # Function to show container status
@@ -381,8 +384,8 @@ show_status() {
 
 # Function for full deployment
 full_deploy() {
-    local build_flag=""
-    local clean_flag=""
+    local build_flag="--build"
+    local clean_flag="--clean"
     local branch="main"
     
     # Parse arguments for --build, --clean, and --branch
@@ -392,11 +395,19 @@ full_deploy() {
                 build_flag="--build"
                 shift
                 ;;
+            --no-build)
+                build_flag=""
+                shift
+                ;;
             --clean)
                 clean_flag="--clean"
                 shift
                 ;;
-            --branch)
+            --no-clean)
+                clean_flag=""
+                shift
+                ;;
+            -b|--branch)
                 branch="$2"
                 shift 2
                 ;;
@@ -414,6 +425,8 @@ full_deploy() {
     local docker_args=()
     [[ -n "$build_flag" ]] && docker_args+=("--build")
     [[ -n "$clean_flag" ]] && docker_args+=("--clean")
+    [[ -z "$build_flag" ]] && docker_args+=("--no-build")
+    [[ -z "$clean_flag" ]] && docker_args+=("--no-clean")
     
     docker_up "${docker_args[@]}"
     log_success "Full deployment completed"
@@ -423,11 +436,11 @@ full_deploy() {
 case "$1" in
     "git")
         shift
-        # Parse --branch argument
+        # Parse -b/--branch argument
         branch="main"
         while [[ $# -gt 0 ]]; do
             case $1 in
-                --branch)
+                -b|--branch)
                     branch="$2"
                     shift 2
                     ;;
