@@ -512,12 +512,17 @@ class DatabaseService:
             # Apply NSFW filter
             if nsfw_filter and nsfw_filter != 'all':
                 if nsfw_filter == 'sfw':
+                    # Show only SFW content - both nsfw AND nsfw_label should be False/None
                     query = query.filter(
-                        (MediaFile.nsfw == False) | (MediaFile.nsfw_label == False)
+                        and_(
+                            or_(MediaFile.nsfw == False, MediaFile.nsfw.is_(None)),
+                            or_(MediaFile.nsfw_label == False, MediaFile.nsfw_label.is_(None))
+                        )
                     )
                 elif nsfw_filter == 'nsfw':
+                    # Show only NSFW content - at least one should be True
                     query = query.filter(
-                        (MediaFile.nsfw == True) | (MediaFile.nsfw_label == True)
+                        or_(MediaFile.nsfw == True, MediaFile.nsfw_label == True)
                     )
             
             files_with_hashes = query.all()
