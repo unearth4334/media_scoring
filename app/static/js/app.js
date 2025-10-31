@@ -934,32 +934,22 @@ function calculateFitToWidthZoom() {
   const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
   const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
   
-  // Determine the available width for the image
-  let availableDimension = wrapWidth;
-  
-  // Calculate the zoom percentage needed to fit
-  // The image is displayed with max-width/max-height constraints initially,
-  // so we need to calculate based on the actual rendered size
-  const currentRenderedWidth = imgview.offsetWidth;
-  const currentRenderedHeight = imgview.offsetHeight;
-  
-  let currentDisplayedDimension;
+  // Determine which natural dimension will be the horizontal dimension after rotation
+  let horizontalDimension;
   if (currentRotation === -90) {
-    // When rotated -90 degrees, the image height becomes the horizontal dimension
-    currentDisplayedDimension = currentRenderedHeight;
+    // When rotated -90 degrees, the natural height becomes the horizontal dimension
+    horizontalDimension = imageHeight;
   } else {
-    // Normal orientation: fit image width to wrap width
-    currentDisplayedDimension = currentRenderedWidth;
+    // Normal orientation: natural width is the horizontal dimension
+    horizontalDimension = imageWidth;
   }
   
-  // Calculate zoom to fit available dimension
-  if (currentDisplayedDimension > 0) {
-    const zoomPercent = (availableDimension / currentDisplayedDimension) * 100;
-    // Clamp to reasonable values (min 50%, max 500%)
-    return Math.max(50, Math.min(500, zoomPercent));
-  }
+  // Calculate zoom percentage needed to fit the horizontal dimension to the wrap width
+  // This is relative to the image at 100% scale (no transform applied)
+  const zoomPercent = (wrapWidth / horizontalDimension) * 100;
   
-  return 100;
+  // Clamp to reasonable values (min 50%, max 500%)
+  return Math.max(50, Math.min(500, zoomPercent));
 }
 
 function applyImageZoom(zoomPercent) {
