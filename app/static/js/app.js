@@ -1025,9 +1025,42 @@ function applyAspectRatio(aspectRatio) {
   // Add the new aspect ratio class (CSS handles the styling)
   if (aspectRatio === 'free') {
     videoWrap.classList.add('aspect-free');
+    // Calculate and apply the aspect ratio of the current media
+    updateFreeAspectRatio();
   } else {
+    // Clear any inline aspect ratio when using preset ratios
+    videoWrap.style.aspectRatio = '';
     const className = 'aspect-' + aspectRatio.replace(':', '-');
     videoWrap.classList.add(className);
+  }
+}
+
+// Helper function to update aspect ratio when "free" is selected
+function updateFreeAspectRatio() {
+  const videoWrap = document.querySelector('.video-wrap');
+  if (!videoWrap) return;
+  if (!isMobileDevice()) return; // Only apply on mobile
+  if (!videoWrap.classList.contains('aspect-free')) return; // Only update if free aspect is selected
+  
+  const player = document.getElementById('player');
+  const imgview = document.getElementById('imgview');
+  
+  let width, height;
+  
+  // Get dimensions from the currently visible media element
+  if (player && player.style.display !== 'none' && player.readyState >= 1) {
+    // Video element - check readyState to ensure metadata is loaded
+    width = player.videoWidth;
+    height = player.videoHeight;
+  } else if (imgview && imgview.style.display !== 'none' && imgview.complete) {
+    // Image element - check complete to ensure image is loaded
+    width = imgview.naturalWidth;
+    height = imgview.naturalHeight;
+  }
+  
+  // Apply the calculated aspect ratio to the video-wrap only if dimensions are valid
+  if (width && height && width > 0 && height > 0) {
+    videoWrap.style.aspectRatio = `${width} / ${height}`;
   }
 }
 
@@ -1138,6 +1171,11 @@ function showMedia(url, name){
         }
       }
       
+      // Update aspect ratio if "free" is selected
+      if (videoWrap && videoWrap.classList.contains('aspect-free')) {
+        updateFreeAspectRatio();
+      }
+      
       // Remove the event listener to avoid multiple calls
       vtag.removeEventListener('loadedmetadata', restoreVideoState);
     }, { once: true });
@@ -1158,6 +1196,14 @@ function showMedia(url, name){
     if (mobileZoomBtn && isMobileDevice()) {
       mobileZoomBtn.style.display = '';
     }
+    
+    // Update aspect ratio when image loads if "free" is selected
+    itag.addEventListener('load', function updateImageAspect() {
+      if (videoWrap && videoWrap.classList.contains('aspect-free')) {
+        updateFreeAspectRatio();
+      }
+    }, { once: true });
+    
   } else {
     vtag.style.display='none'; vtag.removeAttribute('src');
     itag.style.display=''; itag.src = url;
