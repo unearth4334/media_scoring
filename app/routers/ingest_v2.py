@@ -325,22 +325,6 @@ async def cleanup_session(session_id: str):
                 pass
     
     return {"status": "cleaned_up"}
-    if session_id in processing_sessions:
-        del processing_sessions[session_id]
-    
-    # Remove persistent state
-    ingestion_state_manager.delete_state(session_id)
-    
-    # Clean up any temporary files
-    temp_dir = Path(tempfile.gettempdir()) / "media_scoring_reports"
-    if temp_dir.exists():
-        for report_file in temp_dir.glob(f"ingest_report_{session_id}*"):
-            try:
-                report_file.unlink()
-            except:
-                pass
-    
-    return {"status": "cleaned_up"}
 
 
 async def process_files_sequential(session_id: str):
