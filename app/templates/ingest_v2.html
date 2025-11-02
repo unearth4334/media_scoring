@@ -609,8 +609,8 @@
 <body>
   <div class="ingest-container">
     <div class="ingest-header">
-      <h1>🎬 Data Ingestion Tool v2 <span class="badge new">Enhanced</span></h1>
-      <p>Batch process media files with preview and commit workflow</p>
+      <h1>🎬 Data Ingestion Tool v2 <span class="badge new">Sequential</span></h1>
+      <p>Process and commit media files one-by-one with real-time progress</p>
     </div>
 
     <!-- Workflow Steps -->
@@ -622,18 +622,13 @@
       </div>
       <div class="workflow-step">
         <div class="step-number" id="step-2">2</div>
-        <div class="step-title">Process</div>
-        <div class="step-description">Extract data</div>
+        <div class="step-title">Process & Commit</div>
+        <div class="step-description">Sequential ingestion</div>
       </div>
       <div class="workflow-step">
         <div class="step-number" id="step-3">3</div>
-        <div class="step-title">Preview</div>
-        <div class="step-description">Review results</div>
-      </div>
-      <div class="workflow-step">
-        <div class="step-number" id="step-4">4</div>
-        <div class="step-title">Commit</div>
-        <div class="step-description">Save to database</div>
+        <div class="step-title">Complete</div>
+        <div class="step-description">All files saved</div>
       </div>
     </div>
 
@@ -717,6 +712,10 @@
           <div class="stat-label">Processed</div>
         </div>
         <div class="stat-card">
+          <div class="stat-number" id="stat-committed">0</div>
+          <div class="stat-label">Committed</div>
+        </div>
+        <div class="stat-card">
           <div class="stat-number" id="stat-metadata">0</div>
           <div class="stat-label">Metadata</div>
         </div>
@@ -741,36 +740,19 @@
       <div id="error-container"></div>
     </div>
 
-    <!-- Preview Section -->
-    <div class="preview-section" id="preview-section">
-      <h3>📊 Processing Completed!</h3>
-      <p>Your files have been processed successfully. Review the results before committing to the database.</p>
+    <!-- Completion Section -->
+    <div class="preview-section" id="completion-section">
+      <h3>✅ Processing Completed!</h3>
+      <p>All files have been processed and committed to the database.</p>
       
       <div class="preview-actions">
-        <a href="#" class="btn btn-primary" id="view-report-btn" target="_blank">
-          📄 View Detailed Report
-        </a>
-        <button type="button" class="btn btn-success" onclick="commitToDatabase()" id="commit-btn">
-          💾 Commit to Database
+        <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
+          🏠 Return to Main App
         </button>
         <button type="button" class="btn btn-secondary" onclick="startNewSession()">
-          🔄 Start New Session
+          🔄 Process More Files
         </button>
       </div>
-    </div>
-
-    <!-- Commit Section -->
-    <div class="commit-section" id="commit-section">
-      <h3>💾 Committing to Database...</h3>
-      <div class="progress-info">
-        <span id="commit-progress-text">Saving data...</span>
-        <span id="commit-progress-percentage">0%</span>
-      </div>
-      <div class="progress-bar-container">
-        <div class="progress-bar" id="commit-progress-bar"></div>
-      </div>
-      
-      <div id="commit-result"></div>
     </div>
   </div>
 
@@ -798,13 +780,12 @@
     // State
     let currentSessionId = null;
     let processingTimer = null;
-    let commitTimer = null;
     let currentPath = '';
     let selectedPath = '';
 
     function updateWorkflowStep(stepNumber) {
       // Reset all steps
-      for (let i = 1; i <= 4; i++) {
+      for (let i = 1; i <= 3; i++) {
         const stepEl = document.getElementById(`step-${i}`);
         stepEl.classList.remove('active', 'completed');
         if (i < stepNumber) {
@@ -816,7 +797,7 @@
     }
 
     function showSection(sectionId) {
-      const sections = ['parameters-form', 'progress-section', 'preview-section', 'commit-section'];
+      const sections = ['parameters-form', 'progress-section', 'completion-section'];
       sections.forEach(id => {
         const el = document.getElementById(id);
         if (id === sectionId) {
@@ -863,6 +844,7 @@
 
         const result = await response.json();
         currentSessionId = result.session_id;
+        saveSessionToStorage(currentSessionId);
 
         updateWorkflowStep(2);
         showSection('progress-section');
@@ -890,7 +872,7 @@
 
           if (status.status === 'completed') {
             clearInterval(processingTimer);
-            showPreviewSection();
+            showCompletionSection();
           } else if (status.status === 'error') {
             clearInterval(processingTimer);
             showError(`Processing failed: ${status.error || 'Unknown error'}`);
@@ -910,16 +892,19 @@
       
       if (status.current_file) {
         document.getElementById('current-file').textContent = `Current: ${status.current_file}`;
+      } else {
+        document.getElementById('current-file').textContent = '';
       }
 
       // Update stats
       const stats = status.stats;
-      document.getElementById('stat-processed').textContent = stats.processed_files;
-      document.getElementById('stat-metadata').textContent = stats.metadata_extracted;
-      document.getElementById('stat-keywords').textContent = stats.keywords_added;
-      document.getElementById('stat-scores').textContent = stats.scores_imported;
-      document.getElementById('stat-nsfw').textContent = stats.nsfw_detected;
-      document.getElementById('stat-errors').textContent = stats.errors;
+      document.getElementById('stat-processed').textContent = stats.processed_files || 0;
+      document.getElementById('stat-committed').textContent = stats.committed_files || 0;
+      document.getElementById('stat-metadata').textContent = stats.metadata_extracted || 0;
+      document.getElementById('stat-keywords').textContent = stats.keywords_added || 0;
+      document.getElementById('stat-scores').textContent = stats.scores_imported || 0;
+      document.getElementById('stat-nsfw').textContent = stats.nsfw_detected || 0;
+      document.getElementById('stat-errors').textContent = stats.errors || 0;
 
       // Show errors if any
       if (status.errors && status.errors.length > 0) {
@@ -937,113 +922,11 @@
       `;
     }
 
-    function showPreviewSection() {
+    function showCompletionSection() {
       updateWorkflowStep(3);
-      showSection('preview-section');
-      
-      // Set up report link
-      const reportBtn = document.getElementById('view-report-btn');
-      reportBtn.href = `/api/ingest/report/${currentSessionId}`;
+      showSection('completion-section');
     }
 
-    async function commitToDatabase() {
-      try {
-        document.getElementById('commit-btn').disabled = true;
-        document.getElementById('commit-btn').textContent = '💾 Starting Commit...';
-
-        const response = await fetch('/api/ingest/commit', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: currentSessionId })
-        });
-
-        if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.detail || 'Failed to start commit');
-        }
-
-        updateWorkflowStep(4);
-        showSection('commit-section');
-        
-        // Start polling for commit progress
-        startCommitPolling();
-
-      } catch (error) {
-        alert(`Error: ${error.message}`);
-        document.getElementById('commit-btn').disabled = false;
-        document.getElementById('commit-btn').textContent = '💾 Commit to Database';
-      }
-    }
-
-    function startCommitPolling() {
-      commitTimer = setInterval(async () => {
-        try {
-          const response = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
-          if (!response.ok) {
-            throw new Error('Failed to get commit status');
-          }
-
-          const status = await response.json();
-          updateCommitDisplay(status);
-
-          if (status.status === 'committed') {
-            clearInterval(commitTimer);
-            showCommitSuccess();
-          } else if (status.status === 'commit_error') {
-            clearInterval(commitTimer);
-            showCommitError(status.commit_error || 'Unknown error');
-          }
-
-        } catch (error) {
-          console.error('Error polling commit status:', error);
-        }
-      }, 1000);
-    }
-
-    function updateCommitDisplay(status) {
-      document.getElementById('commit-progress-text').textContent = 'Saving to database...';
-      document.getElementById('commit-progress-percentage').textContent = `${status.commit_progress}%`;
-      document.getElementById('commit-progress-bar').style.width = `${status.commit_progress}%`;
-
-      if (status.commit_errors && status.commit_errors.length > 0) {
-        const container = document.getElementById('commit-result');
-        container.innerHTML = `
-          <div class="error-list">
-            <h4>Commit Errors:</h4>
-            ${status.commit_errors.map(error => `<div class="error-item">${error}</div>`).join('')}
-          </div>
-        `;
-      }
-    }
-
-    function showCommitSuccess() {
-      const container = document.getElementById('commit-result');
-      container.innerHTML = `
-        <div class="success-message">
-          <h4>✅ Successfully Committed to Database!</h4>
-          <p>All processed data has been saved to your database. You can now view the files in the main application.</p>
-          <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
-            🏠 Return to Main App
-          </button>
-          <button type="button" class="btn btn-secondary" onclick="startNewSession()">
-            🔄 Process More Files
-          </button>
-        </div>
-      `;
-    }
-
-    function showCommitError(error) {
-      const container = document.getElementById('commit-result');
-      container.innerHTML = `
-        <div class="error-list">
-          <h4>❌ Commit Failed</h4>
-          <p>Error: ${error}</p>
-          <button type="button" class="btn btn-secondary" onclick="startNewSession()">
-            🔄 Start Over
-          </button>
-        </div>
-      `;
-    }
 
     function showError(message) {
       const container = document.getElementById('error-container');
@@ -1069,27 +952,20 @@
         clearInterval(processingTimer);
         processingTimer = null;
       }
-      if (commitTimer) {
-        clearInterval(commitTimer);
-        commitTimer = null;
-      }
       
       // Reset UI
       currentSessionId = null;
+      clearSessionFromStorage();
       updateWorkflowStep(1);
       showSection('parameters-form');
       
       // Reset form
       document.getElementById('process-btn').disabled = false;
       document.getElementById('process-btn').textContent = '🚀 Start Processing';
-      document.getElementById('commit-btn').disabled = false;
-      document.getElementById('commit-btn').textContent = '💾 Commit to Database';
       
       // Clear progress
       document.getElementById('progress-bar').style.width = '0%';
-      document.getElementById('commit-progress-bar').style.width = '0%';
       document.getElementById('error-container').innerHTML = '';
-      document.getElementById('commit-result').innerHTML = '';
     }
 
     function openDirectoryBrowser() {
@@ -1174,11 +1050,21 @@
         if (data.directories.length === 0 && data.file_summary === 'No files') {
           directoryTree.innerHTML = '<div style="color: #888; padding: 10px;">Empty directory</div>';
         } else {
-          // Show file summary
+          // Show file summary with ingestion stats
           if (data.file_summary && data.file_summary !== 'No files') {
             const filesDiv = document.createElement('div');
             filesDiv.className = 'tree-files';
-            filesDiv.textContent = `📄 ${data.file_summary}`;
+            let summary = `📄 ${data.file_summary}`;
+            
+            // Add ingestion stats if available
+            if (data.ingest_stats && data.ingest_stats.total_files > 0) {
+              const ingested = data.ingest_stats.ingested_files || 0;
+              const total = data.ingest_stats.total_files;
+              const color = ingested === total ? '#28a745' : '#ffc107';
+              summary += ` <span style="color: ${color}; font-weight: bold;">(${ingested}/${total})</span>`;
+            }
+            
+            filesDiv.innerHTML = summary;
             directoryTree.appendChild(filesDiv);
           }
           
@@ -1186,9 +1072,19 @@
           data.directories.forEach(dir => {
             const item = document.createElement('div');
             item.className = 'tree-item tree-folder';
+            
+            // Build ingest stats badge
+            let ingestBadge = '';
+            if (dir.ingest_stats && dir.ingest_stats.total_files > 0) {
+              const ingested = dir.ingest_stats.ingested_files || 0;
+              const total = dir.ingest_stats.total_files;
+              const color = ingested === total ? '#28a745' : '#ffc107';
+              ingestBadge = ` <span style="color: ${color}; font-weight: bold; font-size: 0.85em;">(${ingested}/${total})</span>`;
+            }
+            
             item.innerHTML = `
               ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
-              📁 ${dir.name}
+              📁 ${dir.name}${ingestBadge}
             `;
             
             item.addEventListener('click', (e) => {
@@ -1215,10 +1111,59 @@
     }
 
     // Initialize the page
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check for active session in session storage
+      const savedSessionId = sessionStorage.getItem('ingest_session_id');
+      
+      if (savedSessionId) {
+        // Try to resume the session
+        try {
+          const response = await fetch(`/api/ingest/status/${savedSessionId}`);
+          if (response.ok) {
+            const status = await response.json();
+            
+            // If session is still active (processing or completed), restore it
+            if (status.status === 'processing' || status.status === 'completed') {
+              currentSessionId = savedSessionId;
+              
+              if (status.status === 'processing') {
+                // Resume progress display
+                updateWorkflowStep(2);
+                showSection('progress-section');
+                updateProgressDisplay(status);
+                startProgressPolling();
+              } else if (status.status === 'completed') {
+                // Show completion
+                updateWorkflowStep(3);
+                showSection('completion-section');
+                updateProgressDisplay(status);
+              }
+              
+              return; // Don't show parameters form
+            }
+          }
+        } catch (error) {
+          console.log('Could not resume session, starting fresh');
+        }
+        
+        // Clear invalid session
+        sessionStorage.removeItem('ingest_session_id');
+      }
+      
+      // Show initial form
       updateWorkflowStep(1);
       showSection('parameters-form');
     });
+    
+    // Save session ID to session storage when processing starts
+    function saveSessionToStorage(sessionId) {
+      sessionStorage.setItem('ingest_session_id', sessionId);
+    }
+    
+    // Clear session from storage
+    function clearSessionFromStorage() {
+      sessionStorage.removeItem('ingest_session_id');
+    }
   </script>
 </body>
 </html>
