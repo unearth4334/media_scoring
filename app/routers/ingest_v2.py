@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 
 from ..state import get_state
 from ..database.service import DatabaseService
+from ..database.models import MediaFile
 from ..services.files import discover_files, read_score
 from ..services.metadata import extract_metadata, extract_keywords_from_metadata
 from ..services.nsfw_detection import detect_image_nsfw, is_nsfw_detection_available
@@ -72,7 +73,7 @@ async def ingest_v2_page(request: Request):
 
 @router.get("/api/ingest/directories")
 async def list_directories_tree(path: str = ""):
-    """List directories with file counts for tree view."""
+    """List directories with file counts and ingestion stats for tree view."""
     try:
         # Define media root directory
         media_root = Path("/media").resolve()
@@ -100,17 +101,24 @@ async def list_directories_tree(path: str = ""):
         try:
             for item in sorted(target_path.iterdir(), key=lambda x: x.name.lower()):
                 if item.is_dir() and not item.name.startswith('.'):
+                    # Get ingestion stats for this directory
+                    ingest_stats = get_directory_ingest_stats(item)
+                    
                     subdirs.append({
                         "name": item.name,
                         "path": str(item),
                         "has_children": any(subitem.is_dir() and not subitem.name.startswith('.') 
-                                           for subitem in item.iterdir())
+                                           for subitem in item.iterdir()),
+                        "ingest_stats": ingest_stats
                     })
                 elif item.is_file():
                     ext = item.suffix.lower()
                     file_counts[ext] = file_counts.get(ext, 0) + 1
         except PermissionError:
             pass
+        
+        # Get ingestion stats for current directory
+        current_dir_stats = get_directory_ingest_stats(target_path)
         
         # Format file count summary
         file_summary = []
@@ -128,11 +136,51 @@ async def list_directories_tree(path: str = ""):
             "path": str(target_path),
             "parent": parent_path,
             "directories": subdirs,
-            "file_summary": ", ".join(file_summary) if file_summary else "No files"
+            "file_summary": ", ".join(file_summary) if file_summary else "No files",
+            "ingest_stats": current_dir_stats
         }
     except Exception as e:
         raise HTTPException(500, f"Failed to list directories: {str(e)}")
 
+
+def get_directory_ingest_stats(directory: Path) -> Dict[str, int]:
+    """Get ingestion statistics for a directory.
+    
+    Args:
+        directory: Path to directory
+        
+    Returns:
+        Dict with total_files and ingested_files counts
+    """
+    state = get_state()
+    if not state.database_enabled:
+        return {"total_files": 0, "ingested_files": 0}
+    
+    try:
+        # Count total media files in directory
+        total_files = 0
+        for ext in ['.mp4', '.png', '.jpg', '.jpeg']:
+            total_files += len(list(directory.glob(f"*{ext}")))
+        
+        # Count ingested files from database
+        ingested_files = 0
+        try:
+            with DatabaseService() as db:
+                # Query for files in this directory
+                dir_str = str(directory.resolve())
+                ingested_files = db.session.query(MediaFile).filter(
+                    MediaFile.directory == dir_str
+                ).count()
+        except Exception as e:
+            logging.warning(f"Failed to get ingest stats for {directory}: {e}")
+        
+        return {
+            "total_files": total_files,
+            "ingested_files": ingested_files
+        }
+    except Exception as e:
+        logging.warning(f"Failed to calculate ingest stats for {directory}: {e}")
+        return {"total_files": 0, "ingested_files": 0}
 
 @router.post("/api/ingest/process")
 async def start_processing(request: ProcessRequest, background_tasks: BackgroundTasks):
@@ -183,7 +231,6 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         "session_id": session_id,
         "total_files": len(files),
         "status": "started"
-    }
     }
 
 

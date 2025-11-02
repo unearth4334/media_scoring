@@ -844,6 +844,7 @@
 
         const result = await response.json();
         currentSessionId = result.session_id;
+        saveSessionToStorage(currentSessionId);
 
         updateWorkflowStep(2);
         showSection('progress-section');
@@ -954,6 +955,7 @@
       
       // Reset UI
       currentSessionId = null;
+      clearSessionFromStorage();
       updateWorkflowStep(1);
       showSection('parameters-form');
       
@@ -1048,11 +1050,21 @@
         if (data.directories.length === 0 && data.file_summary === 'No files') {
           directoryTree.innerHTML = '<div style="color: #888; padding: 10px;">Empty directory</div>';
         } else {
-          // Show file summary
+          // Show file summary with ingestion stats
           if (data.file_summary && data.file_summary !== 'No files') {
             const filesDiv = document.createElement('div');
             filesDiv.className = 'tree-files';
-            filesDiv.textContent = `📄 ${data.file_summary}`;
+            let summary = `📄 ${data.file_summary}`;
+            
+            // Add ingestion stats if available
+            if (data.ingest_stats && data.ingest_stats.total_files > 0) {
+              const ingested = data.ingest_stats.ingested_files || 0;
+              const total = data.ingest_stats.total_files;
+              const color = ingested === total ? '#28a745' : '#ffc107';
+              summary += ` <span style="color: ${color}; font-weight: bold;">(${ingested}/${total})</span>`;
+            }
+            
+            filesDiv.innerHTML = summary;
             directoryTree.appendChild(filesDiv);
           }
           
@@ -1060,9 +1072,19 @@
           data.directories.forEach(dir => {
             const item = document.createElement('div');
             item.className = 'tree-item tree-folder';
+            
+            // Build ingest stats badge
+            let ingestBadge = '';
+            if (dir.ingest_stats && dir.ingest_stats.total_files > 0) {
+              const ingested = dir.ingest_stats.ingested_files || 0;
+              const total = dir.ingest_stats.total_files;
+              const color = ingested === total ? '#28a745' : '#ffc107';
+              ingestBadge = ` <span style="color: ${color}; font-weight: bold; font-size: 0.85em;">(${ingested}/${total})</span>`;
+            }
+            
             item.innerHTML = `
               ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
-              📁 ${dir.name}
+              📁 ${dir.name}${ingestBadge}
             `;
             
             item.addEventListener('click', (e) => {
@@ -1089,10 +1111,59 @@
     }
 
     // Initialize the page
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Check for active session in session storage
+      const savedSessionId = sessionStorage.getItem('ingest_session_id');
+      
+      if (savedSessionId) {
+        // Try to resume the session
+        try {
+          const response = await fetch(`/api/ingest/status/${savedSessionId}`);
+          if (response.ok) {
+            const status = await response.json();
+            
+            // If session is still active (processing or completed), restore it
+            if (status.status === 'processing' || status.status === 'completed') {
+              currentSessionId = savedSessionId;
+              
+              if (status.status === 'processing') {
+                // Resume progress display
+                updateWorkflowStep(2);
+                showSection('progress-section');
+                updateProgressDisplay(status);
+                startProgressPolling();
+              } else if (status.status === 'completed') {
+                // Show completion
+                updateWorkflowStep(3);
+                showSection('completion-section');
+                updateProgressDisplay(status);
+              }
+              
+              return; // Don't show parameters form
+            }
+          }
+        } catch (error) {
+          console.log('Could not resume session, starting fresh');
+        }
+        
+        // Clear invalid session
+        sessionStorage.removeItem('ingest_session_id');
+      }
+      
+      // Show initial form
       updateWorkflowStep(1);
       showSection('parameters-form');
     });
+    
+    // Save session ID to session storage when processing starts
+    function saveSessionToStorage(sessionId) {
+      sessionStorage.setItem('ingest_session_id', sessionId);
+    }
+    
+    // Clear session from storage
+    function clearSessionFromStorage() {
+      sessionStorage.removeItem('ingest_session_id');
+    }
   </script>
 </body>
 </html>
