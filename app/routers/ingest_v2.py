@@ -161,12 +161,22 @@ async def list_directories_tree(path: str = ""):
         if target_path != media_root and target_path.parent != target_path:
             parent_path = str(target_path.parent)
         
-        return {
+        # Return with no-cache headers to ensure fresh data
+        response_data = {
             "path": str(target_path),
             "parent": parent_path,
             "directories": subdirs,
             "file_summary": ", ".join(file_summary) if file_summary else "No files"
         }
+        
+        return JSONResponse(
+            content=response_data,
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     except Exception as e:
         raise HTTPException(500, f"Failed to list directories: {str(e)}")
 

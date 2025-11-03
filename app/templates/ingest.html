@@ -522,6 +522,7 @@
     // Open directory browser
     browseBtn.addEventListener('click', () => {
       selectedPath = directoryInput.value || '';
+      // Force reload directory to refresh ingestion stats
       loadDirectory(selectedPath);
       directoryOverlay.classList.add('active');
     });
@@ -546,7 +547,8 @@
 
     // Navigate to parent
     parentBtn.addEventListener('click', () => {
-      fetch(`/api/ingest/directories?path=${encodeURIComponent(currentPath)}`)
+      const timestamp = new Date().getTime();
+      fetch(`/api/ingest/directories?path=${encodeURIComponent(currentPath)}&_t=${timestamp}`)
         .then(res => res.json())
         .then(data => {
           if (data.parent) {
@@ -564,7 +566,9 @@
         loadingIndicator.classList.add('show');
         directoryTree.style.display = 'none';
         
-        const res = await fetch(`/api/ingest/directories?path=${encodeURIComponent(path)}`);
+        // Add timestamp to prevent caching and ensure fresh stats
+        const timestamp = new Date().getTime();
+        const res = await fetch(`/api/ingest/directories?path=${encodeURIComponent(path)}&_t=${timestamp}`);
         const data = await res.json();
         
         currentPath = data.path;
