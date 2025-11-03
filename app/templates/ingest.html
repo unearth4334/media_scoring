@@ -244,6 +244,36 @@
       transform: rotate(90deg);
     }
 
+    .ingest-stats-pill {
+      display: inline-block;
+      background: rgba(74, 144, 226, 0.2);
+      color: #4a90e2;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: 500;
+      margin-left: 8px;
+      border: 1px solid rgba(74, 144, 226, 0.3);
+    }
+
+    .ingest-stats-pill.complete {
+      background: rgba(76, 175, 80, 0.2);
+      color: #4caf50;
+      border-color: rgba(76, 175, 80, 0.3);
+    }
+
+    .ingest-stats-pill.partial {
+      background: rgba(255, 152, 0, 0.2);
+      color: #ff9800;
+      border-color: rgba(255, 152, 0, 0.3);
+    }
+
+    .ingest-stats-pill.empty {
+      background: rgba(158, 158, 158, 0.2);
+      color: #9e9e9e;
+      border-color: rgba(158, 158, 158, 0.3);
+    }
+
     .tree-children {
       margin-left: 20px;
       display: none;
@@ -566,9 +596,29 @@
           data.directories.forEach(dir => {
             const item = document.createElement('div');
             item.className = 'tree-item tree-folder';
+            
+            // Determine pill class based on ingestion status
+            let pillClass = 'empty';
+            let pillText = '(0/0)';
+            
+            if (dir.total_files > 0) {
+              const ingested = dir.ingested_files || 0;
+              const total = dir.total_files;
+              pillText = `(${ingested}/${total})`;
+              
+              if (ingested === 0) {
+                pillClass = 'empty';
+              } else if (ingested >= total) {
+                pillClass = 'complete';
+              } else {
+                pillClass = 'partial';
+              }
+            }
+            
             item.innerHTML = `
               ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
               📁 ${dir.name}
+              <span class="ingest-stats-pill ${pillClass}">${pillText}</span>
             `;
             
             item.addEventListener('click', (e) => {

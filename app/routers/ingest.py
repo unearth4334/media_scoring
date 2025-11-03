@@ -43,6 +43,8 @@ async def ingest_page(request: Request):
 async def list_directories_tree(path: str = ""):
     """List directories with file counts for tree view."""
     try:
+        state = get_state()
+        
         # Define media root directory
         media_root = Path("/media").resolve()
         
@@ -62,6 +64,26 @@ async def list_directories_tree(path: str = ""):
         if not target_path.exists() or not target_path.is_dir():
             raise HTTPException(404, "Directory not found")
         
+        # Get ingestion statistics from database if enabled
+        ingestion_stats = {}
+        if state.database_enabled:
+            try:
+                db_service = state.get_database_service()
+                if db_service:
+                    with db_service as db:
+                        # Query to get count of ingested files per directory
+                        from sqlalchemy import func
+                        from ..database.models import MediaFile
+                        
+                        results = db.session.query(
+                            MediaFile.directory,
+                            func.count(MediaFile.id).label('count')
+                        ).group_by(MediaFile.directory).all()
+                        
+                        ingestion_stats = {row.directory: row.count for row in results}
+            except Exception as e:
+                state.logger.error(f"Failed to get ingestion stats: {e}")
+        
         # Get subdirectories
         subdirs = []
         file_counts = {}
@@ -69,11 +91,30 @@ async def list_directories_tree(path: str = ""):
         try:
             for item in sorted(target_path.iterdir(), key=lambda x: x.name.lower()):
                 if item.is_dir() and not item.name.startswith('.'):
+                    # Count total media files in this directory
+                    total_files = 0
+                    ingested_files = 0
+                    
+                    try:
+                        for subitem in item.iterdir():
+                            if subitem.is_file():
+                                ext = subitem.suffix.lower()
+                                if ext in ['.mp4', '.png', '.jpg', '.jpeg']:
+                                    total_files += 1
+                    except PermissionError:
+                        pass
+                    
+                    # Get ingested count from database
+                    dir_path = str(item)
+                    ingested_files = ingestion_stats.get(dir_path, 0)
+                    
                     subdirs.append({
                         "name": item.name,
                         "path": str(item),
                         "has_children": any(subitem.is_dir() and not subitem.name.startswith('.') 
-                                           for subitem in item.iterdir())
+                                           for subitem in item.iterdir()),
+                        "total_files": total_files,
+                        "ingested_files": ingested_files
                     })
                 elif item.is_file():
                     # Count files by extension
