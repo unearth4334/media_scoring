@@ -416,8 +416,8 @@ async def process_files_background(session_id: str, files: List[Path], parameter
 async def process_single_file(file_path: Path, parameters: IngestParameters) -> Dict[str, Any]:
     """Process a single file and return its data."""
     import asyncio
-    # Add small delay to allow frontend polling to catch progress
-    await asyncio.sleep(0.1)
+    # Add delay to allow frontend polling to catch progress (for testing/demo)
+    await asyncio.sleep(0.5)
     
     file_data = {
         "file_path": str(file_path),
