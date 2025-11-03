@@ -132,8 +132,8 @@ class DataIngester:
     def _process_single_file_with_db(self, db: DatabaseService, file_path: Path, 
                                    current: int, total: int) -> None:
         """Process a single file with database storage."""
-        if current % 10 == 0 or current == total:
-            self.logger.info(f"Processing file {current}/{total}: {file_path.name}")
+        # Always log progress for each file to show real-time updates
+        self.logger.info(f"[{current}/{total}] Processing: {file_path.name}")
         
         # Create/update media file record
         media_file = db.get_or_create_media_file(file_path)
@@ -180,8 +180,8 @@ class DataIngester:
         
         for i, file_path in enumerate(files, 1):
             try:
-                if i % 10 == 0 or i == len(files):
-                    self.logger.info(f"Processing file {i}/{len(files)}: {file_path.name}")
+                # Always log progress for each file to show real-time updates
+                self.logger.info(f"[{i}/{len(files)}] Processing: {file_path.name}")
                 
                 # Extract metadata to verify it works
                 metadata = extract_metadata(file_path)

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -185,14 +186,15 @@ async def run_ingest(request: IngestRequest):
             cmd.append("--verbose")
         
         try:
-            # Start the subprocess
+            # Start the subprocess with unbuffered output
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 text=True,
-                bufsize=1,
-                universal_newlines=True
+                bufsize=0,  # Unbuffered for real-time output
+                universal_newlines=True,
+                env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered mode
             )
             
             # Stream output line by line
