@@ -246,7 +246,7 @@ async def get_processing_status(session_id: str):
     
     session = processing_sessions[session_id]
     
-    return {
+    response_data = {
         "session_id": session_id,
         "status": session["status"],
         "progress": session["progress"],
@@ -258,6 +258,12 @@ async def get_processing_status(session_id: str):
         "start_time": session["start_time"],
         "end_time": session.get("end_time")
     }
+    
+    # Log periodically to avoid spam
+    if session["processed_files"] % 5 == 0 or session["status"] in ["completed", "error"]:
+        logging.info(f"Status request for {session_id}: processed={session['processed_files']}/{session['total_files']}, stats={session['stats']}")
+    
+    return response_data
 
 
 @router.get("/api/ingest/report/{session_id}")
@@ -356,16 +362,21 @@ async def process_files_background(session_id: str, files: List[Path], parameter
     
     try:
         session["status"] = "processing"
+        logging.info(f"Starting background processing for session {session_id} with {len(files)} files")
         
         for i, file_path in enumerate(files):
+            # Update current file immediately
             session["current_file"] = file_path.name
+            session["progress"] = int((i / len(files)) * 100)
             
             try:
                 # Process single file
                 file_data = await process_single_file(file_path, parameters)
                 session["processed_data"].append(file_data)
-                session["processed_files"] += 1
-                session["stats"]["processed_files"] += 1
+                
+                # Update processed count immediately
+                session["processed_files"] = i + 1
+                session["stats"]["processed_files"] = i + 1
                 
                 # Update stats based on what was processed
                 if file_data.get("metadata"):
@@ -377,8 +388,12 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 if file_data.get("nsfw_label"):
                     session["stats"]["nsfw_detected"] += 1
                 
-                # Update progress after processing file
+                # Update progress after processing file (more accurate)
                 session["progress"] = int(((i + 1) / len(files)) * 100)
+                
+                # Log progress periodically
+                if (i + 1) % 5 == 0 or (i + 1) == len(files):
+                    logging.info(f"Progress [{i+1}/{len(files)}]: stats={session['stats']}")
                     
             except Exception as e:
                 error_msg = f"Error processing {file_path.name}: {str(e)}"
@@ -389,6 +404,7 @@ async def process_files_background(session_id: str, files: List[Path], parameter
         session["status"] = "completed"
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
+        logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
         
     except Exception as e:
         session["status"] = "error"
@@ -399,6 +415,10 @@ async def process_files_background(session_id: str, files: List[Path], parameter
 
 async def process_single_file(file_path: Path, parameters: IngestParameters) -> Dict[str, Any]:
     """Process a single file and return its data."""
+    import asyncio
+    # Add small delay to allow frontend polling to catch progress
+    await asyncio.sleep(0.1)
+    
     file_data = {
         "file_path": str(file_path),
         "filename": file_path.name,

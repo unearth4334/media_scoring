@@ -933,6 +933,8 @@
     }
 
     function updateProgressDisplay(status) {
+      console.log('Status update:', status); // Debug logging
+      
       document.getElementById('progress-text').textContent = 
         `Processing ${status.processed_files}/${status.total_files} files`;
       document.getElementById('progress-percentage').textContent = `${status.progress}%`;
@@ -944,6 +946,7 @@
 
       // Update stats
       const stats = status.stats;
+      console.log('Stats:', stats); // Debug logging
       document.getElementById('stat-processed').textContent = stats.processed_files;
       document.getElementById('stat-metadata').textContent = stats.metadata_extracted;
       document.getElementById('stat-keywords').textContent = stats.keywords_added;
