@@ -5,7 +5,7 @@ import json
 import logging
 import tempfile
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 import shutil
@@ -313,38 +313,59 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
 @router.get("/api/ingest/active-session")
 async def get_active_session():
     """Get the most recent active or in-progress session."""
-    # Check in-memory sessions first
+    most_recent_session = None
+    most_recent_time = None
+    
+    # Check in-memory sessions for active ones
     for session_id, session in processing_sessions.items():
         if session["status"] in ["starting", "processing", "committing"]:
-            return {"session_id": session_id, "status": session["status"]}
+            start_time = datetime.fromisoformat(session["start_time"])
+            if most_recent_time is None or start_time > most_recent_time:
+                most_recent_session = {"session_id": session_id, "status": session["status"]}
+                most_recent_time = start_time
+    
+    # If found an active session, return it
+    if most_recent_session:
+        return most_recent_session
     
     # Check disk for recent sessions
     active_session_ids = get_active_sessions()
     for session_id in active_session_ids:
         session_data = load_session_from_disk(session_id)
-        if session_data and session_data.get("status") in ["starting", "processing", "committing"]:
-            # Restore to memory
-            processing_sessions[session_id] = {
-                **session_data,
-                "files": [],  # Don't restore file list
-                "processed_data": []  # Don't restore processed data
-            }
-            return {"session_id": session_id, "status": session_data["status"]}
-        elif session_data and session_data.get("status") == "completed":
-            # Return most recent completed session (within last 5 minutes)
-            from datetime import datetime, timedelta
-            try:
-                start_time = datetime.fromisoformat(session_data["start_time"])
-                if datetime.now() - start_time < timedelta(minutes=5):
+        if not session_data:
+            continue
+            
+        try:
+            start_time = datetime.fromisoformat(session_data["start_time"])
+        except:
+            continue
+        
+        # Prioritize in-progress sessions
+        if session_data.get("status") in ["starting", "processing", "committing"]:
+            if most_recent_time is None or start_time > most_recent_time:
+                # Restore to memory
+                processing_sessions[session_id] = {
+                    **session_data,
+                    "files": [],  # Don't restore file list
+                    "processed_data": []  # Don't restore processed data
+                }
+                most_recent_session = {"session_id": session_id, "status": session_data["status"]}
+                most_recent_time = start_time
+        # Return most recent completed session (within last 5 minutes)
+        elif session_data.get("status") == "completed":
+            if datetime.now() - start_time < timedelta(minutes=5):
+                if most_recent_time is None or start_time > most_recent_time:
                     # Restore to memory for viewing
                     processing_sessions[session_id] = {
                         **session_data,
                         "files": [],
                         "processed_data": []
                     }
-                    return {"session_id": session_id, "status": session_data["status"]}
-            except:
-                pass
+                    most_recent_session = {"session_id": session_id, "status": session_data["status"]}
+                    most_recent_time = start_time
+    
+    if most_recent_session:
+        return most_recent_session
     
     return {"session_id": None, "status": None}
 
