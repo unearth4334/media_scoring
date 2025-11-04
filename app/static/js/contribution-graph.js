@@ -95,9 +95,9 @@ function renderContributionGraph() {
       lastMonth = month;
     }
     
-    // Create day cell
+    // Create day cell with a copy of the date string to avoid reference issues
     currentWeek.push({
-      date: dateStr,
+      date: String(dateStr),  // Explicitly convert to string
       count: count,
       level: level,
       dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' })
