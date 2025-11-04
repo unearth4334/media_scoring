@@ -151,6 +151,55 @@ let currentRotation = 0; // Current rotation angle for mobile image viewing (0 o
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
 
+// Thumbnail lazy loading with Intersection Observer
+let thumbnailObserver = null;
+
+// Initialize the Intersection Observer for lazy loading thumbnails
+function initThumbnailObserver() {
+  // Disconnect existing observer if any
+  if (thumbnailObserver) {
+    thumbnailObserver.disconnect();
+  }
+  
+  // Create new observer with options for detecting visibility in sidebar
+  const observerOptions = {
+    root: document.getElementById('sidebar_list'), // Use sidebar_list as the viewport
+    rootMargin: '50px', // Load thumbnails 50px before they enter viewport
+    threshold: 0.01 // Trigger when even 1% is visible
+  };
+  
+  thumbnailObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        const thumbnailSrc = img.getAttribute('data-thumbnail-src');
+        
+        // Only load if not already loaded
+        if (thumbnailSrc && !img.src) {
+          img.src = thumbnailSrc;
+          img.removeAttribute('data-thumbnail-src'); // Remove data attribute after loading
+        }
+        
+        // Stop observing this image once loaded
+        thumbnailObserver.unobserve(img);
+      }
+    });
+  }, observerOptions);
+}
+
+// Observe all thumbnail images for lazy loading
+function observeThumbnails() {
+  if (!thumbnailObserver) {
+    initThumbnailObserver();
+  }
+  
+  // Find all thumbnail images with data-thumbnail-src (not yet loaded)
+  const thumbnailImages = document.querySelectorAll('.thumbnail img[data-thumbnail-src]');
+  thumbnailImages.forEach(img => {
+    thumbnailObserver.observe(img);
+  });
+}
+
 // Path translation function for clipboard
 function translatePathForUser(containerPath) {
   if (!containerPath || !userPathPrefix) {
@@ -1073,7 +1122,9 @@ function renderSidebar(){
     
     let thumbHtml = '';
     if (thumbnailsEnabled && showThumbnails) {
-      thumbHtml = `<div class="thumbnail"><img src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
+      // Use data-thumbnail-src for lazy loading instead of src
+      // This prevents immediate loading of all thumbnails
+      thumbHtml = `<div class="thumbnail"><img data-thumbnail-src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
       classes.push('with-thumbnails');
     }
     
@@ -1094,6 +1145,12 @@ function renderSidebar(){
       if (j >= 0) show(j);
     });
   });
+  
+  // Initialize lazy loading for thumbnails after rendering
+  if (thumbnailsEnabled && showThumbnails) {
+    // Use setTimeout to defer observation until after DOM updates
+    setTimeout(() => observeThumbnails(), 0);
+  }
 }
 function applyFilter(){
   if (minFilter === null) {
