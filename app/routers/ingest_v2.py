@@ -34,30 +34,34 @@ SESSION_DIR = Path(tempfile.gettempdir()) / "media_scoring_sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
 
-def save_session_to_disk(session_id: str, session_data: Dict):
+async def save_session_to_disk(session_id: str, session_data: Dict):
     """Save session to disk for persistence across page refreshes."""
-    try:
-        session_file = SESSION_DIR / f"{session_id}.json"
-        # Create a serializable copy (exclude processed_data for size)
-        save_data = {
-            "session_id": session_id,
-            "status": session_data.get("status"),
-            "progress": session_data.get("progress"),
-            "total_files": session_data.get("total_files"),
-            "current_file": session_data.get("current_file"),
-            "processed_files": session_data.get("processed_files"),
-            "stats": session_data.get("stats"),
-            "errors": session_data.get("errors", []),
-            "start_time": session_data.get("start_time"),
-            "end_time": session_data.get("end_time"),
-            "parameters": session_data.get("parameters"),
-            "commit_progress": session_data.get("commit_progress"),
-            "commit_errors": session_data.get("commit_errors", [])
-        }
-        with open(session_file, 'w') as f:
-            json.dump(save_data, f)
-    except Exception as e:
-        logging.error(f"Failed to save session {session_id} to disk: {e}")
+    def _save():
+        try:
+            session_file = SESSION_DIR / f"{session_id}.json"
+            # Create a serializable copy (exclude processed_data for size)
+            save_data = {
+                "session_id": session_id,
+                "status": session_data.get("status"),
+                "progress": session_data.get("progress"),
+                "total_files": session_data.get("total_files"),
+                "current_file": session_data.get("current_file"),
+                "processed_files": session_data.get("processed_files"),
+                "stats": session_data.get("stats"),
+                "errors": session_data.get("errors", []),
+                "start_time": session_data.get("start_time"),
+                "end_time": session_data.get("end_time"),
+                "parameters": session_data.get("parameters"),
+                "commit_progress": session_data.get("commit_progress"),
+                "commit_errors": session_data.get("commit_errors", [])
+            }
+            with open(session_file, 'w') as f:
+                json.dump(save_data, f)
+        except Exception as e:
+            logging.error(f"Failed to save session {session_id} to disk: {e}")
+    
+    # Run file I/O in thread to avoid blocking event loop
+    await asyncio.to_thread(_save)
 
 
 def load_session_from_disk(session_id: str) -> Optional[Dict]:
@@ -294,8 +298,8 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         }
     }
     
-    # Save session to disk for persistence
-    save_session_to_disk(session_id, processing_sessions[session_id])
+    # Save session to disk for persistence (non-blocking)
+    asyncio.create_task(save_session_to_disk(session_id, processing_sessions[session_id]))
     
     # Cleanup old sessions (older than 24 hours)
     cleanup_old_sessions()
@@ -512,7 +516,7 @@ async def process_files_background(session_id: str, files: List[Path], parameter
     
     try:
         session["status"] = "processing"
-        save_session_to_disk(session_id, session)  # Save initial state
+        await save_session_to_disk(session_id, session)  # Save initial state
         logging.info(f"Starting background processing for session {session_id} with {len(files)} files")
         
         for i, file_path in enumerate(files):
@@ -542,9 +546,9 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 # Update progress after processing file (more accurate)
                 session["progress"] = int(((i + 1) / len(files)) * 100)
                 
-                # Save to disk periodically (every 10 files)
+                # Save to disk periodically (every 10 files) - non-blocking
                 if (i + 1) % 10 == 0:
-                    save_session_to_disk(session_id, session)
+                    asyncio.create_task(save_session_to_disk(session_id, session))
                 
                 # Log progress periodically
                 if (i + 1) % 5 == 0 or (i + 1) == len(files):
@@ -559,14 +563,14 @@ async def process_files_background(session_id: str, files: List[Path], parameter
         session["status"] = "completed"
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
-        save_session_to_disk(session_id, session)  # Save final state
+        await save_session_to_disk(session_id, session)  # Save final state
         logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
         
     except Exception as e:
         session["status"] = "error"
         session["error"] = str(e)
         session["end_time"] = datetime.now().isoformat()
-        save_session_to_disk(session_id, session)  # Save error state
+        await save_session_to_disk(session_id, session)  # Save error state
         logging.error(f"Processing failed for session {session_id}: {e}")
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
@@ -589,44 +593,44 @@ async def process_single_file(file_path: Path, parameters: IngestParameters) -> 
         "extension": file_path.suffix.lower()
     }
     
-    # Import score if enabled
+    # Import score if enabled (run in thread to avoid blocking)
     if parameters.import_scores:
-        score = read_score(file_path)
+        score = await asyncio.to_thread(read_score, file_path)
         if score is not None:
             file_data["score"] = score
     
-    # Extract metadata if enabled
+    # Extract metadata if enabled (run in thread to avoid blocking)
     if parameters.extract_metadata:
         try:
-            metadata = extract_metadata(file_path)
+            metadata = await asyncio.to_thread(extract_metadata, file_path)
             if metadata:
                 file_data["metadata"] = metadata
                 
                 # Extract keywords from metadata if enabled
                 if parameters.extract_keywords:
-                    keywords = extract_keywords_from_metadata(metadata)
+                    keywords = await asyncio.to_thread(extract_keywords_from_metadata, metadata)
                     if keywords:
                         file_data["keywords"] = keywords
         except Exception as e:
             logging.warning(f"Failed to extract metadata from {file_path}: {e}")
     
-    # NSFW detection if enabled and it's an image
+    # NSFW detection if enabled and it's an image (run in thread to avoid blocking)
     if (parameters.enable_nsfw_detection and 
         file_data["file_type"] == "image" and 
         is_nsfw_detection_available()):
         try:
-            nsfw_score, nsfw_label = detect_image_nsfw(file_path)
+            nsfw_score, nsfw_label = await asyncio.to_thread(detect_image_nsfw, file_path)
             if nsfw_score is not None:
                 file_data["nsfw_score"] = nsfw_score
                 file_data["nsfw_label"] = nsfw_label
         except Exception as e:
             logging.warning(f"Failed NSFW detection for {file_path}: {e}")
     
-    # Generate file ID and perceptual hash for images
+    # Generate file ID and perceptual hash for images (run in thread to avoid blocking)
     if file_data["file_type"] == "image":
         try:
-            file_data["media_file_id"] = compute_media_file_id(file_path)
-            file_data["phash"] = compute_perceptual_hash(file_path)
+            file_data["media_file_id"] = await asyncio.to_thread(compute_media_file_id, file_path)
+            file_data["phash"] = await asyncio.to_thread(compute_perceptual_hash, file_path)
         except Exception as e:
             logging.warning(f"Failed to compute hashes for {file_path}: {e}")
     
@@ -640,7 +644,7 @@ async def commit_data_background(session_id: str):
     try:
         session["commit_errors"] = []
         session["status"] = "committing"
-        save_session_to_disk(session_id, session)  # Save committing state
+        await save_session_to_disk(session_id, session)  # Save committing state
         
         processed_data = session["processed_data"]
         parameters = session["parameters"]
@@ -649,9 +653,9 @@ async def commit_data_background(session_id: str):
             for i, file_data in enumerate(processed_data):
                 session["commit_progress"] = int((i / len(processed_data)) * 100)
                 
-                # Save progress periodically
+                # Save progress periodically - non-blocking
                 if i % 10 == 0:
-                    save_session_to_disk(session_id, session)
+                    asyncio.create_task(save_session_to_disk(session_id, session))
                 
                 try:
                     # Create or update media file
@@ -696,12 +700,12 @@ async def commit_data_background(session_id: str):
         
         session["status"] = "committed"
         session["commit_progress"] = 100
-        save_session_to_disk(session_id, session)  # Save final committed state
+        await save_session_to_disk(session_id, session)  # Save final committed state
         
     except Exception as e:
         session["status"] = "commit_error"
         session["commit_error"] = str(e)
-        save_session_to_disk(session_id, session)  # Save error state
+        await save_session_to_disk(session_id, session)  # Save error state
         logging.error(f"Commit failed for session {session_id}: {e}")
 
 
