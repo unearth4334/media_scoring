@@ -62,6 +62,8 @@ Thumbs.db
 test_media/
 media/test_*.png
 media/test_*.jpg
+media/blue_*.jpg
+media/red_*.png
 
 # Ignore self-generated files
 .thumbnails/
