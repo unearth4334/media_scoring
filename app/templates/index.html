@@ -7,6 +7,8 @@
   <!-- Favicon: small movie camera emoji as SVG data URI -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='50%' x='50%' text-anchor='middle' dominant-baseline='central' font-size='48'>🎬</text></svg>">
   <link rel="stylesheet" href="/themes/{{ settings.style }}">
+  <!-- Viewer.js for enhanced image viewing -->
+  <link rel="stylesheet" href="/static/vendor/viewerjs/viewer.min.css">
 
 </head>
 <body>
@@ -350,6 +352,9 @@
     </div>
   </div>
 
+<!-- Viewer.js for enhanced image viewing -->
+<script src="/static/vendor/viewerjs/viewer.min.js"></script>
+<script src="/static/js/viewer-integration.js"></script>
 <script src="/static/js/svg-icons.js"></script>
 <script src="/static/js/search-toolbar.js"></script>
 <script src="/static/js/contribution-graph.js"></script>
