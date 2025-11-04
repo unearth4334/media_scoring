@@ -36,57 +36,62 @@ function initializeImageViewer() {
   }
   
   // Initialize Viewer.js with configuration
-  imageViewer = new Viewer(imgElement, {
-    // Viewer options for optimal mobile and desktop experience
-    inline: false,          // Use modal mode for better mobile experience
-    button: false,          // Hide default close button (we have our own UI)
-    navbar: false,          // Hide navbar (we have our own navigation)
-    title: false,           // Hide title bar
-    toolbar: {
-      zoomIn: true,
-      zoomOut: true,
-      oneToOne: true,
-      reset: true,
-      rotateLeft: true,
-      rotateRight: true,
-    },
-    tooltip: true,          // Show zoom percentage
-    movable: true,          // Enable drag to move
-    zoomable: true,         // Enable zoom
-    rotatable: true,        // Enable rotation
-    scalable: false,        // Disable scaling (we use zoom instead)
-    transition: true,       // Smooth transitions
-    fullscreen: false,      // Disable fullscreen (conflicts with our maximize feature)
-    keyboard: true,         // Enable keyboard shortcuts
+  try {
+    imageViewer = new Viewer(imgElement, {
+      // Viewer options for optimal mobile and desktop experience
+      inline: false,          // Use modal mode for better mobile experience
+      button: false,          // Hide default close button (we have our own UI)
+      navbar: false,          // Hide navbar (we have our own navigation)
+      title: false,           // Hide title bar
+      toolbar: {
+        zoomIn: true,
+        zoomOut: true,
+        oneToOne: true,
+        reset: true,
+        rotateLeft: true,
+        rotateRight: true,
+      },
+      tooltip: true,          // Show zoom percentage
+      movable: true,          // Enable drag to move
+      zoomable: true,         // Enable zoom
+      rotatable: true,        // Enable rotation
+      scalable: false,        // Disable scaling (we use zoom instead)
+      transition: true,       // Smooth transitions
+      fullscreen: false,      // Disable fullscreen (conflicts with our maximize feature)
+      keyboard: true,         // Enable keyboard shortcuts
+      
+      // Touch gesture support for mobile
+      backdrop: 'static',     // Click backdrop to close
+      
+      // Zoom configuration
+      zoomRatio: 0.1,        // Zoom increment (10%)
+      minZoomRatio: 0.1,     // Minimum zoom (10%)
+      maxZoomRatio: 5,       // Maximum zoom (500%)
+      
+      // Event handlers
+      viewed: function() {
+        // Image has been viewed (loaded into viewer)
+        console.log('Viewer.js: Image loaded');
+      },
+      
+      show: function() {
+        // Viewer is shown
+        // Disable old mobile zoom controls when Viewer.js is active
+        disableOldMobileZoom();
+      },
+      
+      hide: function() {
+        // Viewer is hidden
+        // Re-enable old mobile zoom controls
+        enableOldMobileZoom();
+      }
+    });
     
-    // Touch gesture support for mobile
-    backdrop: 'static',     // Click backdrop to close
-    
-    // Zoom configuration
-    zoomRatio: 0.1,        // Zoom increment (10%)
-    minZoomRatio: 0.1,     // Minimum zoom (10%)
-    maxZoomRatio: 5,       // Maximum zoom (500%)
-    
-    // Event handlers
-    viewed: function() {
-      // Image has been viewed (loaded into viewer)
-      console.log('Viewer.js: Image loaded');
-    },
-    
-    show: function() {
-      // Viewer is shown
-      // Disable old mobile zoom controls when Viewer.js is active
-      disableOldMobileZoom();
-    },
-    
-    hide: function() {
-      // Viewer is hidden
-      // Re-enable old mobile zoom controls
-      enableOldMobileZoom();
-    }
-  });
-  
-  console.log('Viewer.js initialized for image viewer');
+    console.log('Viewer.js initialized for image viewer');
+  } catch (error) {
+    console.error('Failed to initialize Viewer.js:', error);
+    imageViewer = null;
+  }
 }
 
 /**
@@ -138,7 +143,8 @@ function enableOldMobileZoom() {
   const imgElement = document.getElementById('imgview');
   
   // Show old mobile zoom button if we're viewing an image on mobile
-  if (mobileZoomBtn && imgElement && imgElement.style.display !== 'none' && isMobileDevice()) {
+  // Note: isMobileDevice() is defined in app.js
+  if (mobileZoomBtn && imgElement && imgElement.style.display !== 'none' && typeof isMobileDevice === 'function' && isMobileDevice()) {
     mobileZoomBtn.style.display = '';
   }
 }
@@ -195,21 +201,18 @@ document.addEventListener('DOMContentLoaded', function() {
   // Add mobile zoom button handler to trigger Viewer.js
   const mobileZoomBtn = document.getElementById('mobile-zoom-btn');
   if (mobileZoomBtn) {
-    // Store the original click handler
-    const originalZoomHandler = mobileZoomBtn.onclick;
-    
     // Add new handler that opens Viewer.js for images
     mobileZoomBtn.addEventListener('click', function(e) {
       const imgElement = document.getElementById('imgview');
       
       // If image is visible, open in Viewer.js instead of old zoom popover
-      if (imgElement && imgElement.style.display !== 'none' && window.imageViewerIntegration) {
+      if (imgElement && imgElement.style.display !== 'none') {
         e.preventDefault();
         e.stopPropagation();
         viewCurrentImage();
       }
-      // Otherwise, let the original handler run (if any)
-    }, true); // Use capture phase to run before old handler
+      // Otherwise, allow default behavior (old zoom popover will open)
+    }, true); // Use capture phase to run before other handlers
   }
 });
 
