@@ -462,6 +462,19 @@ aside#sidebar {
 
 .item .thumbnail { flex-shrink: 0; border-radius: 4px; overflow: hidden; background: #fff; border: 1px solid #d0c0d0; }
 .item .thumbnail img { display: block; border-radius: 4px; }
+
+/* Lazy loading placeholder for thumbnails */
+.item .thumbnail img:not([src]) {
+  background: linear-gradient(90deg, #e8d8e8 25%, #f0e0f0 50%, #e8d8e8 75%);
+  background-size: 200% 100%;
+  animation: thumbnail-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes thumbnail-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .item .content { flex: 1; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; min-width: 0; }
 .item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items: start; }
 .item .name { font-family: monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b5b6b; }
