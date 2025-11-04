@@ -604,6 +604,7 @@
             // Determine pill class based on ingestion status
             let pillClass = 'empty';
             let pillText = '(0/0)';
+            let pillHtml = '';
             
             if (dir.total_files > 0) {
               const ingested = dir.ingested_files || 0;
@@ -617,12 +618,13 @@
               } else {
                 pillClass = 'partial';
               }
+              pillHtml = `<span class="ingest-stats-pill ${pillClass}">${pillText}</span>`;
             }
             
             item.innerHTML = `
               ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
               📁 ${dir.name}
-              <span class="ingest-stats-pill ${pillClass}">${pillText}</span>
+              ${pillHtml}
             `;
             
             item.addEventListener('click', (e) => {
