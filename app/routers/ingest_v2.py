@@ -637,6 +637,53 @@ async def process_single_file(file_path: Path, parameters: IngestParameters) -> 
     return file_data
 
 
+def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) -> Optional[str]:
+    """Synchronous helper to commit a single file to database (runs in thread pool).
+    
+    Returns error message if failed, None if successful.
+    """
+    try:
+        # Create or update media file
+        file_path = Path(file_data["file_path"])
+        media_file = db.get_or_create_media_file(file_path)
+        
+        # Update file attributes
+        if "score" in file_data:
+            media_file.score = file_data["score"]
+        
+        # Handle NSFW detection results
+        if "nsfw_score" in file_data and file_data["nsfw_score"] is not None:
+            media_file.nsfw_score = file_data["nsfw_score"]
+            media_file.nsfw_label = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
+            media_file.nsfw = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
+            media_file.nsfw_model = "Marqo/nsfw-image-detection-384"
+            media_file.nsfw_model_version = "1.0"
+            media_file.nsfw_threshold = parameters["nsfw_threshold"]
+        else:
+            # Set default values for files without NSFW detection
+            media_file.nsfw = False
+            media_file.nsfw_score = None
+            media_file.nsfw_label = None
+        if "media_file_id" in file_data:
+            media_file.media_file_id = file_data["media_file_id"]
+        if "phash" in file_data:
+            media_file.phash = file_data["phash"]
+        
+        # Store metadata
+        if "metadata" in file_data:
+            db.store_media_metadata(file_path, file_data["metadata"])
+        
+        # Store keywords
+        if "keywords" in file_data:
+            for keyword in file_data["keywords"]:
+                db.add_keyword_to_file(file_path, keyword)
+        
+        return None  # Success
+        
+    except Exception as e:
+        return f"Error committing {file_data['filename']}: {str(e)}"
+
+
 async def commit_data_background(session_id: str):
     """Background task to commit processed data to database."""
     session = processing_sessions[session_id]
@@ -657,44 +704,9 @@ async def commit_data_background(session_id: str):
                 if i % 10 == 0:
                     asyncio.create_task(save_session_to_disk(session_id, session))
                 
-                try:
-                    # Create or update media file
-                    file_path = Path(file_data["file_path"])
-                    media_file = db.get_or_create_media_file(file_path)
-                    
-                    # Update file attributes
-                    if "score" in file_data:
-                        media_file.score = file_data["score"]
-                    
-                    # Handle NSFW detection results
-                    if "nsfw_score" in file_data and file_data["nsfw_score"] is not None:
-                        media_file.nsfw_score = file_data["nsfw_score"]
-                        media_file.nsfw_label = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
-                        media_file.nsfw = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
-                        media_file.nsfw_model = "Marqo/nsfw-image-detection-384"
-                        media_file.nsfw_model_version = "1.0"
-                        media_file.nsfw_threshold = parameters["nsfw_threshold"]
-                    else:
-                        # Set default values for files without NSFW detection
-                        media_file.nsfw = False
-                        media_file.nsfw_score = None
-                        media_file.nsfw_label = None
-                    if "media_file_id" in file_data:
-                        media_file.media_file_id = file_data["media_file_id"]
-                    if "phash" in file_data:
-                        media_file.phash = file_data["phash"]
-                    
-                    # Store metadata
-                    if "metadata" in file_data:
-                        db.store_media_metadata(file_path, file_data["metadata"])
-                    
-                    # Store keywords
-                    if "keywords" in file_data:
-                        for keyword in file_data["keywords"]:
-                            db.add_keyword_to_file(file_path, keyword)
-                    
-                except Exception as e:
-                    error_msg = f"Error committing {file_data['filename']}: {str(e)}"
+                # Run database operations in thread pool to prevent blocking
+                error_msg = await asyncio.to_thread(_commit_single_file, db, file_data, parameters)
+                if error_msg:
                     session["commit_errors"].append(error_msg)
                     logging.error(error_msg)
         
