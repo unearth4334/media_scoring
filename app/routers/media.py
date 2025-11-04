@@ -801,3 +801,62 @@ async def list_sibling_directories(path: str = ""):
         return {"directories": directories, "current_path": str(target_path), "parent_path": str(parent_path)}
     except Exception as e:
         raise HTTPException(500, f"Failed to list sibling directories: {str(e)}")
+
+
+@router.get("/media/daily-counts")
+async def get_daily_media_counts():
+    """Get media file counts grouped by creation date for contribution graph.
+    
+    Returns a dictionary mapping dates (YYYY-MM-DD) to the count of media files
+    created on that date. Uses original_created_at (file modification time) for
+    files from filesystem, or created_at from database.
+    """
+    state = get_state()
+    daily_counts = {}
+    
+    try:
+        if state.database_enabled:
+            # Get from database
+            db_service = state.get_database_service()
+            if db_service is None:
+                state.logger.error("Database service is not available")
+                return _get_daily_counts_from_filesystem(state)
+                
+            with db_service as db:
+                media_files = db.get_all_media_files()
+                
+                for media_file in media_files:
+                    # Use created_at if available, otherwise original_created_at
+                    date_obj = media_file.created_at or media_file.original_created_at
+                    if date_obj:
+                        date_str = date_obj.strftime('%Y-%m-%d')
+                        daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
+        else:
+            # Get from filesystem
+            daily_counts = _get_daily_counts_from_filesystem(state)
+        
+        return {
+            "daily_counts": daily_counts,
+            "total_files": sum(daily_counts.values()),
+            "total_days": len(daily_counts)
+        }
+    except Exception as e:
+        state.logger.error(f"Failed to get daily media counts: {e}")
+        raise HTTPException(500, f"Failed to get daily media counts: {str(e)}")
+
+
+def _get_daily_counts_from_filesystem(state):
+    """Get daily counts from filesystem using file modification times."""
+    daily_counts = {}
+    
+    for p in state.file_list:
+        try:
+            stat = p.stat()
+            date_obj = datetime.fromtimestamp(stat.st_mtime)
+            date_str = date_obj.strftime('%Y-%m-%d')
+            daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
+        except (OSError, ValueError) as e:
+            state.logger.warning(f"Could not get modification time for {p}: {e}")
+            continue
+    
+    return daily_counts

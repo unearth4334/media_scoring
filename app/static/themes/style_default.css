@@ -1139,6 +1139,211 @@ aside#sidebar {
   border-color: var(--btn-border-hover);
 }
 
+/* Contribution Graph Styles */
+.contribution-graph-header {
+  margin-bottom: 16px;
+}
+
+.graph-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--btn-text);
+}
+
+.graph-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--btn-text);
+  opacity: 0.7;
+}
+
+.legend-label {
+  margin: 0 2px;
+}
+
+.legend-square {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.legend-square[data-level="0"] {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.legend-square[data-level="1"] {
+  background: rgba(0, 255, 255, 0.25);
+}
+
+.legend-square[data-level="2"] {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+.legend-square[data-level="3"] {
+  background: rgba(0, 255, 255, 0.75);
+}
+
+.legend-square[data-level="4"] {
+  background: rgba(0, 255, 255, 1);
+}
+
+.contribution-graph-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 16px;
+  padding: 8px 0;
+}
+
+.contribution-graph {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  min-width: min-content;
+}
+
+.graph-loading {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 20px;
+  color: var(--btn-text);
+  opacity: 0.6;
+  font-size: 12px;
+}
+
+.graph-months {
+  display: flex;
+  margin-bottom: 4px;
+}
+
+.graph-month {
+  font-size: 10px;
+  color: var(--btn-text);
+  opacity: 0.6;
+  padding-left: 2px;
+}
+
+.graph-days-labels {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 4px;
+}
+
+.graph-day-label {
+  font-size: 10px;
+  color: var(--btn-text);
+  opacity: 0.6;
+  height: 12px;
+  line-height: 12px;
+}
+
+.graph-weeks {
+  display: flex;
+  gap: 2px;
+}
+
+.graph-week {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.graph-day {
+  width: 12px;
+  height: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.graph-day:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.15);
+  z-index: 10;
+}
+
+.graph-day[data-level="0"] {
+  background: rgba(0, 255, 255, 0.1);
+}
+
+.graph-day[data-level="1"] {
+  background: rgba(0, 255, 255, 0.25);
+}
+
+.graph-day[data-level="2"] {
+  background: rgba(0, 255, 255, 0.5);
+}
+
+.graph-day[data-level="3"] {
+  background: rgba(0, 255, 255, 0.75);
+}
+
+.graph-day[data-level="4"] {
+  background: rgba(0, 255, 255, 1);
+}
+
+.graph-day.selected {
+  border: 2px solid #4CAF50;
+  border-radius: 3px;
+}
+
+.graph-tooltip {
+  position: fixed;
+  background: rgba(0, 0, 0, 0.95);
+  border: 1px solid rgba(0, 255, 255, 0.5);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #ffffff;
+  pointer-events: none;
+  z-index: 1000;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.tooltip-date {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: #00ffff;
+}
+
+.tooltip-count {
+  opacity: 0.9;
+}
+
+/* Mobile responsive adjustments for contribution graph */
+@media (max-width: 768px) {
+  .contribution-graph-container {
+    margin-left: -8px;
+    margin-right: -8px;
+    padding: 8px;
+  }
+  
+  .graph-day {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .legend-square {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .graph-legend {
+    font-size: 10px;
+  }
+  
+  .graph-title {
+    font-size: 13px;
+  }
+}
+
 /* Info bar styling (formerly controls-row) */
 .info-bar {
   display: flex;

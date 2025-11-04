@@ -1,0 +1,319 @@
+/**
+ * Contribution Graph for Date Filtering
+ * GitHub-style activity calendar for media creation dates
+ */
+
+let contributionGraphData = null;
+let selectedDate = null;
+
+/**
+ * Initialize the contribution graph
+ */
+async function initContributionGraph() {
+  console.log('Initializing contribution graph...');
+  
+  // Load data when date editor is opened
+  const datePill = document.getElementById('pill-date');
+  if (datePill) {
+    datePill.addEventListener('click', async () => {
+      if (!contributionGraphData) {
+        await loadContributionGraphData();
+      }
+    });
+  }
+}
+
+/**
+ * Load daily media counts from API
+ */
+async function loadContributionGraphData() {
+  const graphContainer = document.getElementById('contribution-graph');
+  if (!graphContainer) return;
+  
+  try {
+    graphContainer.innerHTML = '<div class="graph-loading">Loading activity data...</div>';
+    
+    const response = await fetch('/api/media/daily-counts');
+    if (!response.ok) {
+      throw new Error(`Failed to load data: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    contributionGraphData = data.daily_counts || {};
+    
+    console.log(`Loaded ${data.total_files} files across ${data.total_days} days`);
+    
+    renderContributionGraph();
+  } catch (error) {
+    console.error('Error loading contribution graph data:', error);
+    graphContainer.innerHTML = '<div class="graph-loading" style="color: #ff6b6b;">Failed to load activity data</div>';
+  }
+}
+
+/**
+ * Render the contribution graph
+ */
+function renderContributionGraph() {
+  const graphContainer = document.getElementById('contribution-graph');
+  if (!graphContainer || !contributionGraphData) return;
+  
+  // Calculate date range (last 12 months)
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - 12);
+  startDate.setDate(1); // Start from beginning of month
+  
+  // Adjust to start on Sunday for calendar grid
+  const dayOfWeek = startDate.getDay();
+  if (dayOfWeek !== 0) {
+    startDate.setDate(startDate.getDate() - dayOfWeek);
+  }
+  
+  // Calculate max count for color scaling
+  const counts = Object.values(contributionGraphData);
+  const maxCount = Math.max(...counts, 1);
+  
+  // Build the graph HTML
+  const weeks = [];
+  const months = [];
+  let currentDate = new Date(startDate);
+  let currentWeek = [];
+  let lastMonth = -1;
+  
+  while (currentDate <= endDate) {
+    const dateStr = formatDate(currentDate);
+    const count = contributionGraphData[dateStr] || 0;
+    const level = getActivityLevel(count, maxCount);
+    
+    // Track month labels
+    const month = currentDate.getMonth();
+    if (month !== lastMonth && currentDate.getDate() <= 7) {
+      months.push({
+        name: currentDate.toLocaleDateString('en-US', { month: 'short' }),
+        week: weeks.length
+      });
+      lastMonth = month;
+    }
+    
+    // Create day cell with a copy of the date string to avoid reference issues
+    currentWeek.push({
+      date: String(dateStr),  // Explicitly convert to string
+      count: count,
+      level: level,
+      dayName: currentDate.toLocaleDateString('en-US', { weekday: 'short' })
+    });
+    
+    // Start new week on Saturday
+    if (currentDate.getDay() === 6) {
+      weeks.push(currentWeek);
+      currentWeek = [];
+    }
+    
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Add remaining days
+  if (currentWeek.length > 0) {
+    // Pad the week with empty cells
+    while (currentWeek.length < 7) {
+      currentWeek.push({ empty: true });
+    }
+    weeks.push(currentWeek);
+  }
+  
+  // Build HTML
+  let html = '<div class="graph-content">';
+  
+  // Month labels
+  html += '<div class="graph-months">';
+  let lastWeekIndex = 0;
+  for (const monthInfo of months) {
+    const weekSpan = monthInfo.week - lastWeekIndex;
+    const width = weekSpan * 14; // 12px + 2px gap
+    if (width > 0) {
+      html += `<div class="graph-month" style="min-width: ${width}px;">${monthInfo.name}</div>`;
+    }
+    lastWeekIndex = monthInfo.week;
+  }
+  html += '</div>';
+  
+  // Grid container
+  html += '<div class="graph-grid-container" style="display: grid; grid-template-columns: auto 1fr; gap: 8px;">';
+  
+  // Day labels (Sun, Mon, etc.)
+  html += '<div class="graph-days-labels">';
+  const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  for (let i = 0; i < 7; i++) {
+    // Only show Mon, Wed, Fri to reduce clutter
+    const label = (i === 1 || i === 3 || i === 5) ? dayLabels[i] : '';
+    html += `<div class="graph-day-label">${label}</div>`;
+  }
+  html += '</div>';
+  
+  // Weeks grid
+  html += '<div class="graph-weeks">';
+  for (const week of weeks) {
+    html += '<div class="graph-week">';
+    for (const day of week) {
+      if (day.empty) {
+        html += '<div class="graph-day" style="opacity: 0; pointer-events: none;"></div>';
+      } else {
+        const selectedClass = selectedDate === day.date ? 'selected' : '';
+        html += `<div class="graph-day ${selectedClass}" data-date="${day.date}" data-count="${day.count}" data-level="${day.level}"></div>`;
+      }
+    }
+    html += '</div>';
+  }
+  html += '</div>'; // graph-weeks
+  html += '</div>'; // graph-grid-container
+  html += '</div>'; // graph-content
+  
+  graphContainer.innerHTML = html;
+  
+  // Add event listeners
+  attachGraphEventListeners();
+}
+
+/**
+ * Get activity level (0-4) based on count
+ */
+function getActivityLevel(count, maxCount) {
+  if (count === 0) return 0;
+  if (maxCount === 0) return 0;
+  
+  const percentage = count / maxCount;
+  if (percentage >= 0.75) return 4;
+  if (percentage >= 0.50) return 3;
+  if (percentage >= 0.25) return 2;
+  return 1;
+}
+
+/**
+ * Format date as YYYY-MM-DD
+ */
+function formatDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
+ * Attach event listeners to graph days
+ */
+function attachGraphEventListeners() {
+  const days = document.querySelectorAll('.graph-day[data-date]');
+  const tooltip = document.getElementById('graph-tooltip');
+  
+  days.forEach(day => {
+    // Hover - show tooltip
+    day.addEventListener('mouseenter', (e) => {
+      const date = day.getAttribute('data-date');
+      const count = parseInt(day.getAttribute('data-count'));
+      
+      if (!tooltip) return;
+      
+      const tooltipDate = tooltip.querySelector('.tooltip-date');
+      const tooltipCount = tooltip.querySelector('.tooltip-count');
+      
+      if (tooltipDate && tooltipCount) {
+        tooltipDate.textContent = date;
+        tooltipCount.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
+        
+        tooltip.style.display = 'block';
+        updateTooltipPosition(e, tooltip);
+      }
+    });
+    
+    day.addEventListener('mousemove', (e) => {
+      if (tooltip && tooltip.style.display === 'block') {
+        updateTooltipPosition(e, tooltip);
+      }
+    });
+    
+    day.addEventListener('mouseleave', () => {
+      if (tooltip) {
+        tooltip.style.display = 'none';
+      }
+    });
+    
+    // Click - filter by date
+    day.addEventListener('click', () => {
+      const date = day.getAttribute('data-date');
+      selectDate(date);
+    });
+  });
+}
+
+/**
+ * Update tooltip position
+ */
+function updateTooltipPosition(event, tooltip) {
+  const x = event.clientX;
+  const y = event.clientY;
+  
+  tooltip.style.left = (x + 10) + 'px';
+  tooltip.style.top = (y - 40) + 'px';
+}
+
+/**
+ * Select a date and filter media
+ */
+function selectDate(date) {
+  if (selectedDate === date) {
+    // Deselect if clicking the same date
+    selectedDate = null;
+    searchToolbarFilters.dateStart = null;
+    searchToolbarFilters.dateEnd = null;
+  } else {
+    // Select new date
+    selectedDate = date;
+    searchToolbarFilters.dateStart = date;
+    searchToolbarFilters.dateEnd = date;
+  }
+  
+  // Update UI
+  const days = document.querySelectorAll('.graph-day[data-date]');
+  days.forEach(day => {
+    if (day.getAttribute('data-date') === selectedDate) {
+      day.classList.add('selected');
+    } else {
+      day.classList.remove('selected');
+    }
+  });
+  
+  // Update pill value and apply filter
+  updatePillValues();
+  applyCurrentFilters();
+  
+  // Save state
+  saveSearchToolbarState();
+  
+  console.log(`Selected date: ${selectedDate || 'none'}`);
+}
+
+/**
+ * Clear date filter
+ */
+function clearDateFilter() {
+  selectedDate = null;
+  searchToolbarFilters.dateStart = null;
+  searchToolbarFilters.dateEnd = null;
+  
+  // Update UI
+  const days = document.querySelectorAll('.graph-day[data-date]');
+  days.forEach(day => {
+    day.classList.remove('selected');
+  });
+  
+  updatePillValues();
+  applyCurrentFilters();
+  saveSearchToolbarState();
+}
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initContributionGraph);
+} else {
+  initContributionGraph();
+}

@@ -118,28 +118,32 @@
           </div>
         </div>
         
-        <!-- Date editor -->
+        <!-- Date editor with contribution graph -->
         <div class="pill-editor" id="editor-date" data-editor="date">
           <div class="editor-content">
-            <div class="date-inputs">
-              <div class="date-input-group">
-                <label>From:</label>
-                <input type="date" id="date-start" />
-              </div>
-              <div class="date-input-group">
-                <label>To:</label>
-                <input type="date" id="date-end" />
+            <div class="contribution-graph-header">
+              <div class="graph-title">Media Creation Activity</div>
+              <div class="graph-legend">
+                <span class="legend-label">Less</span>
+                <span class="legend-square" data-level="0"></span>
+                <span class="legend-square" data-level="1"></span>
+                <span class="legend-square" data-level="2"></span>
+                <span class="legend-square" data-level="3"></span>
+                <span class="legend-square" data-level="4"></span>
+                <span class="legend-label">More</span>
               </div>
             </div>
-            <div class="date-presets">
-              <button class="preset-btn" data-preset="today">Today</button>
-              <button class="preset-btn" data-preset="week">This Week</button>
-              <button class="preset-btn" data-preset="month">This Month</button>
-              <button class="preset-btn" data-preset="year">This Year</button>
+            <div class="contribution-graph-container">
+              <div class="contribution-graph" id="contribution-graph">
+                <div class="graph-loading">Loading activity data...</div>
+              </div>
+            </div>
+            <div class="graph-tooltip" id="graph-tooltip" style="display: none;">
+              <div class="tooltip-date"></div>
+              <div class="tooltip-count"></div>
             </div>
             <div class="editor-actions">
-              <button class="editor-btn editor-apply" id="date-apply">Apply</button>
-              <button class="editor-btn editor-clear" id="date-clear">Clear</button>
+              <button class="editor-btn editor-clear" id="date-clear">Clear Filter</button>
               <button class="editor-btn editor-close" id="date-close">Close</button>
             </div>
           </div>
@@ -348,6 +352,7 @@
 
 <script src="/static/js/svg-icons.js"></script>
 <script src="/static/js/search-toolbar.js"></script>
+<script src="/static/js/contribution-graph.js"></script>
 <script src="/static/js/app.js"></script>
 <script>
 // Populate static SVG icons after DOM loads
