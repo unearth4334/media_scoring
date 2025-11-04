@@ -337,8 +337,10 @@ function populateEditor(pillType) {
       break;
       
     case 'date':
-      document.getElementById('date-start').value = searchToolbarFilters.dateStart || '';
-      document.getElementById('date-end').value = searchToolbarFilters.dateEnd || '';
+      // Restore selected date in contribution graph if available
+      if (typeof loadContributionGraphData === 'function' && !contributionGraphData) {
+        loadContributionGraphData();
+      }
       break;
       
     case 'nsfw':
@@ -404,18 +406,24 @@ function setupEditorActions() {
   document.getElementById('rating-clear').addEventListener('click', () => clearFilter('rating'));
   document.getElementById('rating-close').addEventListener('click', closePillEditor);
   
-  // Date editor
-  document.getElementById('date-apply').addEventListener('click', () => applySearchToolbarFilter('date'));
-  document.getElementById('date-clear').addEventListener('click', () => clearFilter('date'));
-  document.getElementById('date-close').addEventListener('click', closePillEditor);
+  // Date editor - updated for contribution graph
+  const dateClearBtn = document.getElementById('date-clear');
+  const dateCloseBtn = document.getElementById('date-close');
   
-  // Date preset buttons
-  document.querySelectorAll('.preset-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      applyDatePreset(btn.dataset.preset);
+  if (dateClearBtn) {
+    dateClearBtn.addEventListener('click', () => {
+      // Call the contribution graph's clear function if available
+      if (typeof clearDateFilter === 'function') {
+        clearDateFilter();
+      } else {
+        clearFilter('date');
+      }
     });
-  });
+  }
+  
+  if (dateCloseBtn) {
+    dateCloseBtn.addEventListener('click', closePillEditor);
+  }
   
   // NSFW editor
   document.getElementById('nsfw-apply').addEventListener('click', () => applySearchToolbarFilter('nsfw'));
@@ -509,8 +517,8 @@ function applySearchToolbarFilter(pillType) {
       break;
       
     case 'date':
-      searchToolbarFilters.dateStart = document.getElementById('date-start').value || null;
-      searchToolbarFilters.dateEnd = document.getElementById('date-end').value || null;
+      // Date filtering is now handled by contribution graph click events
+      // This case is kept for compatibility but shouldn't be called
       break;
       
     case 'nsfw':
@@ -558,8 +566,14 @@ function clearFilter(pillType) {
     case 'date':
       searchToolbarFilters.dateStart = null;
       searchToolbarFilters.dateEnd = null;
-      document.getElementById('date-start').value = '';
-      document.getElementById('date-end').value = '';
+      // Clear selection in contribution graph
+      if (typeof selectedDate !== 'undefined') {
+        selectedDate = null;
+        const days = document.querySelectorAll('.graph-day[data-date]');
+        days.forEach(day => {
+          day.classList.remove('selected');
+        });
+      }
       break;
       
     case 'nsfw':
