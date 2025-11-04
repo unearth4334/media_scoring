@@ -934,19 +934,24 @@ function calculateFitToWidthZoom() {
   const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
   const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
   
-  // Determine which natural dimension will be the horizontal dimension after rotation
-  let horizontalDimension;
+  // Get the current rendered dimensions of the image (after CSS scaling)
+  const imgRect = imgview.getBoundingClientRect();
+  const currentRenderedWidth = imgRect.width;
+  const currentRenderedHeight = imgRect.height;
+  
+  // Determine which rendered dimension will be the horizontal dimension after rotation
+  let horizontalRenderedDimension;
   if (currentRotation === -90) {
-    // When rotated -90 degrees, the natural height becomes the horizontal dimension
-    horizontalDimension = imageHeight;
+    // When rotated -90 degrees, the rendered height becomes the horizontal dimension
+    horizontalRenderedDimension = currentRenderedHeight;
   } else {
-    // Normal orientation: natural width is the horizontal dimension
-    horizontalDimension = imageWidth;
+    // Normal orientation: rendered width is the horizontal dimension
+    horizontalRenderedDimension = currentRenderedWidth;
   }
   
   // Calculate zoom percentage needed to fit the horizontal dimension to the wrap width
-  // This is relative to the image at 100% scale (no transform applied)
-  const zoomPercent = (wrapWidth / horizontalDimension) * 100;
+  // We need to scale relative to the current rendered size (which is already at 100% in our zoom scale)
+  const zoomPercent = (wrapWidth / horizontalRenderedDimension) * 100;
   
   // Clamp to reasonable values (min 50%, max 500%)
   return Math.max(50, Math.min(500, zoomPercent));
