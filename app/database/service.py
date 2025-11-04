@@ -97,6 +97,15 @@ class DatabaseService:
         ).first()
         return media_file.score if media_file else None
     
+    @log_db_operation("media_file_exists")
+    def media_file_exists(self, file_path: Path) -> bool:
+        """Check if a media file already exists in the database."""
+        file_path_str = str(file_path.resolve())
+        exists = self.session.query(MediaFile).filter(
+            MediaFile.file_path == file_path_str
+        ).count() > 0
+        return exists
+    
     @log_db_operation("get_media_files_by_directory")
     def get_media_files_by_directory(self, directory: Path) -> List[MediaFile]:
         """Get all media files in a directory."""

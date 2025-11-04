@@ -86,18 +86,40 @@ def get_active_sessions() -> List[str]:
         return []
 
 
-def cleanup_old_sessions(max_age_hours: int = 24):
-    """Clean up session files older than max_age_hours."""
+def cleanup_old_sessions():
+    """Remove session files older than 24 hours."""
     try:
-        import time
-        now = time.time()
+        if not SESSION_DIR.exists():
+            return
+        
+        cutoff_time = datetime.now() - timedelta(hours=24)
         for session_file in SESSION_DIR.glob("*.json"):
-            age_hours = (now - session_file.stat().st_mtime) / 3600
-            if age_hours > max_age_hours:
-                session_file.unlink()
-                logging.info(f"Cleaned up old session: {session_file.stem}")
+            try:
+                file_mtime = datetime.fromtimestamp(session_file.stat().st_mtime)
+                if file_mtime < cutoff_time:
+                    session_file.unlink()
+            except:
+                pass
     except Exception as e:
         logging.error(f"Failed to cleanup old sessions: {e}")
+
+
+def filter_existing_files(files: List[Path], db: DatabaseService) -> tuple[List[Path], int]:
+    """Filter out files that already exist in the database.
+    
+    Returns:
+        Tuple of (new_files, skipped_count)
+    """
+    new_files = []
+    skipped_count = 0
+    
+    for file_path in files:
+        if db.media_file_exists(file_path):
+            skipped_count += 1
+        else:
+            new_files.append(file_path)
+    
+    return new_files, skipped_count
 
 
 class IngestParameters(BaseModel):
@@ -109,6 +131,7 @@ class IngestParameters(BaseModel):
     extract_metadata: bool = Field(True, description="Extract file metadata")
     extract_keywords: bool = Field(True, description="Extract keywords from metadata")
     import_scores: bool = Field(True, description="Import existing score files")
+    skip_existing: bool = Field(True, description="Skip files already in database")
     max_files: Optional[int] = Field(None, description="Maximum files to process (for testing)")
 
 
@@ -274,6 +297,25 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
     if not files:
         raise HTTPException(400, "No files found matching the specified pattern")
     
+    # Filter out already-ingested files if skip_existing is enabled
+    skipped_count = 0
+    total_discovered = len(files)
+    if request.parameters.skip_existing:
+        state = get_state()
+        if state.database_enabled:
+            try:
+                with DatabaseService() as db:
+                    # Run filtering in thread to avoid blocking
+                    files, skipped_count = await asyncio.to_thread(filter_existing_files, files, db)
+                    logging.info(f"Filtered files: {len(files)} new, {skipped_count} already in database")
+            except Exception as e:
+                logging.warning(f"Failed to filter existing files, processing all: {e}")
+        else:
+            logging.info("Database disabled, skip_existing has no effect")
+    
+    if not files:
+        raise HTTPException(400, f"No new files to process (found {total_discovered}, skipped {skipped_count} already ingested)")
+    
     # Initialize processing session
     processing_sessions[session_id] = {
         "session_id": session_id,
@@ -281,6 +323,8 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         "status": "starting",
         "progress": 0,
         "total_files": len(files),
+        "total_discovered": total_discovered,
+        "skipped_existing": skipped_count,
         "current_file": None,
         "processed_files": 0,
         "start_time": datetime.now().isoformat(),
@@ -289,6 +333,8 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         "errors": [],
         "stats": {
             "total_files": len(files),
+            "total_discovered": total_discovered,
+            "skipped_existing": skipped_count,
             "processed_files": 0,
             "metadata_extracted": 0,
             "keywords_added": 0,
@@ -310,6 +356,8 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
     return {
         "session_id": session_id,
         "total_files": len(files),
+        "total_discovered": total_discovered,
+        "skipped_existing": skipped_count,
         "status": "started"
     }
 
