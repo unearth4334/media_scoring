@@ -1244,17 +1244,24 @@ function showMedia(url, name){
       videoWrap.style.touchAction = 'auto';
     }
     
-    // Show zoom button for images on mobile
-    if (mobileZoomBtn && isMobileDevice()) {
-      mobileZoomBtn.style.display = '';
-    }
-    
-    // Update aspect ratio when image loads if "free" is selected
-    itag.addEventListener('load', function updateImageAspect() {
+    // Initialize Viewer.js for this image when it loads
+    itag.addEventListener('load', function initViewerOnLoad() {
+      // Initialize Viewer.js integration if available
+      if (window.imageViewerIntegration) {
+        window.imageViewerIntegration.initialize();
+      }
+      
+      // Update aspect ratio if "free" is selected
       if (videoWrap && videoWrap.classList.contains('aspect-free')) {
         updateFreeAspectRatio();
       }
     }, { once: true });
+    
+    // Keep old mobile zoom button visible on mobile as a backup/alternative
+    // Viewer.js will be the primary method, but old zoom is still available
+    if (mobileZoomBtn && isMobileDevice()) {
+      mobileZoomBtn.style.display = '';
+    }
     
   } else {
     vtag.style.display='none'; vtag.removeAttribute('src');
