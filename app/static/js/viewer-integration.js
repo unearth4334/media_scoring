@@ -18,6 +18,41 @@
 let imageViewer = null;
 
 /**
+ * Handle previous button click in Viewer.js toolbar
+ */
+function handleViewerPrev(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  // Check if we can navigate to previous media
+  if (typeof idx !== 'undefined' && typeof show === 'function' && idx > 0) {
+    // Hide viewer and navigate to previous media
+    if (imageViewer) {
+      imageViewer.hide();
+    }
+    show(idx - 1);
+  }
+}
+
+/**
+ * Handle next button click in Viewer.js toolbar
+ */
+function handleViewerNext(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  
+  // Check if we can navigate to next media
+  if (typeof idx !== 'undefined' && typeof filtered !== 'undefined' && 
+      typeof show === 'function' && idx < filtered.length - 1) {
+    // Hide viewer and navigate to next media
+    if (imageViewer) {
+      imageViewer.hide();
+    }
+    show(idx + 1);
+  }
+}
+
+/**
  * Initialize Viewer.js for the image element
  * This is called when the page loads or when switching to an image
  */
@@ -48,6 +83,8 @@ function initializeImageViewer() {
         zoomOut: true,
         oneToOne: true,
         reset: true,
+        prev: true,
+        next: true,
         rotateLeft: true,
         rotateRight: true,
       },
@@ -78,6 +115,22 @@ function initializeImageViewer() {
         // Viewer is shown
         // Disable old mobile zoom controls when Viewer.js is active
         disableOldMobileZoom();
+        
+        // Add click handlers to prev/next buttons for media navigation
+        setTimeout(() => {
+          const viewerContainer = document.querySelector('.viewer-container');
+          if (viewerContainer) {
+            const prevBtn = viewerContainer.querySelector('.viewer-prev');
+            const nextBtn = viewerContainer.querySelector('.viewer-next');
+            
+            if (prevBtn) {
+              prevBtn.addEventListener('click', handleViewerPrev);
+            }
+            if (nextBtn) {
+              nextBtn.addEventListener('click', handleViewerNext);
+            }
+          }
+        }, 100); // Small delay to ensure viewer DOM is ready
       },
       
       hide: function() {
