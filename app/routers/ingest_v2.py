@@ -29,6 +29,72 @@ templates = Jinja2Templates(directory="app/templates")
 # In-memory storage for processing sessions
 processing_sessions: Dict[str, Dict] = {}
 
+# Session persistence directory
+SESSION_DIR = Path(tempfile.gettempdir()) / "media_scoring_sessions"
+SESSION_DIR.mkdir(exist_ok=True)
+
+
+def save_session_to_disk(session_id: str, session_data: Dict):
+    """Save session to disk for persistence across page refreshes."""
+    try:
+        session_file = SESSION_DIR / f"{session_id}.json"
+        # Create a serializable copy (exclude processed_data for size)
+        save_data = {
+            "session_id": session_id,
+            "status": session_data.get("status"),
+            "progress": session_data.get("progress"),
+            "total_files": session_data.get("total_files"),
+            "current_file": session_data.get("current_file"),
+            "processed_files": session_data.get("processed_files"),
+            "stats": session_data.get("stats"),
+            "errors": session_data.get("errors", []),
+            "start_time": session_data.get("start_time"),
+            "end_time": session_data.get("end_time"),
+            "parameters": session_data.get("parameters"),
+            "commit_progress": session_data.get("commit_progress"),
+            "commit_errors": session_data.get("commit_errors", [])
+        }
+        with open(session_file, 'w') as f:
+            json.dump(save_data, f)
+    except Exception as e:
+        logging.error(f"Failed to save session {session_id} to disk: {e}")
+
+
+def load_session_from_disk(session_id: str) -> Optional[Dict]:
+    """Load session from disk."""
+    try:
+        session_file = SESSION_DIR / f"{session_id}.json"
+        if session_file.exists():
+            with open(session_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logging.error(f"Failed to load session {session_id} from disk: {e}")
+    return None
+
+
+def get_active_sessions() -> List[str]:
+    """Get list of active session IDs from disk."""
+    try:
+        session_files = SESSION_DIR.glob("*.json")
+        return [f.stem for f in session_files]
+    except Exception as e:
+        logging.error(f"Failed to list active sessions: {e}")
+        return []
+
+
+def cleanup_old_sessions(max_age_hours: int = 24):
+    """Clean up session files older than max_age_hours."""
+    try:
+        import time
+        now = time.time()
+        for session_file in SESSION_DIR.glob("*.json"):
+            age_hours = (now - session_file.stat().st_mtime) / 3600
+            if age_hours > max_age_hours:
+                session_file.unlink()
+                logging.info(f"Cleaned up old session: {session_file.stem}")
+    except Exception as e:
+        logging.error(f"Failed to cleanup old sessions: {e}")
+
 
 class IngestParameters(BaseModel):
     """Parameters for the ingestion process."""
@@ -228,6 +294,12 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
         }
     }
     
+    # Save session to disk for persistence
+    save_session_to_disk(session_id, processing_sessions[session_id])
+    
+    # Cleanup old sessions (older than 24 hours)
+    cleanup_old_sessions()
+    
     # Start background processing
     background_tasks.add_task(process_files_background, session_id, files, request.parameters)
     
@@ -238,11 +310,60 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
     }
 
 
+@router.get("/api/ingest/active-session")
+async def get_active_session():
+    """Get the most recent active or in-progress session."""
+    # Check in-memory sessions first
+    for session_id, session in processing_sessions.items():
+        if session["status"] in ["starting", "processing", "committing"]:
+            return {"session_id": session_id, "status": session["status"]}
+    
+    # Check disk for recent sessions
+    active_session_ids = get_active_sessions()
+    for session_id in active_session_ids:
+        session_data = load_session_from_disk(session_id)
+        if session_data and session_data.get("status") in ["starting", "processing", "committing"]:
+            # Restore to memory
+            processing_sessions[session_id] = {
+                **session_data,
+                "files": [],  # Don't restore file list
+                "processed_data": []  # Don't restore processed data
+            }
+            return {"session_id": session_id, "status": session_data["status"]}
+        elif session_data and session_data.get("status") == "completed":
+            # Return most recent completed session (within last 5 minutes)
+            from datetime import datetime, timedelta
+            try:
+                start_time = datetime.fromisoformat(session_data["start_time"])
+                if datetime.now() - start_time < timedelta(minutes=5):
+                    # Restore to memory for viewing
+                    processing_sessions[session_id] = {
+                        **session_data,
+                        "files": [],
+                        "processed_data": []
+                    }
+                    return {"session_id": session_id, "status": session_data["status"]}
+            except:
+                pass
+    
+    return {"session_id": None, "status": None}
+
+
 @router.get("/api/ingest/status/{session_id}")
 async def get_processing_status(session_id: str):
     """Get the current processing status."""
+    # Check in-memory first
     if session_id not in processing_sessions:
-        raise HTTPException(404, "Session not found")
+        # Try loading from disk
+        session_data = load_session_from_disk(session_id)
+        if session_data:
+            processing_sessions[session_id] = {
+                **session_data,
+                "files": [],
+                "processed_data": []
+            }
+        else:
+            raise HTTPException(404, "Session not found")
     
     session = processing_sessions[session_id]
     
@@ -344,6 +465,14 @@ async def cleanup_session(session_id: str):
     if session_id in processing_sessions:
         del processing_sessions[session_id]
     
+    # Remove session file from disk
+    session_file = SESSION_DIR / f"{session_id}.json"
+    if session_file.exists():
+        try:
+            session_file.unlink()
+        except Exception as e:
+            logging.error(f"Failed to delete session file {session_id}: {e}")
+    
     # Clean up any temporary files
     temp_dir = Path(tempfile.gettempdir()) / "media_scoring_reports"
     if temp_dir.exists():
@@ -362,6 +491,7 @@ async def process_files_background(session_id: str, files: List[Path], parameter
     
     try:
         session["status"] = "processing"
+        save_session_to_disk(session_id, session)  # Save initial state
         logging.info(f"Starting background processing for session {session_id} with {len(files)} files")
         
         for i, file_path in enumerate(files):
@@ -391,6 +521,10 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 # Update progress after processing file (more accurate)
                 session["progress"] = int(((i + 1) / len(files)) * 100)
                 
+                # Save to disk periodically (every 10 files)
+                if (i + 1) % 10 == 0:
+                    save_session_to_disk(session_id, session)
+                
                 # Log progress periodically
                 if (i + 1) % 5 == 0 or (i + 1) == len(files):
                     logging.info(f"Progress [{i+1}/{len(files)}]: stats={session['stats']}")
@@ -402,6 +536,17 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 logging.error(error_msg)
         
         session["status"] = "completed"
+        session["progress"] = 100
+        session["end_time"] = datetime.now().isoformat()
+        save_session_to_disk(session_id, session)  # Save final state
+        logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
+        
+    except Exception as e:
+        session["status"] = "error"
+        session["error"] = str(e)
+        session["end_time"] = datetime.now().isoformat()
+        save_session_to_disk(session_id, session)  # Save error state
+        logging.error(f"Processing failed for session {session_id}: {e}")
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
         logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
@@ -473,12 +618,19 @@ async def commit_data_background(session_id: str):
     
     try:
         session["commit_errors"] = []
+        session["status"] = "committing"
+        save_session_to_disk(session_id, session)  # Save committing state
+        
         processed_data = session["processed_data"]
         parameters = session["parameters"]
         
         with DatabaseService() as db:
             for i, file_data in enumerate(processed_data):
                 session["commit_progress"] = int((i / len(processed_data)) * 100)
+                
+                # Save progress periodically
+                if i % 10 == 0:
+                    save_session_to_disk(session_id, session)
                 
                 try:
                     # Create or update media file
@@ -523,10 +675,12 @@ async def commit_data_background(session_id: str):
         
         session["status"] = "committed"
         session["commit_progress"] = 100
+        save_session_to_disk(session_id, session)  # Save final committed state
         
     except Exception as e:
         session["status"] = "commit_error"
         session["commit_error"] = str(e)
+        save_session_to_disk(session_id, session)  # Save error state
         logging.error(f"Commit failed for session {session_id}: {e}")
 
 

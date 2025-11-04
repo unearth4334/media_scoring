@@ -1271,10 +1271,55 @@
       }
     }
 
+    // Check for active session on page load
+    async function checkForActiveSession() {
+      try {
+        const response = await fetch('/api/ingest/active-session');
+        if (!response.ok) return;
+        
+        const data = await response.json();
+        if (data.session_id && data.status) {
+          console.log('Found active session:', data.session_id, 'Status:', data.status);
+          currentSessionId = data.session_id;
+          
+          // Restore appropriate view based on status
+          if (data.status === 'processing' || data.status === 'starting') {
+            updateWorkflowStep(2);
+            showSection('progress-section');
+            startProgressPolling();
+          } else if (data.status === 'completed') {
+            updateWorkflowStep(3);
+            showSection('preview-section');
+            // Update preview button with session ID
+            const viewReportBtn = document.getElementById('view-report-btn');
+            viewReportBtn.href = `/api/ingest/report/${currentSessionId}`;
+          } else if (data.status === 'committing') {
+            updateWorkflowStep(4);
+            showSection('commit-section');
+            startCommitPolling();
+          } else if (data.status === 'committed') {
+            updateWorkflowStep(4);
+            showSection('commit-section');
+            document.getElementById('commit-result').innerHTML = `
+              <div class="alert alert-success">
+                <strong>✅ Success!</strong> All data has been committed to the database.
+              </div>
+              <button class="btn btn-primary" onclick="startNewSession()">Start New Session</button>
+            `;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking for active session:', error);
+      }
+    }
+
     // Initialize the page
     document.addEventListener('DOMContentLoaded', () => {
       updateWorkflowStep(1);
       showSection('parameters-form');
+      
+      // Check if there's an active session to restore
+      checkForActiveSession();
     });
   </script>
 </body>
