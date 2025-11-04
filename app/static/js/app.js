@@ -1117,13 +1117,13 @@ function renderSidebar(){
   const list = document.getElementById('sidebar_list');
   if (!list) return;
   let html = '';
-  const namesInFiltered = new Set(filtered.map(v => v.name));
-  videos.forEach((v) => {
-    const inFiltered = namesInFiltered.has(v.name);
+  
+  // Render filtered items in their sorted order
+  filtered.forEach((v, i) => {
     const s = scoreBadge(v.score || 0);
     const classes = ['item'];
-    if (!inFiltered) classes.push('disabled');
-    if (filtered.length && filtered[idx] && filtered[idx].name === v.name) classes.push('current');
+    // Mark current selection
+    if (i === idx) classes.push('current');
     
     let thumbHtml = '';
     if (thumbnailsEnabled && showThumbnails) {
@@ -1133,7 +1133,7 @@ function renderSidebar(){
       classes.push('with-thumbnails');
     }
     
-    html += `<div class="${classes.join(' ')}" data-name="${v.name}" ${inFiltered ? '' : 'data-disabled="1"'}>` +
+    html += `<div class="${classes.join(' ')}" data-name="${v.name}">` +
             thumbHtml +
             `<div class="content">` +
             `<div class="name" title="${v.name}">${v.name}</div>` +
@@ -1141,9 +1141,9 @@ function renderSidebar(){
             `</div>` +
             `</div>`;
   });
+  
   list.innerHTML = html;
   list.querySelectorAll('.item').forEach(el => {
-    if (el.getAttribute('data-disabled') === '1') return;
     el.addEventListener('click', () => {
       const name = el.getAttribute('data-name');
       const j = filtered.findIndex(x => x.name === name);

@@ -687,30 +687,6 @@ function updatePillValues() {
   });
 }
 
-function applyCurrentFilters() {
-  // Start with all videos
-  filtered = [...videos];
-  
-  // Apply rating filter using existing function
-  if (typeof applyFilter === 'function') {
-    applyFilter();
-  }
-  
-  // Apply sort
-  applySortFilter();
-  
-  // Update display
-  if (typeof renderSidebar === 'function') {
-    renderSidebar();
-  }
-  
-  if (filtered.length > 0) {
-    show(0);
-  } else {
-    show(-1);
-  }
-}
-
 function applySortFilter() {
   const sortBy = searchToolbarFilters.sort;
   const sortDirection = searchToolbarFilters.sortDirection;
@@ -855,6 +831,9 @@ function applyCurrentFilters() {
 async function applyDatabaseFilters() {
   console.log('Applying database filters with sort...', searchToolbarFilters);
   
+  // Remember current selection
+  const currentVideo = filtered.length > 0 && idx >= 0 && idx < filtered.length ? filtered[idx] : null;
+  
   try {
     // Build comprehensive filter request
     const filterRequest = {
@@ -921,8 +900,20 @@ async function applyDatabaseFilters() {
         renderSidebar();
       }
       
+      // Restore selection or show first item
       if (filtered.length > 0) {
-        show(0);
+        if (currentVideo) {
+          // Find the current video's new position in the sorted/filtered list
+          const newIndex = filtered.findIndex(v => v.name === currentVideo.name);
+          if (newIndex >= 0) {
+            show(newIndex);
+          } else {
+            // Current video was filtered out, show first item
+            show(0);
+          }
+        } else {
+          show(0);
+        }
       }
     } else {
       console.error('Filter request failed:', response.status, response.statusText);
@@ -937,6 +928,9 @@ async function applyDatabaseFilters() {
 }
 
 function applyClientSideFilters() {
+  // Remember current selection
+  const currentVideo = filtered.length > 0 && idx >= 0 && idx < filtered.length ? filtered[idx] : null;
+  
   // Start with all videos
   let currentFiltered = [...videos];
   
@@ -964,8 +958,20 @@ function applyClientSideFilters() {
     renderSidebar();
   }
   
+  // Restore selection or show first item
   if (filtered.length > 0) {
-    show(0);
+    if (currentVideo) {
+      // Find the current video's new position in the sorted/filtered list
+      const newIndex = filtered.findIndex(v => v.name === currentVideo.name);
+      if (newIndex >= 0) {
+        show(newIndex);
+      } else {
+        // Current video was filtered out, show first item
+        show(0);
+      }
+    } else {
+      show(0);
+    }
   } else {
     show(-1);
   }
