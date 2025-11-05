@@ -1113,6 +1113,19 @@ function scoreBadge(s){
   if (!s || s < 1) return '—';
   return s + '★';
 }
+function formatDatePill(isoDateString){
+  if (!isoDateString) return '';
+  try {
+    const date = new Date(isoDateString);
+    if (isNaN(date.getTime())) return '';
+    const year = String(date.getFullYear()).slice(-2);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  } catch (e) {
+    return '';
+  }
+}
 function renderSidebar(){
   const list = document.getElementById('sidebar_list');
   if (!list) return;
@@ -1133,11 +1146,16 @@ function renderSidebar(){
       classes.push('with-thumbnails');
     }
     
+    const datePill = formatDatePill(v.original_created_at);
+    
     html += `<div class="${classes.join(' ')}" data-name="${v.name}" ${inFiltered ? '' : 'data-disabled="1"'}>` +
             thumbHtml +
             `<div class="content">` +
             `<div class="name" title="${v.name}">${v.name}</div>` +
+            `<div class="meta-row">` +
             `<div class="score">${s}</div>` +
+            (datePill ? `<div class="date-pill">${datePill}</div>` : '') +
+            `</div>` +
             `</div>` +
             `</div>`;
   });

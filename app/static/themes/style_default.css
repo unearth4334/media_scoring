@@ -506,6 +506,18 @@ aside#sidebar {
 .item.with-thumbnails .content { grid-template-columns: 1fr; grid-template-rows: auto auto; align-items: start; }
 .item .name { font-family: monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .item .score { font-size: 12px; opacity: 0.9; flex-shrink: 0; }
+.item .meta-row { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+.item .date-pill { 
+  font-size: 10px; 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  background: #2d2d2d; 
+  border: 1px solid #444; 
+  color: #aaa; 
+  opacity: 0.8;
+  font-family: monospace;
+  white-space: nowrap;
+}
 .item.disabled { opacity: 0.4; cursor: default; }
 
 /* =========================================================
