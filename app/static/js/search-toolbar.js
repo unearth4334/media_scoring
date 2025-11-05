@@ -634,21 +634,30 @@ function updatePillValues() {
   };
   ratingValue.textContent = ratingLabels[searchToolbarFilters.rating] || 'All';
   
-  // Date
-  const dateValue = document.getElementById('date-value');
-  const datePill = document.getElementById('pill-date');
-  if (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) {
-    let dateText = '';
-    if (searchToolbarFilters.dateStart && searchToolbarFilters.dateEnd) {
-      dateText = `${searchToolbarFilters.dateStart} to ${searchToolbarFilters.dateEnd}`;
-    } else if (searchToolbarFilters.dateStart) {
-      dateText = `From ${searchToolbarFilters.dateStart}`;
-    } else if (searchToolbarFilters.dateEnd) {
-      dateText = `Until ${searchToolbarFilters.dateEnd}`;
-    }
-    dateValue.textContent = dateText;
+  // Date - use the function from contribution-graph.js if available
+  if (typeof updateDatePillValue === 'function') {
+    updateDatePillValue();
   } else {
-    dateValue.textContent = 'All';
+    // Fallback to old behavior if contribution-graph.js not loaded
+    const dateValue = document.getElementById('date-value');
+    const datePill = document.getElementById('pill-date');
+    if (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) {
+      let dateText = '';
+      if (searchToolbarFilters.dateStart && searchToolbarFilters.dateEnd) {
+        if (searchToolbarFilters.dateStart === searchToolbarFilters.dateEnd) {
+          dateText = searchToolbarFilters.dateStart;
+        } else {
+          dateText = `${searchToolbarFilters.dateStart} to ${searchToolbarFilters.dateEnd}`;
+        }
+      } else if (searchToolbarFilters.dateStart) {
+        dateText = `From ${searchToolbarFilters.dateStart}`;
+      } else if (searchToolbarFilters.dateEnd) {
+        dateText = `Until ${searchToolbarFilters.dateEnd}`;
+      }
+      dateValue.textContent = dateText;
+    } else {
+      dateValue.textContent = 'All';
+    }
   }
   
   // NSFW

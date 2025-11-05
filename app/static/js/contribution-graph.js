@@ -4,7 +4,8 @@
  */
 
 let contributionGraphData = null;
-let selectedDate = null;
+let selectedDates = new Set(); // Changed from single to multiple dates
+let pendingSelectedDates = new Set(); // Track changes before Apply
 
 /**
  * Initialize the contribution graph
@@ -18,6 +19,10 @@ async function initContributionGraph() {
     datePill.addEventListener('click', async () => {
       if (!contributionGraphData) {
         await loadContributionGraphData();
+      } else {
+        // Reset pending changes to match current selection
+        pendingSelectedDates = new Set(selectedDates);
+        renderContributionGraph();
       }
     });
   }
@@ -42,6 +47,9 @@ async function loadContributionGraphData() {
     contributionGraphData = data.daily_counts || {};
     
     console.log(`Loaded ${data.total_files} files across ${data.total_days} days`);
+    
+    // Initialize pending dates to match current selection
+    pendingSelectedDates = new Set(selectedDates);
     
     renderContributionGraph();
   } catch (error) {
@@ -158,7 +166,7 @@ function renderContributionGraph() {
       if (day.empty) {
         html += '<div class="graph-day" style="opacity: 0; pointer-events: none;"></div>';
       } else {
-        const selectedClass = selectedDate === day.date ? 'selected' : '';
+        const selectedClass = pendingSelectedDates.has(day.date) ? 'selected' : '';
         html += `<div class="graph-day ${selectedClass}" data-date="${day.date}" data-count="${day.count}" data-level="${day.level}"></div>`;
       }
     }
@@ -237,10 +245,10 @@ function attachGraphEventListeners() {
       }
     });
     
-    // Click - filter by date
+    // Click - toggle date selection
     day.addEventListener('click', () => {
       const date = day.getAttribute('data-date');
-      selectDate(date);
+      toggleDateSelection(date);
     });
   });
 }
@@ -257,46 +265,105 @@ function updateTooltipPosition(event, tooltip) {
 }
 
 /**
- * Select a date and filter media
+ * Toggle date selection (add/remove from pending set)
  */
-function selectDate(date) {
-  if (selectedDate === date) {
-    // Deselect if clicking the same date
-    selectedDate = null;
+function toggleDateSelection(date) {
+  if (pendingSelectedDates.has(date)) {
+    pendingSelectedDates.delete(date);
+  } else {
+    pendingSelectedDates.add(date);
+  }
+  
+  // Update visual selection immediately
+  const day = document.querySelector(`.graph-day[data-date="${date}"]`);
+  if (day) {
+    if (pendingSelectedDates.has(date)) {
+      day.classList.add('selected');
+    } else {
+      day.classList.remove('selected');
+    }
+  }
+  
+  console.log(`Toggled date: ${date}, pending selection: ${Array.from(pendingSelectedDates).join(', ')}`);
+}
+
+/**
+ * Apply date filter (called when Apply button is clicked)
+ */
+function applyDateFilter() {
+  // Copy pending selection to active selection
+  selectedDates = new Set(pendingSelectedDates);
+  
+  // Update filter based on selected dates
+  if (selectedDates.size === 0) {
     searchToolbarFilters.dateStart = null;
     searchToolbarFilters.dateEnd = null;
   } else {
-    // Select new date
-    selectedDate = date;
-    searchToolbarFilters.dateStart = date;
-    searchToolbarFilters.dateEnd = date;
+    // Sort dates to find range
+    const sortedDates = Array.from(selectedDates).sort();
+    searchToolbarFilters.dateStart = sortedDates[0];
+    searchToolbarFilters.dateEnd = sortedDates[sortedDates.length - 1];
+  }
+  
+  // Update pill value and apply filter
+  updateDatePillValue();
+  applyCurrentFilters();
+  
+  // Save state
+  saveSearchToolbarState();
+  
+  // Close the editor
+  closeAllPillEditors();
+  
+  console.log(`Applied date filter: ${selectedDates.size} date(s) selected`);
+}
+
+/**
+ * Update the date pill value based on selection
+ */
+function updateDatePillValue() {
+  const pillValue = document.getElementById('date-value');
+  if (!pillValue) return;
+  
+  if (selectedDates.size === 0) {
+    pillValue.textContent = 'All';
+  } else if (selectedDates.size === 1) {
+    pillValue.textContent = Array.from(selectedDates)[0];
+  } else {
+    pillValue.textContent = 'Multiple dates';
+  }
+}
+
+/**
+ * Select a date and filter media (DEPRECATED - keeping for compatibility)
+ */
+function selectDate(date) {
+  // This function is deprecated but kept for backward compatibility
+  pendingSelectedDates.clear();
+  if (date) {
+    pendingSelectedDates.add(date);
   }
   
   // Update UI
   const days = document.querySelectorAll('.graph-day[data-date]');
   days.forEach(day => {
-    if (day.getAttribute('data-date') === selectedDate) {
+    if (day.getAttribute('data-date') === date) {
       day.classList.add('selected');
     } else {
       day.classList.remove('selected');
     }
   });
   
-  // Update pill value and apply filter
-  updatePillValues();
-  applyCurrentFilters();
-  
-  // Save state
-  saveSearchToolbarState();
-  
-  console.log(`Selected date: ${selectedDate || 'none'}`);
+  // Apply immediately (old behavior)
+  applyDateFilter();
 }
 
 /**
  * Clear date filter
  */
 function clearDateFilter() {
-  selectedDate = null;
+  selectedDates.clear();
+  pendingSelectedDates.clear();
   searchToolbarFilters.dateStart = null;
   searchToolbarFilters.dateEnd = null;
   
@@ -306,7 +373,7 @@ function clearDateFilter() {
     day.classList.remove('selected');
   });
   
-  updatePillValues();
+  updateDatePillValue();
   applyCurrentFilters();
   saveSearchToolbarState();
 }
@@ -317,3 +384,11 @@ if (document.readyState === 'loading') {
 } else {
   initContributionGraph();
 }
+
+// Add event listener for Apply button when DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const dateApplyBtn = document.getElementById('date-apply');
+  if (dateApplyBtn) {
+    dateApplyBtn.addEventListener('click', applyDateFilter);
+  }
+});
