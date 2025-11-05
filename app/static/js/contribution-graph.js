@@ -47,6 +47,12 @@ async function loadContributionGraphData() {
     contributionGraphData = data.daily_counts || {};
     
     console.log(`Loaded ${data.total_files} files across ${data.total_days} days`);
+    console.log('Daily counts sample:', Object.entries(contributionGraphData).slice(0, 5));
+    console.log('Total entries in contributionGraphData:', Object.keys(contributionGraphData).length);
+    
+    // Debug: Check what dates are in the data
+    const sampleDates = Object.keys(contributionGraphData).slice(0, 10);
+    console.log('Sample dates in data:', sampleDates);
     
     // Initialize pending dates to match current selection
     pendingSelectedDates = new Set(selectedDates);
@@ -77,6 +83,9 @@ function renderContributionGraph() {
     startDate.setDate(startDate.getDate() - dayOfWeek);
   }
   
+  console.log('Graph date range:', formatDate(startDate), 'to', formatDate(endDate));
+  console.log('contributionGraphData has', Object.keys(contributionGraphData).length, 'dates');
+  
   // Calculate max count for color scaling
   const counts = Object.values(contributionGraphData);
   const maxCount = Math.max(...counts, 1);
@@ -92,6 +101,11 @@ function renderContributionGraph() {
     const dateStr = formatDate(currentDate);
     const count = contributionGraphData[dateStr] || 0;
     const level = getActivityLevel(count, maxCount);
+    
+    // Debug: Log first few days with their counts AND what's in data
+    if (weeks.length === 0 && currentWeek.length < 5) {
+      console.log(`Date: ${dateStr}, Count: ${count}, In data: ${contributionGraphData[dateStr] !== undefined}, Value in data: ${contributionGraphData[dateStr]}`);
+    }
     
     // Track month labels
     const month = currentDate.getMonth();
@@ -227,6 +241,11 @@ function attachGraphEventListeners() {
       if (tooltipDate && tooltipCount) {
         tooltipDate.textContent = date;
         tooltipCount.textContent = `${count} ${count === 1 ? 'item' : 'items'}`;
+        
+        // Debug: Log what we're showing
+        if (count > 0) {
+          console.log(`Tooltip for ${date}: showing ${count} items (attribute value: "${day.getAttribute('data-count')}")`);
+        }
         
         tooltip.style.display = 'block';
         updateTooltipPosition(e, tooltip);
