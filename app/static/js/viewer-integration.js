@@ -17,6 +17,9 @@
 // Global Viewer.js instance
 let imageViewer = null;
 
+// Flag to track if we're navigating within the viewer
+let isNavigatingInViewer = false;
+
 /**
  * Handle previous button click in Viewer.js toolbar
  */
@@ -26,11 +29,28 @@ function handleViewerPrev(event) {
   
   // Check if we can navigate to previous media
   if (typeof idx !== 'undefined' && typeof show === 'function' && idx > 0) {
-    // Hide viewer and navigate to previous media
-    if (imageViewer) {
-      imageViewer.hide();
-    }
+    // Set flag to indicate we're navigating within the viewer
+    isNavigatingInViewer = true;
+    
+    // Navigate to previous media (this updates the underlying image)
     show(idx - 1);
+    
+    // After the image loads, update the viewer to show the new image
+    const imgElement = document.getElementById('imgview');
+    if (imgElement && imageViewer) {
+      imgElement.addEventListener('load', function updateViewerOnLoad() {
+        if (imageViewer) {
+          // Update viewer with new image and show it
+          imageViewer.update();
+          imageViewer.show();
+        }
+        // Reset the navigation flag
+        isNavigatingInViewer = false;
+      }, { once: true });
+    } else {
+      // Reset flag if image element not found
+      isNavigatingInViewer = false;
+    }
   }
 }
 
@@ -44,11 +64,28 @@ function handleViewerNext(event) {
   // Check if we can navigate to next media
   if (typeof idx !== 'undefined' && typeof filtered !== 'undefined' && 
       typeof show === 'function' && idx < filtered.length - 1) {
-    // Hide viewer and navigate to next media
-    if (imageViewer) {
-      imageViewer.hide();
-    }
+    // Set flag to indicate we're navigating within the viewer
+    isNavigatingInViewer = true;
+    
+    // Navigate to next media (this updates the underlying image)
     show(idx + 1);
+    
+    // After the image loads, update the viewer to show the new image
+    const imgElement = document.getElementById('imgview');
+    if (imgElement && imageViewer) {
+      imgElement.addEventListener('load', function updateViewerOnLoad() {
+        if (imageViewer) {
+          // Update viewer with new image and show it
+          imageViewer.update();
+          imageViewer.show();
+        }
+        // Reset the navigation flag
+        isNavigatingInViewer = false;
+      }, { once: true });
+    } else {
+      // Reset flag if image element not found
+      isNavigatingInViewer = false;
+    }
   }
 }
 
@@ -61,6 +98,13 @@ function initializeImageViewer() {
   
   if (!imgElement) {
     console.warn('Image element #imgview not found');
+    return;
+  }
+  
+  // If we're navigating within the viewer, don't destroy it
+  // Just update it and it will be shown after the image loads
+  if (isNavigatingInViewer && imageViewer) {
+    console.log('Viewer.js: Keeping viewer active during navigation');
     return;
   }
   
