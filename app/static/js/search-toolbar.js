@@ -635,12 +635,12 @@ function updatePillValues() {
   ratingValue.textContent = ratingLabels[searchToolbarFilters.rating] || 'All';
   
   // Date - use the function from contribution-graph.js if available
+  const datePill = document.getElementById('pill-date');
   if (typeof updateDatePillValue === 'function') {
     updateDatePillValue();
   } else {
     // Fallback to old behavior if contribution-graph.js not loaded
     const dateValue = document.getElementById('date-value');
-    const datePill = document.getElementById('pill-date');
     if (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) {
       let dateText = '';
       if (searchToolbarFilters.dateStart && searchToolbarFilters.dateEnd) {
