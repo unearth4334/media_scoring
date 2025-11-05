@@ -98,7 +98,7 @@ function initializeImageViewer() {
       keyboard: true,         // Enable keyboard shortcuts
       
       // Touch gesture support for mobile
-      backdrop: 'static',     // Click backdrop to close
+      backdrop: true,         // Click backdrop to close
       
       // Zoom configuration
       zoomRatio: 0.1,        // Zoom increment (10%)
