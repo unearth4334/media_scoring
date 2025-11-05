@@ -1342,8 +1342,8 @@ aside#sidebar {
   }
   
   .graph-day {
-    width: 16px;  /* Increased from 10px for easier mobile tapping */
-    height: 16px; /* Increased from 10px for easier mobile tapping */
+    width: 20px;  /* Increased from 16px for easier mobile tapping */
+    height: 20px; /* Increased from 16px for easier mobile tapping */
   }
   
   .legend-square {
