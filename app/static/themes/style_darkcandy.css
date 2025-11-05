@@ -1476,3 +1476,128 @@ aside#sidebar {
   flex-shrink: 0;
 }
 
+/* =========================================================
+   VIEWER.JS MOBILE ENHANCEMENTS
+   --------------------------------------------------------- */
+/* Make Viewer.js toolbar buttons ~2x larger for mobile users */
+@media (max-width: 767px) {
+  /* Toolbar container padding */
+  .viewer-toolbar > ul {
+    padding: 12px 6px !important;
+  }
+  
+  /* Toolbar buttons - doubled from 24px to 48px */
+  .viewer-toolbar > ul > li {
+    height: 48px !important;
+    width: 48px !important;
+  }
+  
+  /* Icon margins - doubled from 2px to 4px */
+  .viewer-toolbar > ul > li:before {
+    margin: 4px !important;
+    /* Scale the icon sprite to 2x size */
+    background-size: 560px !important; /* 280px * 2 */
+    height: 40px !important; /* 20px * 2 */
+    width: 40px !important; /* 20px * 2 */
+  }
+  
+  /* Spacing between buttons - doubled from 1px to 2px */
+  .viewer-toolbar > ul > li + li {
+    margin-left: 2px !important;
+  }
+  
+  /* Adjust individual icon positions (doubled offsets) */
+  .viewer-zoom-in:before {
+    background-position: 0 0 !important;
+  }
+  
+  .viewer-zoom-out:before {
+    background-position: -40px 0 !important; /* -20px * 2 */
+  }
+  
+  .viewer-one-to-one:before {
+    background-position: -80px 0 !important; /* -40px * 2 */
+  }
+  
+  .viewer-reset:before {
+    background-position: -120px 0 !important; /* -60px * 2 */
+  }
+  
+  .viewer-prev:before {
+    background-position: -160px 0 !important; /* -80px * 2 */
+  }
+  
+  .viewer-play:before {
+    background-position: -200px 0 !important; /* -100px * 2 */
+  }
+  
+  .viewer-next:before {
+    background-position: -240px 0 !important; /* -120px * 2 */
+  }
+  
+  .viewer-rotate-left:before {
+    background-position: -280px 0 !important; /* -140px * 2 */
+  }
+  
+  .viewer-rotate-right:before {
+    background-position: -320px 0 !important; /* -160px * 2 */
+  }
+  
+  .viewer-flip-horizontal:before {
+    background-position: -360px 0 !important; /* -180px * 2 */
+  }
+  
+  .viewer-flip-vertical:before {
+    background-position: -400px 0 !important; /* -200px * 2 */
+  }
+  
+  .viewer-fullscreen:before {
+    background-position: -440px 0 !important; /* -220px * 2 */
+  }
+  
+  .viewer-fullscreen-exit:before {
+    background-position: -480px 0 !important; /* -240px * 2 */
+  }
+  
+  .viewer-close:before {
+    background-position: -520px 0 !important; /* -260px * 2 */
+  }
+  
+  /* Small variant buttons - doubled from 18px to 36px */
+  .viewer-toolbar > ul > .viewer-small {
+    height: 36px !important;
+    width: 36px !important;
+    margin-top: 6px !important;
+    margin-bottom: 6px !important;
+  }
+  
+  .viewer-toolbar > ul > .viewer-small:before {
+    margin: -2px !important;
+  }
+  
+  /* Large variant buttons - doubled from 30px to 60px */
+  .viewer-toolbar > ul > .viewer-large {
+    height: 60px !important;
+    width: 60px !important;
+    margin-top: -6px !important;
+    margin-bottom: -6px !important;
+  }
+  
+  .viewer-toolbar > ul > .viewer-large:before {
+    margin: 10px !important;
+  }
+  
+  /* Close button (top-right) - doubled from 80px to 160px */
+  .viewer-button {
+    height: 160px !important;
+    width: 160px !important;
+    right: -80px !important;
+    top: -80px !important;
+  }
+  
+  .viewer-button:before {
+    bottom: 30px !important;
+    left: 30px !important;
+  }
+}
+
