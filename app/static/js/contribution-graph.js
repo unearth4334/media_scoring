@@ -313,7 +313,7 @@ function applyDateFilter() {
   saveSearchToolbarState();
   
   // Close the editor
-  closeAllPillEditors();
+  closePillEditor();
   
   console.log(`Applied date filter: ${selectedDates.size} date(s) selected`);
 }
