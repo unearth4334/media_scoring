@@ -87,7 +87,7 @@ function renderContributionGraph() {
     startDate.setDate(startDate.getDate() - dayOfWeek);
   }
   
-  console.log('Graph date range:', formatDate(startDate), 'to', formatDate(endDate));
+  console.log('Graph date range:', formatDateYMD(startDate), 'to', formatDateYMD(endDate));
   console.log('contributionGraphData has', Object.keys(contributionGraphData).length, 'dates');
   
   // Calculate max count for color scaling
@@ -102,7 +102,7 @@ function renderContributionGraph() {
   let lastMonth = -1;
   
   while (currentDate <= endDate) {
-    const dateStr = formatDate(currentDate);
+    const dateStr = formatDateYMD(currentDate);
     const count = contributionGraphData[dateStr] || 0;
     const level = getActivityLevel(count, maxCount);
     
@@ -222,7 +222,7 @@ function getActivityLevel(count, maxCount) {
 /**
  * Format date as YYYY-MM-DD
  */
-function formatDate(date) {
+function formatDateYMD(date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
