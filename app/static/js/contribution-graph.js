@@ -71,6 +71,10 @@ function renderContributionGraph() {
   const graphContainer = document.getElementById('contribution-graph');
   if (!graphContainer || !contributionGraphData) return;
   
+  console.log('=== RENDERING CONTRIBUTION GRAPH ===');
+  console.log('contributionGraphData keys:', Object.keys(contributionGraphData));
+  console.log('contributionGraphData values sample:', Object.entries(contributionGraphData).slice(0, 5));
+  
   // Calculate date range (last 12 months)
   const endDate = new Date();
   const startDate = new Date();
@@ -101,6 +105,11 @@ function renderContributionGraph() {
     const dateStr = formatDate(currentDate);
     const count = contributionGraphData[dateStr] || 0;
     const level = getActivityLevel(count, maxCount);
+    
+    // Debug: Log dates with data
+    if (contributionGraphData[dateStr] !== undefined) {
+      console.log(`✓ Found data for ${dateStr}: ${contributionGraphData[dateStr]} items`);
+    }
     
     // Debug: Log first few days with their counts AND what's in data
     if (weeks.length === 0 && currentWeek.length < 5) {
@@ -287,6 +296,8 @@ function updateTooltipPosition(event, tooltip) {
  * Toggle date selection (add/remove from pending set)
  */
 function toggleDateSelection(date) {
+  console.log(`toggleDateSelection called with:`, typeof date, date, `"${date}"`);
+  
   if (pendingSelectedDates.has(date)) {
     pendingSelectedDates.delete(date);
   } else {
@@ -303,7 +314,9 @@ function toggleDateSelection(date) {
     }
   }
   
-  console.log(`Toggled date: ${date}, pending selection: ${Array.from(pendingSelectedDates).join(', ')}`);
+  const pendingArray = Array.from(pendingSelectedDates);
+  console.log(`Toggled date: ${date}, pending count: ${pendingArray.length}`);
+  console.log('Pending dates (raw):', pendingArray);
 }
 
 /**
