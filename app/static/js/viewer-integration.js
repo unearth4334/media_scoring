@@ -75,7 +75,7 @@ function initializeImageViewer() {
     imageViewer = new Viewer(imgElement, {
       // Viewer options for optimal mobile and desktop experience
       inline: false,          // Use modal mode for better mobile experience
-      button: false,          // Hide default close button (we have our own UI)
+      button: true,           // Show close button for easy dismissal
       navbar: false,          // Hide navbar (we have our own navigation)
       title: false,           // Hide title bar
       toolbar: {
