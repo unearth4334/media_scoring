@@ -57,6 +57,12 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
             }
             with open(session_file, 'w') as f:
                 json.dump(save_data, f)
+            
+            # Save processed_data separately if status is completed (needed for commit)
+            if session_data.get("status") == "completed" and session_data.get("processed_data"):
+                data_file = SESSION_DIR / f"{session_id}_data.json"
+                with open(data_file, 'w') as f:
+                    json.dump(session_data["processed_data"], f)
         except Exception as e:
             logging.error(f"Failed to save session {session_id} to disk: {e}")
     
@@ -73,6 +79,18 @@ def load_session_from_disk(session_id: str) -> Optional[Dict]:
                 return json.load(f)
     except Exception as e:
         logging.error(f"Failed to load session {session_id} from disk: {e}")
+    return None
+
+
+def load_processed_data_from_disk(session_id: str) -> Optional[List[Dict]]:
+    """Load processed data from disk for a completed session."""
+    try:
+        data_file = SESSION_DIR / f"{session_id}_data.json"
+        if data_file.exists():
+            with open(data_file, 'r') as f:
+                return json.load(f)
+    except Exception as e:
+        logging.error(f"Failed to load processed data for {session_id} from disk: {e}")
     return None
 
 
@@ -420,18 +438,17 @@ async def get_active_session():
                 }
                 most_recent_session = {"session_id": session_id, "status": session_data["status"]}
                 most_recent_time = start_time
-        # Return most recent completed session (within last 5 minutes)
+        # Return most recent completed session (persist until committed or canceled)
         elif session_data.get("status") == "completed":
-            if datetime.now() - start_time < timedelta(minutes=5):
-                if most_recent_time is None or start_time > most_recent_time:
-                    # Restore to memory for viewing
-                    processing_sessions[session_id] = {
-                        **session_data,
-                        "files": [],
-                        "processed_data": []
-                    }
-                    most_recent_session = {"session_id": session_id, "status": session_data["status"]}
-                    most_recent_time = start_time
+            if most_recent_time is None or start_time > most_recent_time:
+                # Restore to memory for viewing
+                processing_sessions[session_id] = {
+                    **session_data,
+                    "files": [],
+                    "processed_data": []
+                }
+                most_recent_session = {"session_id": session_id, "status": session_data["status"]}
+                most_recent_time = start_time
     
     if most_recent_session:
         return most_recent_session
@@ -488,6 +505,14 @@ async def get_preview_report(session_id: str):
     if session["status"] not in ["completed", "error"]:
         raise HTTPException(400, "Processing not completed yet")
     
+    # Load processed_data from disk if not in memory
+    if not session.get("processed_data"):
+        processed_data = load_processed_data_from_disk(session_id)
+        if processed_data:
+            session["processed_data"] = processed_data
+        else:
+            raise HTTPException(500, "Processed data not found. Please reprocess the files.")
+    
     # Generate HTML report
     report_html = generate_html_report(session)
     
@@ -521,6 +546,14 @@ async def commit_to_database(request: CommitRequest, background_tasks: Backgroun
     state = get_state()
     if not state.database_enabled:
         raise HTTPException(503, "Database functionality is disabled")
+    
+    # Load processed_data from disk if not in memory
+    if not session.get("processed_data"):
+        processed_data = load_processed_data_from_disk(request.session_id)
+        if processed_data:
+            session["processed_data"] = processed_data
+        else:
+            raise HTTPException(500, "Processed data not found. Please reprocess the files.")
     
     # Start background commit
     session["status"] = "committing"
@@ -562,6 +595,14 @@ async def cleanup_session(session_id: str):
             session_file.unlink()
         except Exception as e:
             logging.error(f"Failed to delete session file {session_id}: {e}")
+    
+    # Remove processed data file from disk
+    data_file = SESSION_DIR / f"{session_id}_data.json"
+    if data_file.exists():
+        try:
+            data_file.unlink()
+        except Exception as e:
+            logging.error(f"Failed to delete data file {session_id}: {e}")
     
     # Clean up any temporary files
     temp_dir = Path(tempfile.gettempdir()) / "media_scoring_reports"
