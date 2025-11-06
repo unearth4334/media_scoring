@@ -34,6 +34,28 @@ SESSION_DIR = Path(tempfile.gettempdir()) / "media_scoring_sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
 
+def validate_session_id(session_id: str) -> str:
+    """Validate and sanitize session_id to prevent path traversal.
+    
+    Args:
+        session_id: The session ID to validate
+        
+    Returns:
+        The validated session_id
+        
+    Raises:
+        HTTPException: If session_id is not a valid UUID
+    """
+    try:
+        # Validate it's a proper UUID
+        uuid.UUID(session_id)
+        # Return only the string representation (no path components)
+        return session_id
+    except ValueError:
+        raise HTTPException(400, "Invalid session ID format")
+
+
+
 async def save_session_to_disk(session_id: str, session_data: Dict):
     """Save session to disk for persistence across page refreshes."""
     def _save():
@@ -73,10 +95,14 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
 def load_session_from_disk(session_id: str) -> Optional[Dict]:
     """Load session from disk."""
     try:
+        session_id = validate_session_id(session_id)  # Validate to prevent path traversal
         session_file = SESSION_DIR / f"{session_id}.json"
         if session_file.exists():
             with open(session_file, 'r') as f:
                 return json.load(f)
+    except HTTPException:
+        # Invalid session_id format
+        return None
     except Exception as e:
         logging.error(f"Failed to load session {session_id} from disk: {e}")
     return None
@@ -90,10 +116,14 @@ def load_processed_data_from_disk(session_id: str) -> Optional[List[Dict]]:
         Each dictionary contains file metadata, scores, keywords, etc.
     """
     try:
+        session_id = validate_session_id(session_id)  # Validate to prevent path traversal
         data_file = SESSION_DIR / f"{session_id}_data.json"
         if data_file.exists():
             with open(data_file, 'r') as f:
                 return json.load(f)
+    except HTTPException:
+        # Invalid session_id format
+        return None
     except Exception as e:
         logging.error(f"Failed to load processed data for {session_id} from disk: {e}")
     return None
@@ -612,6 +642,8 @@ async def get_commit_status(session_id: str):
 @router.delete("/api/ingest/session/{session_id}")
 async def cleanup_session(session_id: str):
     """Clean up a processing session."""
+    session_id = validate_session_id(session_id)  # Validate to prevent path traversal
+    
     if session_id in processing_sessions:
         del processing_sessions[session_id]
     
