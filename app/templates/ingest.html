@@ -667,16 +667,27 @@
       
       clearSelectionBtn.disabled = false;
       
-      const items = Array.from(selectedPaths).map(path => {
-        return `
-          <div class="selected-dir-item">
-            <div class="dir-path" title="${path}">📁 ${path}</div>
-            <button class="remove-btn" onclick="removeSelectedPath('${path.replace(/'/g, "\\'")}')">Remove</button>
-          </div>
-        `;
-      }).join('');
+      // Clear and rebuild with proper DOM elements to avoid XSS
+      selectedDirectoriesDiv.innerHTML = '';
       
-      selectedDirectoriesDiv.innerHTML = items;
+      Array.from(selectedPaths).forEach(path => {
+        const item = document.createElement('div');
+        item.className = 'selected-dir-item';
+        
+        const pathDiv = document.createElement('div');
+        pathDiv.className = 'dir-path';
+        pathDiv.title = path;
+        pathDiv.textContent = `📁 ${path}`;
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => removeSelectedPath(path);
+        
+        item.appendChild(pathDiv);
+        item.appendChild(removeBtn);
+        selectedDirectoriesDiv.appendChild(item);
+      });
     }
 
     // Add selected path

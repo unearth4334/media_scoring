@@ -165,16 +165,27 @@ async def run_ingest(request: IngestRequest):
         """Stream progress updates from the ingest process."""
         import subprocess
         import sys
+        from pathlib import Path
         
         # Process each directory
         for directory in request.directories:
+            # Validate directory path
+            try:
+                dir_path = Path(directory).resolve()
+                if not dir_path.exists() or not dir_path.is_dir():
+                    yield f"data: [ERROR] Invalid directory: {directory}\n\n"
+                    continue
+            except Exception as e:
+                yield f"data: [ERROR] Invalid directory path {directory}: {str(e)}\n\n"
+                continue
+            
             yield f"data: Processing directory: {directory}\n\n"
             
-            # Build command
+            # Build command with validated path
             cmd = [
                 sys.executable,
                 "tools/ingest_data.py",
-                directory
+                str(dir_path)  # Use validated path
             ]
             
             if request.pattern:
