@@ -20,7 +20,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 class IngestRequest(BaseModel):
     """Request model for ingestion."""
-    directory: str
+    directories: list[str]  # Changed from directory to directories list
     pattern: str = "*.mp4|*.png|*.jpg"
     enable_database: bool = False
     database_url: Optional[str] = None
@@ -165,54 +165,72 @@ async def run_ingest(request: IngestRequest):
         """Stream progress updates from the ingest process."""
         import subprocess
         import sys
+        from pathlib import Path
         
-        # Build command
-        cmd = [
-            sys.executable,
-            "tools/ingest_data.py",
-            request.directory
-        ]
-        
-        if request.pattern:
-            cmd.extend(["--pattern", request.pattern])
-        
-        if request.enable_database:
-            cmd.append("--enable-database")
-        
-        if request.database_url:
-            cmd.extend(["--database-url", request.database_url])
-        
-        if request.verbose:
-            cmd.append("--verbose")
-        
-        try:
-            # Start the subprocess with unbuffered output
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=0,  # Unbuffered for real-time output
-                universal_newlines=True,
-                env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered mode
-            )
+        # Process each directory
+        for directory in request.directories:
+            # Validate directory path
+            try:
+                dir_path = Path(directory).resolve()
+                if not dir_path.exists() or not dir_path.is_dir():
+                    yield f"data: [ERROR] Invalid directory: {directory}\n\n"
+                    continue
+            except Exception as e:
+                yield f"data: [ERROR] Invalid directory path {directory}: {str(e)}\n\n"
+                continue
             
-            # Stream output line by line
-            if process.stdout:
-                for line in process.stdout:
-                    yield f"data: {line}\n\n"
+            yield f"data: Processing directory: {directory}\n\n"
             
-            # Wait for completion
-            process.wait()
+            # Build command with validated path
+            cmd = [
+                sys.executable,
+                "tools/ingest_data.py",
+                str(dir_path)  # Use validated path
+            ]
             
-            # Send completion status
-            if process.returncode == 0:
-                yield f"data: [COMPLETE] Ingestion completed successfully\n\n"
-            else:
-                yield f"data: [ERROR] Ingestion failed with exit code {process.returncode}\n\n"
+            if request.pattern:
+                cmd.extend(["--pattern", request.pattern])
+            
+            if request.enable_database:
+                cmd.append("--enable-database")
+            
+            if request.database_url:
+                cmd.extend(["--database-url", request.database_url])
+            
+            if request.verbose:
+                cmd.append("--verbose")
+            
+            try:
+                # Start the subprocess with unbuffered output
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=0,  # Unbuffered for real-time output
+                    universal_newlines=True,
+                    env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered mode
+                )
                 
-        except Exception as e:
-            yield f"data: [ERROR] {str(e)}\n\n"
+                # Stream output line by line
+                if process.stdout:
+                    for line in process.stdout:
+                        yield f"data: {line}\n\n"
+                
+                # Wait for completion
+                process.wait()
+                
+                # Send completion status for this directory
+                if process.returncode == 0:
+                    yield f"data: [COMPLETE] Directory {directory} completed successfully\n\n"
+                else:
+                    yield f"data: [ERROR] Directory {directory} failed with exit code {process.returncode}\n\n"
+                    
+            except Exception as e:
+                yield f"data: [ERROR] {str(e)}\n\n"
+        
+        # Send overall completion
+        yield f"data: [COMPLETE] All directories processed\n\n"
     
     return StreamingResponse(
         stream_progress(),

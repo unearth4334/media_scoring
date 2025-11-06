@@ -27,8 +27,8 @@ def test_ingest_page_loads(client):
     response = client.get("/ingest")
     assert response.status_code == 200
     assert b"Data Ingestion Tool" in response.content
-    assert b"Target Directory" in response.content
-    assert b"Browse" in response.content
+    assert b"Target Directories" in response.content
+    assert b"Browse & Select Directories" in response.content
 
 
 def test_directory_api_home(client):
@@ -65,6 +65,19 @@ def test_ingest_page_has_menu_link(client):
     assert response.status_code == 200
     assert b"Data Ingestion Tool" in response.content
     assert b"/ingest" in response.content
+
+
+def test_ingest_page_has_multiple_directory_elements(client):
+    """Test that the ingest page has elements for multiple directory selection."""
+    response = client.get("/ingest")
+    assert response.status_code == 200
+    # Check for the selected directories container
+    assert b"selected-directories" in response.content
+    # Check for clear selection button
+    assert b"clear-selection-btn" in response.content
+    # Check for add/remove buttons
+    assert b"tree-add-btn" in response.content
+    assert b"tree-remove-btn" in response.content
 
 
 if __name__ == "__main__":
