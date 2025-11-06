@@ -20,7 +20,7 @@ templates = Jinja2Templates(directory="app/templates")
 
 class IngestRequest(BaseModel):
     """Request model for ingestion."""
-    directory: str
+    directories: list[str]  # Changed from directory to directories list
     pattern: str = "*.mp4|*.png|*.jpg"
     enable_database: bool = False
     database_url: Optional[str] = None
@@ -166,53 +166,60 @@ async def run_ingest(request: IngestRequest):
         import subprocess
         import sys
         
-        # Build command
-        cmd = [
-            sys.executable,
-            "tools/ingest_data.py",
-            request.directory
-        ]
-        
-        if request.pattern:
-            cmd.extend(["--pattern", request.pattern])
-        
-        if request.enable_database:
-            cmd.append("--enable-database")
-        
-        if request.database_url:
-            cmd.extend(["--database-url", request.database_url])
-        
-        if request.verbose:
-            cmd.append("--verbose")
-        
-        try:
-            # Start the subprocess with unbuffered output
-            process = subprocess.Popen(
-                cmd,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-                text=True,
-                bufsize=0,  # Unbuffered for real-time output
-                universal_newlines=True,
-                env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered mode
-            )
+        # Process each directory
+        for directory in request.directories:
+            yield f"data: Processing directory: {directory}\n\n"
             
-            # Stream output line by line
-            if process.stdout:
-                for line in process.stdout:
-                    yield f"data: {line}\n\n"
+            # Build command
+            cmd = [
+                sys.executable,
+                "tools/ingest_data.py",
+                directory
+            ]
             
-            # Wait for completion
-            process.wait()
+            if request.pattern:
+                cmd.extend(["--pattern", request.pattern])
             
-            # Send completion status
-            if process.returncode == 0:
-                yield f"data: [COMPLETE] Ingestion completed successfully\n\n"
-            else:
-                yield f"data: [ERROR] Ingestion failed with exit code {process.returncode}\n\n"
+            if request.enable_database:
+                cmd.append("--enable-database")
+            
+            if request.database_url:
+                cmd.extend(["--database-url", request.database_url])
+            
+            if request.verbose:
+                cmd.append("--verbose")
+            
+            try:
+                # Start the subprocess with unbuffered output
+                process = subprocess.Popen(
+                    cmd,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                    text=True,
+                    bufsize=0,  # Unbuffered for real-time output
+                    universal_newlines=True,
+                    env={**os.environ, 'PYTHONUNBUFFERED': '1'}  # Force Python unbuffered mode
+                )
                 
-        except Exception as e:
-            yield f"data: [ERROR] {str(e)}\n\n"
+                # Stream output line by line
+                if process.stdout:
+                    for line in process.stdout:
+                        yield f"data: {line}\n\n"
+                
+                # Wait for completion
+                process.wait()
+                
+                # Send completion status for this directory
+                if process.returncode == 0:
+                    yield f"data: [COMPLETE] Directory {directory} completed successfully\n\n"
+                else:
+                    yield f"data: [ERROR] Directory {directory} failed with exit code {process.returncode}\n\n"
+                    
+            except Exception as e:
+                yield f"data: [ERROR] {str(e)}\n\n"
+        
+        # Send overall completion
+        yield f"data: [COMPLETE] All directories processed\n\n"
     
     return StreamingResponse(
         stream_progress(),

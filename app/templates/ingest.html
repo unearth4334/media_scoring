@@ -387,6 +387,140 @@
       margin-top: 5px;
     }
 
+    .selected-directories {
+      margin-top: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color, #444);
+      border-radius: 4px;
+      padding: 5px;
+      background: var(--bg-primary, #1a1a1a);
+    }
+
+    .selected-directories:empty {
+      display: none;
+    }
+
+    .selected-dir-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      margin: 3px 0;
+      background: var(--bg-secondary, #2a2a2a);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.9em;
+    }
+
+    .selected-dir-item .dir-path {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      margin-right: 10px;
+    }
+
+    .selected-dir-item .remove-btn {
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 0.85em;
+    }
+
+    .selected-dir-item .remove-btn:hover {
+      background: #c82333;
+    }
+
+    .tree-item-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tree-item-content {
+      flex: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    .tree-item-content:hover {
+      background: var(--bg-secondary, #2a2a2a);
+    }
+
+    .tree-item-content.selected-path {
+      background: rgba(74, 144, 226, 0.2);
+      border: 1px solid rgba(74, 144, 226, 0.5);
+    }
+
+    .tree-add-btn,
+    .tree-remove-btn {
+      padding: 4px 10px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1.1em;
+      line-height: 1;
+      min-width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .tree-add-btn {
+      background: #28a745;
+      color: white;
+    }
+
+    .tree-add-btn:hover {
+      background: #218838;
+    }
+
+    .tree-remove-btn {
+      background: #dc3545;
+      color: white;
+    }
+
+    .tree-remove-btn:hover {
+      background: #c82333;
+    }
+
+    .tree-actions {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .tree-clear-btn {
+      padding: 8px 16px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .tree-clear-btn:hover {
+      background: #c82333;
+    }
+
+    .tree-clear-btn:disabled {
+      background: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
     /* Mobile-specific styles */
     @media (max-width: 768px) {
       /* Fix width issues for directory and pattern inputs on mobile */
@@ -426,18 +560,18 @@
 
     <form class="ingest-form" id="ingest-form">
       <div class="form-group">
-        <label for="directory">Target Directory *</label>
+        <label for="directories">Target Directories *</label>
         <div class="form-group-inline">
-          <input type="text" id="directory" name="directory" placeholder="/path/to/media/files" required>
           <button type="button" class="browse-btn" id="browse-btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
               <path d="m21 21-4.35-4.35"></path>
             </svg>
-            Browse
+            Browse & Select Directories
           </button>
         </div>
-        <div class="help-text">Select the directory containing media files to ingest</div>
+        <div class="help-text">Select one or more directories containing media files to ingest</div>
+        <div id="selected-directories" class="selected-directories"></div>
       </div>
 
       <div class="form-group">
@@ -487,14 +621,17 @@
         <button class="directory-close-btn" id="directory-close-btn">×</button>
       </div>
       <div class="directory-content">
-        <button class="tree-nav-btn" id="parent-btn" style="display: none;">↑ Parent Directory</button>
+        <div class="tree-actions">
+          <button class="tree-nav-btn" id="parent-btn" style="display: none;">↑ Parent Directory</button>
+          <button class="tree-clear-btn" id="clear-selection-btn" disabled>Clear Selection</button>
+        </div>
         <div class="current-path" id="current-path"></div>
         <div class="directory-loading" id="directory-loading">
           <div class="loading-spinner"></div>
           <div>Loading directories...</div>
         </div>
         <div class="directory-tree" id="directory-tree"></div>
-        <button class="tree-select-btn" id="select-btn">Select This Directory</button>
+        <button class="tree-select-btn" id="close-browser-btn">Done</button>
       </div>
     </div>
   </div>
@@ -502,28 +639,93 @@
   <script>
     // State
     let currentPath = '';
-    let selectedPath = '';
+    let selectedPaths = new Set();  // Changed from selectedPath to selectedPaths Set
     let eventSource = null;
 
     // Elements
-    const directoryInput = document.getElementById('directory');
     const browseBtn = document.getElementById('browse-btn');
     const directoryOverlay = document.getElementById('directory-overlay');
     const directoryCloseBtn = document.getElementById('directory-close-btn');
     const currentPathDiv = document.getElementById('current-path');
     const directoryTree = document.getElementById('directory-tree');
-    const selectBtn = document.getElementById('select-btn');
+    const closeBrowserBtn = document.getElementById('close-browser-btn');
+    const clearSelectionBtn = document.getElementById('clear-selection-btn');
     const parentBtn = document.getElementById('parent-btn');
     const ingestForm = document.getElementById('ingest-form');
     const submitBtn = document.getElementById('submit-btn');
     const progressPane = document.getElementById('progress-pane');
     const progressOutput = document.getElementById('progress-output');
+    const selectedDirectoriesDiv = document.getElementById('selected-directories');
+
+    // Update selected directories display
+    function updateSelectedDirectoriesDisplay() {
+      if (selectedPaths.size === 0) {
+        selectedDirectoriesDiv.innerHTML = '';
+        clearSelectionBtn.disabled = true;
+        return;
+      }
+      
+      clearSelectionBtn.disabled = false;
+      
+      const items = Array.from(selectedPaths).map(path => {
+        return `
+          <div class="selected-dir-item">
+            <div class="dir-path" title="${path}">📁 ${path}</div>
+            <button class="remove-btn" onclick="removeSelectedPath('${path.replace(/'/g, "\\'")}')">Remove</button>
+          </div>
+        `;
+      }).join('');
+      
+      selectedDirectoriesDiv.innerHTML = items;
+    }
+
+    // Add selected path
+    function addSelectedPath(path) {
+      selectedPaths.add(path);
+      updateSelectedDirectoriesDisplay();
+      updateDirectoryTree();
+    }
+
+    // Remove selected path
+    function removeSelectedPath(path) {
+      selectedPaths.delete(path);
+      updateSelectedDirectoriesDisplay();
+      updateDirectoryTree();
+    }
+
+    // Clear all selections
+    function clearSelection() {
+      selectedPaths.clear();
+      updateSelectedDirectoriesDisplay();
+      updateDirectoryTree();
+    }
+
+    // Update the directory tree to reflect selected paths
+    function updateDirectoryTree() {
+      // Re-render the tree items to show/hide + and - buttons
+      const treeItems = directoryTree.querySelectorAll('.tree-item-wrapper');
+      treeItems.forEach(wrapper => {
+        const path = wrapper.dataset.path;
+        const addBtn = wrapper.querySelector('.tree-add-btn');
+        const removeBtn = wrapper.querySelector('.tree-remove-btn');
+        const content = wrapper.querySelector('.tree-item-content');
+        
+        if (selectedPaths.has(path)) {
+          if (addBtn) addBtn.style.display = 'none';
+          if (removeBtn) removeBtn.style.display = 'flex';
+          if (content) content.classList.add('selected-path');
+        } else {
+          if (addBtn) addBtn.style.display = 'flex';
+          if (removeBtn) removeBtn.style.display = 'none';
+          if (content) content.classList.remove('selected-path');
+        }
+      });
+    }
 
     // Open directory browser
     browseBtn.addEventListener('click', () => {
-      selectedPath = directoryInput.value || '';
       // Force reload directory to refresh ingestion stats
-      loadDirectory(selectedPath);
+      loadDirectory(currentPath || '');
       directoryOverlay.classList.add('active');
     });
 
@@ -539,10 +741,14 @@
       }
     });
 
-    // Select directory
-    selectBtn.addEventListener('click', () => {
-      directoryInput.value = selectedPath;
+    // Close browser button
+    closeBrowserBtn.addEventListener('click', () => {
       directoryOverlay.classList.remove('active');
+    });
+
+    // Clear selection button
+    clearSelectionBtn.addEventListener('click', () => {
+      clearSelection();
     });
 
     // Navigate to parent
@@ -572,7 +778,6 @@
         const data = await res.json();
         
         currentPath = data.path;
-        selectedPath = data.path;
         currentPathDiv.textContent = data.path;
         
         // Show/hide parent button
@@ -598,8 +803,9 @@
           
           // Show subdirectories
           data.directories.forEach(dir => {
-            const item = document.createElement('div');
-            item.className = 'tree-item tree-folder';
+            const wrapper = document.createElement('div');
+            wrapper.className = 'tree-item-wrapper';
+            wrapper.dataset.path = dir.path;
             
             // Determine pill class based on ingestion status
             let pillClass = 'empty';
@@ -621,13 +827,22 @@
               pillHtml = `<span class="ingest-stats-pill ${pillClass}">${pillText}</span>`;
             }
             
-            item.innerHTML = `
-              ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
-              📁 ${dir.name}
-              ${pillHtml}
+            const isSelected = selectedPaths.has(dir.path);
+            const contentClass = isSelected ? 'tree-item-content selected-path' : 'tree-item-content';
+            
+            wrapper.innerHTML = `
+              <div class="${contentClass}">
+                ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
+                📁 ${dir.name}
+                ${pillHtml}
+              </div>
+              <button class="tree-add-btn" style="display: ${isSelected ? 'none' : 'flex'};">+</button>
+              <button class="tree-remove-btn" style="display: ${isSelected ? 'flex' : 'none'};">−</button>
             `;
             
-            item.addEventListener('click', (e) => {
+            // Navigate on content click
+            const content = wrapper.querySelector('.tree-item-content');
+            content.addEventListener('click', (e) => {
               // Don't navigate if clicking caret
               if (e.target.classList.contains('tree-caret')) {
                 return;
@@ -635,7 +850,21 @@
               loadDirectory(dir.path);
             });
             
-            directoryTree.appendChild(item);
+            // Add button click
+            const addBtn = wrapper.querySelector('.tree-add-btn');
+            addBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              addSelectedPath(dir.path);
+            });
+            
+            // Remove button click
+            const removeBtn = wrapper.querySelector('.tree-remove-btn');
+            removeBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              removeSelectedPath(dir.path);
+            });
+            
+            directoryTree.appendChild(wrapper);
           });
         }
         
@@ -659,20 +888,20 @@
         eventSource.close();
       }
       
+      // Validate that at least one directory is selected
+      if (selectedPaths.size === 0) {
+        alert('Please select at least one target directory');
+        return;
+      }
+      
       // Get form data
       const formData = {
-        directory: directoryInput.value,
+        directories: Array.from(selectedPaths),  // Changed from directory to directories array
         pattern: document.getElementById('pattern').value,
         enable_database: document.getElementById('enable_database').checked,
         database_url: document.getElementById('database_url').value || null,
         verbose: document.getElementById('verbose').checked
       };
-      
-      // Validate
-      if (!formData.directory) {
-        alert('Please select a target directory');
-        return;
-      }
       
       // Show progress pane
       progressPane.classList.add('active');
