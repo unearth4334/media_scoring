@@ -457,6 +457,7 @@
       gap: 8px;
       border-radius: 4px;
       margin: 2px 0;
+      position: relative;
     }
 
     .tree-item:hover {
@@ -464,8 +465,50 @@
     }
 
     .tree-item.selected {
-      background: var(--accent-color, #4a90e2);
+      background: rgba(74, 144, 226, 0.3);
+      border: 1px solid var(--accent-color, #4a90e2);
+    }
+    
+    .tree-item-content {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .tree-item-actions {
+      display: flex;
+      gap: 4px;
+      margin-left: auto;
+    }
+    
+    .tree-add-btn,
+    .tree-remove-btn {
+      padding: 4px 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: bold;
+      transition: all 0.2s;
+    }
+    
+    .tree-add-btn {
+      background: #28a745;
       color: white;
+    }
+    
+    .tree-add-btn:hover {
+      background: #218838;
+    }
+    
+    .tree-remove-btn {
+      background: #dc3545;
+      color: white;
+    }
+    
+    .tree-remove-btn:hover {
+      background: #c82333;
     }
 
     .tree-folder {
@@ -559,6 +602,113 @@
 
     .tree-select-btn:hover {
       background: #218838;
+    }
+    
+    .tree-clear-btn {
+      padding: 10px 20px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      width: 100%;
+    }
+    
+    .tree-clear-btn:hover {
+      background: #c82333;
+    }
+    
+    .selected-directories {
+      margin: 10px 0;
+      padding: 10px;
+      background: var(--bg-secondary, #2a2a2a);
+      border-radius: 4px;
+      border: 1px solid var(--border-color, #444);
+    }
+    
+    .selected-directories h4 {
+      margin: 0 0 10px 0;
+      font-size: 0.9em;
+      color: var(--accent-color, #4a90e2);
+    }
+    
+    .selected-dir-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      margin: 4px 0;
+      background: rgba(74, 144, 226, 0.1);
+      border: 1px solid rgba(74, 144, 226, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85em;
+    }
+    
+    .selected-dir-remove {
+      padding: 2px 6px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .selected-dir-remove:hover {
+      background: #c82333;
+    }
+    
+    .selected-dirs-display {
+      margin-bottom: 15px;
+      padding: 15px;
+      background: var(--bg-secondary, #2a2a2a);
+      border-radius: 4px;
+      border: 1px solid var(--border-color, #444);
+    }
+    
+    .selected-dirs-display h4 {
+      margin: 0 0 10px 0;
+      color: var(--accent-color, #4a90e2);
+    }
+    
+    .selected-dirs-list {
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    
+    .selected-dirs-list-item {
+      padding: 6px 8px;
+      margin: 4px 0;
+      background: rgba(74, 144, 226, 0.1);
+      border: 1px solid rgba(74, 144, 226, 0.3);
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 0.85em;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .selected-dirs-list-item button {
+      padding: 2px 6px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .selected-dirs-list-item button:hover {
+      background: #c82333;
+    }
+    
+    .no-directories-message {
+      color: #888;
+      font-style: italic;
+      font-size: 0.9em;
     }
 
     /* Loading indicator */
@@ -672,16 +822,20 @@
       <div class="form-section">
         <h3>📁 Source Directory</h3>
         <div class="form-group">
-          <label for="directory">Directory Path</label>
+          <label for="directory">Directory Path (deprecated - use Browse to select multiple)</label>
           <div class="form-group-inline">
-            <input type="text" id="directory" placeholder="/path/to/media/files" />
+            <input type="text" id="directory" placeholder="/path/to/media/files" readonly style="display: none;" />
             <button type="button" class="browse-btn" onclick="openDirectoryBrowser()">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M20 6h-2l-2-2H8L6 6H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2z"/>
               </svg>
-              Browse
+              Browse & Select Directories
             </button>
           </div>
+        </div>
+        <div id="selected-dirs-display" class="selected-dirs-display" style="display: none;">
+          <h4>Selected Directories (<span id="selected-count">0</span>)</h4>
+          <div id="selected-dirs-list" class="selected-dirs-list"></div>
         </div>
         <div class="form-group">
           <label for="pattern">File Pattern</label>
@@ -818,8 +972,13 @@
           <div class="loading-spinner"></div>
           <div>Loading directories...</div>
         </div>
+        <div id="selected-in-browser" class="selected-directories" style="display: none;">
+          <h4>Selected Directories (<span id="browser-selected-count">0</span>)</h4>
+          <div id="browser-selected-list"></div>
+        </div>
         <div class="directory-tree" id="directory-tree"></div>
-        <button class="tree-select-btn" id="select-btn">Select This Directory</button>
+        <button class="tree-select-btn" id="add-current-btn">+ Add Current Directory</button>
+        <button class="tree-clear-btn" id="clear-selection-btn">Clear All Selections</button>
       </div>
     </div>
   </div>
@@ -830,7 +989,7 @@
     let processingTimer = null;
     let commitTimer = null;
     let currentPath = '';
-    let selectedPath = '';
+    let selectedDirectories = [];  // Array to store selected directories
 
     function updateWorkflowStep(stepNumber) {
       // Reset all steps
@@ -861,7 +1020,8 @@
 
     async function startProcessing() {
       const parameters = {
-        directory: document.getElementById('directory').value,
+        directories: selectedDirectories.length > 0 ? selectedDirectories : null,
+        directory: null,  // Deprecated
         pattern: document.getElementById('pattern').value,
         enable_nsfw_detection: document.getElementById('enable_nsfw_detection').checked,
         nsfw_threshold: parseFloat(document.getElementById('nsfw_threshold').value),
@@ -871,8 +1031,8 @@
         max_files: document.getElementById('max_files').value ? parseInt(document.getElementById('max_files').value) : null
       };
 
-      if (!parameters.directory) {
-        alert('Please select a directory');
+      if (!parameters.directories || parameters.directories.length === 0) {
+        alert('Please select at least one directory using the Browse button');
         return;
       }
 
@@ -1124,15 +1284,82 @@
       document.getElementById('error-container').innerHTML = '';
       document.getElementById('commit-result').innerHTML = '';
     }
+    
+    // Helper functions for managing selected directories
+    function addDirectory(path) {
+      if (!selectedDirectories.includes(path)) {
+        selectedDirectories.push(path);
+        updateSelectedDirectoriesDisplay();
+        updateBrowserSelectedDisplay();
+      }
+    }
+    
+    function removeDirectory(path) {
+      selectedDirectories = selectedDirectories.filter(d => d !== path);
+      updateSelectedDirectoriesDisplay();
+      updateBrowserSelectedDisplay();
+    }
+    
+    function clearAllDirectories() {
+      selectedDirectories = [];
+      updateSelectedDirectoriesDisplay();
+      updateBrowserSelectedDisplay();
+    }
+    
+    function isDirectorySelected(path) {
+      return selectedDirectories.includes(path);
+    }
+    
+    function updateSelectedDirectoriesDisplay() {
+      const display = document.getElementById('selected-dirs-display');
+      const list = document.getElementById('selected-dirs-list');
+      const count = document.getElementById('selected-count');
+      
+      if (selectedDirectories.length === 0) {
+        display.style.display = 'none';
+        return;
+      }
+      
+      display.style.display = 'block';
+      count.textContent = selectedDirectories.length;
+      
+      list.innerHTML = selectedDirectories.map(dir => `
+        <div class="selected-dirs-list-item">
+          <span>📁 ${dir}</span>
+          <button onclick="removeDirectory('${dir.replace(/'/g, "\\'")}')">×</button>
+        </div>
+      `).join('');
+    }
+    
+    function updateBrowserSelectedDisplay() {
+      const display = document.getElementById('selected-in-browser');
+      const list = document.getElementById('browser-selected-list');
+      const count = document.getElementById('browser-selected-count');
+      
+      if (selectedDirectories.length === 0) {
+        display.style.display = 'none';
+        return;
+      }
+      
+      display.style.display = 'block';
+      count.textContent = selectedDirectories.length;
+      
+      list.innerHTML = selectedDirectories.map(dir => `
+        <div class="selected-dir-item">
+          <span>📁 ${dir}</span>
+          <button class="selected-dir-remove" onclick="removeDirectory('${dir.replace(/'/g, "\\'")}')">×</button>
+        </div>
+      `).join('');
+    }
 
     function openDirectoryBrowser() {
       // Get directory browser elements
-      const directoryInput = document.getElementById('directory');
       const directoryOverlay = document.getElementById('directory-overlay');
       const directoryCloseBtn = document.getElementById('directory-close-btn');
       const currentPathDiv = document.getElementById('current-path');
       const directoryTree = document.getElementById('directory-tree');
-      const selectBtn = document.getElementById('select-btn');
+      const addCurrentBtn = document.getElementById('add-current-btn');
+      const clearSelectionBtn = document.getElementById('clear-selection-btn');
       const parentBtn = document.getElementById('parent-btn');
       
       // Set up event listeners if not already set
@@ -1149,10 +1376,14 @@
           }
         });
 
-        // Select directory
-        selectBtn.addEventListener('click', () => {
-          directoryInput.value = selectedPath;
-          directoryOverlay.classList.remove('active');
+        // Add current directory
+        addCurrentBtn.addEventListener('click', () => {
+          addDirectory(currentPath);
+        });
+        
+        // Clear all selections
+        clearSelectionBtn.addEventListener('click', () => {
+          clearAllDirectories();
         });
 
         // Navigate to parent
@@ -1170,10 +1401,9 @@
         directoryOverlay.dataset.initialized = 'true';
       }
       
-      // Open the browser with current directory value or empty
-      selectedPath = directoryInput.value || '';
+      // Open the browser with current directory or empty
       // Force reload directory to refresh ingestion stats
-      loadDirectory(selectedPath);
+      loadDirectory(currentPath || '');
       directoryOverlay.classList.add('active');
     }
 
@@ -1195,7 +1425,6 @@
         const data = await res.json();
         
         currentPath = data.path;
-        selectedPath = data.path;
         currentPathDiv.textContent = data.path;
         
         // Show/hide parent button
@@ -1222,7 +1451,13 @@
           // Show subdirectories
           data.directories.forEach(dir => {
             const item = document.createElement('div');
-            item.className = 'tree-item tree-folder';
+            item.className = 'tree-item';
+            
+            // Check if this directory is selected
+            const selected = isDirectorySelected(dir.path);
+            if (selected) {
+              item.classList.add('selected');
+            }
             
             // Determine pill class based on ingestion status
             let pillClass = 'empty';
@@ -1244,23 +1479,28 @@
               pillHtml = `<span class="ingest-stats-pill ${pillClass}">${pillText}</span>`;
             }
             
-            item.innerHTML = `
-              ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
-              📁 ${dir.name}
-              ${pillHtml}
+            // Create item content
+            const contentHtml = `
+              <div class="tree-item-content" onclick="loadDirectory('${dir.path.replace(/'/g, "\\'")}')">
+                ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
+                📁 ${dir.name}
+                ${pillHtml}
+              </div>
+              <div class="tree-item-actions">
+                ${selected 
+                  ? `<button class="tree-remove-btn" onclick="event.stopPropagation(); removeDirectory('${dir.path.replace(/'/g, "\\'")}')">−</button>`
+                  : `<button class="tree-add-btn" onclick="event.stopPropagation(); addDirectory('${dir.path.replace(/'/g, "\\'")}')">+</button>`
+                }
+              </div>
             `;
             
-            item.addEventListener('click', (e) => {
-              // Don't navigate if clicking caret
-              if (e.target.classList.contains('tree-caret')) {
-                return;
-              }
-              loadDirectory(dir.path);
-            });
-            
+            item.innerHTML = contentHtml;
             directoryTree.appendChild(item);
           });
         }
+        
+        // Update browser selected display
+        updateBrowserSelectedDisplay();
         
         // Hide loading indicator and show tree
         loadingIndicator.classList.remove('show');
@@ -1319,6 +1559,9 @@
     document.addEventListener('DOMContentLoaded', () => {
       updateWorkflowStep(1);
       showSection('parameters-form');
+      
+      // Initialize selected directories display
+      updateSelectedDirectoriesDisplay();
       
       // Check if there's an active session to restore
       checkForActiveSession();

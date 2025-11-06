@@ -124,7 +124,8 @@ def filter_existing_files(files: List[Path], db: DatabaseService) -> tuple[List[
 
 class IngestParameters(BaseModel):
     """Parameters for the ingestion process."""
-    directory: str = Field(..., description="Directory to process")
+    directory: Optional[str] = Field(None, description="Single directory to process (deprecated, use directories)")
+    directories: Optional[List[str]] = Field(None, description="Multiple directories to process")
     pattern: str = Field("*.mp4|*.png|*.jpg", description="File pattern to match")
     enable_nsfw_detection: bool = Field(True, description="Enable NSFW detection")
     nsfw_threshold: float = Field(0.5, description="NSFW threshold (0.0-1.0)")
@@ -281,14 +282,30 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
     # Generate session ID
     session_id = str(uuid.uuid4())
     
-    # Validate directory
-    directory = Path(request.parameters.directory).expanduser().resolve()
-    if not directory.exists() or not directory.is_dir():
-        raise HTTPException(400, f"Directory not found: {directory}")
+    # Get directories list (support both old single directory and new multiple directories)
+    directories_to_process = []
+    if request.parameters.directories:
+        directories_to_process = request.parameters.directories
+    elif request.parameters.directory:
+        directories_to_process = [request.parameters.directory]
+    else:
+        raise HTTPException(400, "No directories specified")
     
-    # Discover files
+    # Validate all directories
+    validated_dirs = []
+    for dir_path in directories_to_process:
+        directory = Path(dir_path).expanduser().resolve()
+        if not directory.exists() or not directory.is_dir():
+            raise HTTPException(400, f"Directory not found: {directory}")
+        validated_dirs.append(directory)
+    
+    # Discover files from all directories
     try:
-        files = discover_files(directory, request.parameters.pattern)
+        files = []
+        for directory in validated_dirs:
+            dir_files = discover_files(directory, request.parameters.pattern)
+            files.extend(dir_files)
+        
         if request.parameters.max_files:
             files = files[:request.parameters.max_files]
     except Exception as e:
