@@ -34,6 +34,28 @@ SESSION_DIR = Path(tempfile.gettempdir()) / "media_scoring_sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
 
+def validate_session_id(session_id: str) -> str:
+    """Validate and sanitize session_id to prevent path traversal.
+    
+    Args:
+        session_id: The session ID to validate
+        
+    Returns:
+        The validated session_id
+        
+    Raises:
+        HTTPException: If session_id is not a valid UUID
+    """
+    try:
+        # Validate it's a proper UUID
+        uuid.UUID(session_id)
+        # Return only the string representation (no path components)
+        return session_id
+    except ValueError:
+        raise HTTPException(400, "Invalid session ID format")
+
+
+
 async def save_session_to_disk(session_id: str, session_data: Dict):
     """Save session to disk for persistence across page refreshes."""
     def _save():
@@ -57,6 +79,12 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
             }
             with open(session_file, 'w') as f:
                 json.dump(save_data, f)
+            
+            # Save processed_data separately if status is completed (needed for commit)
+            if session_data.get("status") == "completed" and session_data.get("processed_data"):
+                data_file = SESSION_DIR / f"{session_id}_data.json"
+                with open(data_file, 'w') as f:
+                    json.dump(session_data["processed_data"], f)
         except Exception as e:
             logging.error(f"Failed to save session {session_id} to disk: {e}")
     
@@ -67,13 +95,70 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
 def load_session_from_disk(session_id: str) -> Optional[Dict]:
     """Load session from disk."""
     try:
+        session_id = validate_session_id(session_id)  # Validate to prevent path traversal
         session_file = SESSION_DIR / f"{session_id}.json"
         if session_file.exists():
             with open(session_file, 'r') as f:
                 return json.load(f)
+    except HTTPException:
+        # Invalid session_id format
+        return None
     except Exception as e:
         logging.error(f"Failed to load session {session_id} from disk: {e}")
     return None
+
+
+def load_processed_data_from_disk(session_id: str) -> Optional[List[Dict]]:
+    """Load processed data from disk for a completed session.
+    
+    Returns:
+        List of dictionaries containing processed file data, or None if not found.
+        Each dictionary contains file metadata, scores, keywords, etc.
+    """
+    try:
+        session_id = validate_session_id(session_id)  # Validate to prevent path traversal
+        data_file = SESSION_DIR / f"{session_id}_data.json"
+        if data_file.exists():
+            with open(data_file, 'r') as f:
+                return json.load(f)
+    except HTTPException:
+        # Invalid session_id format
+        return None
+    except Exception as e:
+        logging.error(f"Failed to load processed data for {session_id} from disk: {e}")
+    return None
+
+
+def ensure_processed_data_loaded(session: Dict, session_id: str) -> None:
+    """Ensure processed_data is loaded in session, loading from disk if needed.
+    
+    Args:
+        session: The session dictionary to check/update
+        session_id: The session ID to use for loading data from disk
+        
+    Raises:
+        HTTPException: If processed data cannot be found
+    """
+    if not session.get("processed_data"):
+        processed_data = load_processed_data_from_disk(session_id)
+        if processed_data:
+            session["processed_data"] = processed_data
+        else:
+            raise HTTPException(500, "Processed data not found. Please reprocess the files.")
+
+
+def delete_session_file(file_path: Path, file_type: str = "file") -> None:
+    """Helper to safely delete a session file.
+    
+    Args:
+        file_path: Path to the file to delete
+        file_type: Description of the file type for logging
+    """
+    if file_path.exists():
+        try:
+            file_path.unlink()
+        except Exception as e:
+            logging.error(f"Failed to delete {file_type} {file_path.name}: {e}")
 
 
 def get_active_sessions() -> List[str]:
@@ -420,18 +505,17 @@ async def get_active_session():
                 }
                 most_recent_session = {"session_id": session_id, "status": session_data["status"]}
                 most_recent_time = start_time
-        # Return most recent completed session (within last 5 minutes)
+        # Return most recent completed session (persist until committed or canceled)
         elif session_data.get("status") == "completed":
-            if datetime.now() - start_time < timedelta(minutes=5):
-                if most_recent_time is None or start_time > most_recent_time:
-                    # Restore to memory for viewing
-                    processing_sessions[session_id] = {
-                        **session_data,
-                        "files": [],
-                        "processed_data": []
-                    }
-                    most_recent_session = {"session_id": session_id, "status": session_data["status"]}
-                    most_recent_time = start_time
+            if most_recent_time is None or start_time > most_recent_time:
+                # Restore to memory for viewing
+                processing_sessions[session_id] = {
+                    **session_data,
+                    "files": [],
+                    "processed_data": []
+                }
+                most_recent_session = {"session_id": session_id, "status": session_data["status"]}
+                most_recent_time = start_time
     
     if most_recent_session:
         return most_recent_session
@@ -488,6 +572,9 @@ async def get_preview_report(session_id: str):
     if session["status"] not in ["completed", "error"]:
         raise HTTPException(400, "Processing not completed yet")
     
+    # Load processed_data from disk if not in memory
+    ensure_processed_data_loaded(session, session_id)
+    
     # Generate HTML report
     report_html = generate_html_report(session)
     
@@ -522,6 +609,9 @@ async def commit_to_database(request: CommitRequest, background_tasks: Backgroun
     if not state.database_enabled:
         raise HTTPException(503, "Database functionality is disabled")
     
+    # Load processed_data from disk if not in memory
+    ensure_processed_data_loaded(session, request.session_id)
+    
     # Start background commit
     session["status"] = "committing"
     session["commit_progress"] = 0
@@ -552,16 +642,14 @@ async def get_commit_status(session_id: str):
 @router.delete("/api/ingest/session/{session_id}")
 async def cleanup_session(session_id: str):
     """Clean up a processing session."""
+    session_id = validate_session_id(session_id)  # Validate to prevent path traversal
+    
     if session_id in processing_sessions:
         del processing_sessions[session_id]
     
-    # Remove session file from disk
-    session_file = SESSION_DIR / f"{session_id}.json"
-    if session_file.exists():
-        try:
-            session_file.unlink()
-        except Exception as e:
-            logging.error(f"Failed to delete session file {session_id}: {e}")
+    # Remove session files from disk
+    delete_session_file(SESSION_DIR / f"{session_id}.json", "session file")
+    delete_session_file(SESSION_DIR / f"{session_id}_data.json", "data file")
     
     # Clean up any temporary files
     temp_dir = Path(tempfile.gettempdir()) / "media_scoring_reports"
