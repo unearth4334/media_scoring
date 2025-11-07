@@ -843,9 +843,8 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
             db.store_media_metadata(file_path, file_data["metadata"])
         
         # Store keywords
-        if "keywords" in file_data:
-            for keyword in file_data["keywords"]:
-                db.add_keyword_to_file(file_path, keyword)
+        if "keywords" in file_data and file_data["keywords"]:
+            db.add_keywords(file_path, file_data["keywords"], keyword_type='extracted', source='comfyui')
         
         return None  # Success
         
