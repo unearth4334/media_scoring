@@ -2416,7 +2416,8 @@ function createTileViewItem(item, index) {
       if (isImageName(item.name)) {
         img.src = `/media/${encodeURIComponent(item.name)}`;
       } else {
-        // For videos, show a placeholder
+        // For videos, show a placeholder without trying to load video file
+        img.removeAttribute('src');
         img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
         img.alt = 'Video: ' + item.name;
       }
@@ -2425,9 +2426,11 @@ function createTileViewItem(item, index) {
     if (isImageName(item.name)) {
       img.src = `/media/${encodeURIComponent(item.name)}`;
     } else {
-      // For videos without thumbnails, show placeholder
+      // For videos without thumbnails, show placeholder without trying to load video file
       img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
       img.alt = 'Video: ' + item.name;
+      // Use a transparent 1x1 pixel data URI to prevent broken image icon
+      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     }
   }
   
