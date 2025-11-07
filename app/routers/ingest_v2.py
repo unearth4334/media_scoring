@@ -75,7 +75,8 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
                 "end_time": session_data.get("end_time"),
                 "parameters": session_data.get("parameters"),
                 "commit_progress": session_data.get("commit_progress"),
-                "commit_errors": session_data.get("commit_errors", [])
+                "commit_errors": session_data.get("commit_errors", []),
+                "commit_error": session_data.get("commit_error")  # Main error message
             }
             with open(session_file, 'w') as f:
                 json.dump(save_data, f)
@@ -472,7 +473,7 @@ async def get_active_session():
     
     # Check in-memory sessions for active ones
     for session_id, session in processing_sessions.items():
-        if session["status"] in ["starting", "processing", "committing"]:
+        if session["status"] in ["starting", "processing", "committing", "committed", "commit_error"]:
             start_time = datetime.fromisoformat(session["start_time"])
             if most_recent_time is None or start_time > most_recent_time:
                 most_recent_session = {"session_id": session_id, "status": session["status"]}
@@ -505,8 +506,8 @@ async def get_active_session():
                 }
                 most_recent_session = {"session_id": session_id, "status": session_data["status"]}
                 most_recent_time = start_time
-        # Return most recent completed session (persist until committed or canceled)
-        elif session_data.get("status") == "completed":
+        # Return most recent completed/committed/error sessions (persist until cleared)
+        elif session_data.get("status") in ["completed", "committed", "commit_error"]:
             if most_recent_time is None or start_time > most_recent_time:
                 # Restore to memory for viewing
                 processing_sessions[session_id] = {
@@ -627,7 +628,16 @@ async def commit_to_database(request: CommitRequest, background_tasks: Backgroun
 async def get_commit_status(session_id: str):
     """Get the current commit status."""
     if session_id not in processing_sessions:
-        raise HTTPException(404, "Session not found")
+        # Try loading from disk
+        session_data = load_session_from_disk(session_id)
+        if session_data:
+            processing_sessions[session_id] = {
+                **session_data,
+                "files": [],
+                "processed_data": []
+            }
+        else:
+            raise HTTPException(404, "Session not found")
     
     session = processing_sessions[session_id]
     
@@ -635,7 +645,8 @@ async def get_commit_status(session_id: str):
         "session_id": session_id,
         "status": session["status"],
         "commit_progress": session.get("commit_progress", 0),
-        "commit_errors": session.get("commit_errors", [])[-10:]  # Last 10 errors
+        "commit_errors": session.get("commit_errors", [])[-10:],  # Last 10 errors
+        "commit_error": session.get("commit_error")  # Main error message for commit_error status
     }
 
 
