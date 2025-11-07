@@ -750,15 +750,6 @@ async def process_files_background(session_id: str, files: List[Path], parameter
         session["end_time"] = datetime.now().isoformat()
         await save_session_to_disk(session_id, session)  # Save error state
         logging.error(f"Processing failed for session {session_id}: {e}")
-        session["progress"] = 100
-        session["end_time"] = datetime.now().isoformat()
-        logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
-        
-    except Exception as e:
-        session["status"] = STATUS_ERROR
-        session["error"] = str(e)
-        session["end_time"] = datetime.now().isoformat()
-        logging.error(f"Processing failed for session {session_id}: {e}")
 
 
 async def process_single_file(file_path: Path, parameters: IngestParameters) -> Dict[str, Any]:
