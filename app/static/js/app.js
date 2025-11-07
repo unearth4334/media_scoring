@@ -2338,3 +2338,201 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+/* =========================================================
+   TILE VIEW FUNCTIONALITY
+   --------------------------------------------------------- */
+
+// Constants for tile view
+const TILE_VIEW_LANDSCAPE_THRESHOLD = 1.3; // Width/height ratio to determine landscape orientation
+const TILE_VIEW_VIDEO_PLACEHOLDER_COLOR = '#333'; // Background color for video placeholders
+const TILE_VIEW_TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // 1x1 transparent pixel
+
+// Open tile view
+function openTileView() {
+  const tileViewOverlay = document.getElementById('tile-view-overlay');
+  if (!tileViewOverlay) return;
+  
+  // Show overlay
+  tileViewOverlay.classList.add('visible');
+  
+  // Populate with media items
+  populateTileView();
+  
+  // Disable body scroll
+  document.body.style.overflow = 'hidden';
+}
+
+// Close tile view
+function closeTileView() {
+  const tileViewOverlay = document.getElementById('tile-view-overlay');
+  if (!tileViewOverlay) return;
+  
+  tileViewOverlay.classList.remove('visible');
+  
+  // Re-enable body scroll
+  document.body.style.overflow = '';
+}
+
+// Populate tile view with current filtered media
+function populateTileView() {
+  const gridContainer = document.getElementById('tile-view-grid');
+  if (!gridContainer) return;
+  
+  // Clear existing content
+  gridContainer.innerHTML = '';
+  
+  // Check if we have any filtered items
+  if (!filtered || filtered.length === 0) {
+    gridContainer.innerHTML = '<div class="tile-view-loading">No media items to display</div>';
+    return;
+  }
+  
+  // Create tile for each filtered item
+  filtered.forEach((item, index) => {
+    const tile = createTileViewItem(item, index);
+    gridContainer.appendChild(tile);
+  });
+}
+
+// Create a single tile view item
+function createTileViewItem(item, index) {
+  const tile = document.createElement('div');
+  tile.className = 'tile-view-item';
+  
+  // Check if current item
+  if (filtered[idx] && filtered[idx].name === item.name) {
+    tile.classList.add('current');
+  }
+  
+  // Create image element
+  const img = document.createElement('img');
+  img.className = 'tile-view-item-image';
+  
+  // Use thumbnail if available, otherwise use the full media
+  if (thumbnailsEnabled) {
+    img.src = `/thumbnail/${encodeURIComponent(item.name)}`;
+    // Fallback to full media if thumbnail fails
+    img.onerror = function() {
+      if (isImageName(item.name)) {
+        img.src = `/media/${encodeURIComponent(item.name)}`;
+      } else {
+        // For videos, show a placeholder without trying to load video file
+        img.removeAttribute('src');
+        img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
+        img.alt = 'Video: ' + item.name;
+      }
+    };
+  } else {
+    if (isImageName(item.name)) {
+      img.src = `/media/${encodeURIComponent(item.name)}`;
+    } else {
+      // For videos without thumbnails, show placeholder without trying to load video file
+      img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
+      img.alt = 'Video: ' + item.name;
+      // Use a transparent 1x1 pixel data URI to prevent broken image icon
+      img.src = TILE_VIEW_TRANSPARENT_PIXEL;
+    }
+  }
+  
+  // When image loads, check its dimensions to determine if landscape
+  img.onload = function() {
+    if (img.naturalWidth > img.naturalHeight * TILE_VIEW_LANDSCAPE_THRESHOLD) {
+      tile.classList.add('landscape');
+    }
+  };
+  
+  tile.appendChild(img);
+  
+  // Create info section
+  const info = document.createElement('div');
+  info.className = 'tile-view-item-info';
+  
+  // Filename
+  const name = document.createElement('div');
+  name.className = 'tile-view-item-name';
+  name.textContent = item.name;
+  name.title = item.name;
+  info.appendChild(name);
+  
+  // Meta info (score, date)
+  const meta = document.createElement('div');
+  meta.className = 'tile-view-item-meta';
+  
+  // Score badge
+  const score = document.createElement('span');
+  score.className = 'tile-view-item-score';
+  if (item.score === -1) {
+    score.textContent = 'R';
+    score.classList.add('rejected');
+  } else if (item.score && item.score > 0) {
+    score.textContent = item.score + '★';
+    score.classList.add('rated');
+  } else {
+    score.textContent = '—';
+  }
+  meta.appendChild(score);
+  
+  // Date if available
+  if (item.original_created_at) {
+    const date = document.createElement('span');
+    date.className = 'tile-view-item-date';
+    date.textContent = formatDatePill(item.original_created_at);
+    meta.appendChild(date);
+  }
+  
+  info.appendChild(meta);
+  tile.appendChild(info);
+  
+  // Click handler
+  tile.addEventListener('click', () => {
+    // Close tile view
+    closeTileView();
+    
+    // Navigate to this item
+    show(index);
+    
+    // Scroll sidebar to show this item
+    const sidebarItem = document.querySelector(`.item[data-name="${item.name}"]`);
+    if (sidebarItem) {
+      sidebarItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  });
+  
+  return tile;
+}
+
+// Event listeners for tile view
+document.addEventListener('DOMContentLoaded', function() {
+  // Tile view button
+  const tileViewBtn = document.getElementById('tile_view_btn');
+  if (tileViewBtn) {
+    tileViewBtn.addEventListener('click', openTileView);
+  }
+  
+  // Close button
+  const tileViewClose = document.getElementById('tile-view-close');
+  if (tileViewClose) {
+    tileViewClose.addEventListener('click', closeTileView);
+  }
+  
+  // ESC key to close tile view
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      const tileViewOverlay = document.getElementById('tile-view-overlay');
+      if (tileViewOverlay && tileViewOverlay.classList.contains('visible')) {
+        closeTileView();
+      }
+    }
+  });
+  
+  // Click overlay background to close
+  const tileViewOverlay = document.getElementById('tile-view-overlay');
+  if (tileViewOverlay) {
+    tileViewOverlay.addEventListener('click', function(e) {
+      if (e.target === tileViewOverlay) {
+        closeTileView();
+      }
+    });
+  }
+});

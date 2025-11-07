@@ -261,3 +261,17 @@ function svgFitToPane() {
   <path d="M8 9h8M8 15h8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
 </svg>`;
 }
+
+/**
+ * Tile view icon - grid of squares
+ * @returns {string} SVG markup
+ */
+function svgTileView() {
+  return `
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+  <rect x="3" y="3" width="8" height="8" stroke="currentColor" stroke-width="2" fill="none" rx="1"/>
+  <rect x="13" y="3" width="8" height="8" stroke="currentColor" stroke-width="2" fill="none" rx="1"/>
+  <rect x="3" y="13" width="8" height="8" stroke="currentColor" stroke-width="2" fill="none" rx="1"/>
+  <rect x="13" y="13" width="8" height="8" stroke="currentColor" stroke-width="2" fill="none" rx="1"/>
+</svg>`;
+}
