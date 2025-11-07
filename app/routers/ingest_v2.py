@@ -867,7 +867,13 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
 
 
 async def commit_data_background(session_id: str):
-    """Background task to commit processed data to database."""
+    """Background task to commit processed data to database.
+    
+    Note: This function processes all files in a single database transaction.
+    For very large batches (>1000 files), consider processing in smaller chunks
+    to avoid connection timeouts. Individual file errors are handled gracefully
+    via rollback in _commit_single_file, allowing the batch to continue.
+    """
     session = processing_sessions[session_id]
     
     try:
@@ -897,14 +903,12 @@ async def commit_data_background(session_id: str):
                     logging.error(error_msg)
                 else:
                     successful_commits += 1
-                    # Commit successful changes every 10 files to avoid losing progress
+                    
+                    # Log progress periodically
                     if successful_commits % 10 == 0:
-                        try:
-                            db.session.commit()
-                            logging.info(f"Committed batch of {successful_commits} files successfully")
-                        except Exception as commit_err:
-                            logging.error(f"Batch commit error: {commit_err}")
-                            db.session.rollback()
+                        logging.info(f"Successfully processed {successful_commits} files so far")
+            
+            # The context manager will automatically commit all successful changes when exiting
         
         # Log final statistics
         logging.info(f"Commit completed: {successful_commits} successful, {failed_commits} failed")
