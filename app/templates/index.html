@@ -240,6 +240,8 @@
             <input type="checkbox" id="toggle_thumbnails" />
             <label for="toggle_thumbnails" class="thumbnail-icon"></label>
           </div>
+          <button id="tile_view_btn" class="nav-btn" title="Open tile view">
+          </button>
           <button id="export_filtered_btn" class="nav-btn" title="Export all filtered files as ZIP">
             Export Filtered
           </button>
@@ -353,6 +355,19 @@
     </div>
   </div>
 
+  <!-- Tile View Overlay -->
+  <div class="tile-view-overlay" id="tile-view-overlay">
+    <div class="tile-view-header">
+      <h3>Media Browser</h3>
+      <button class="tile-view-close" id="tile-view-close" title="Close">×</button>
+    </div>
+    <div class="tile-view-content" id="tile-view-content">
+      <div class="tile-view-grid" id="tile-view-grid">
+        <div class="tile-view-loading">Loading...</div>
+      </div>
+    </div>
+  </div>
+
 <!-- Viewer.js for enhanced image viewing -->
 <script src="/static/vendor/viewerjs/viewer.min.js"></script>
 <script src="/static/js/viewer-integration.js"></script>
@@ -389,6 +404,10 @@ document.addEventListener('DOMContentLoaded', function() {
   if (exportBtn) {
     exportBtn.innerHTML = svgExport() + exportBtn.textContent;
   }
+  
+  // Tile view button
+  const tileViewBtn = document.getElementById('tile_view_btn');
+  if (tileViewBtn) tileViewBtn.innerHTML = svgTileView();
   
   // Menu button
   const menuBtn = document.getElementById('menu-btn');
