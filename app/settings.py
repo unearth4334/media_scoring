@@ -40,7 +40,8 @@ class Settings(BaseModel):
     
     # Thumbnail settings
     generate_thumbnails: bool = Field(default=False, description="Generate thumbnail previews for media files")
-    thumbnail_height: int = Field(default=64, description="Height in pixels for thumbnail previews")
+    thumbnail_height: int = Field(default=64, description="Height in pixels for thumbnail previews (used in sidebar)")
+    large_thumbnail_height: int = Field(default=256, description="Height in pixels for large thumbnail previews (used in tile view)")
     
     # Toggle extensions
     toggle_extensions: List[str] = Field(default=["jpg", "png", "mp4"], description="File extensions for toggle buttons")
@@ -87,6 +88,14 @@ class Settings(BaseModel):
         """Validate thumbnail height."""
         if not 16 <= v <= 512:
             raise ValueError(f"Thumbnail height must be between 16 and 512, got {v}")
+        return v
+    
+    @field_validator('large_thumbnail_height')
+    @classmethod
+    def validate_large_thumbnail_height(cls, v):
+        """Validate large thumbnail height."""
+        if not 64 <= v <= 1024:
+            raise ValueError(f"Large thumbnail height must be between 64 and 1024, got {v}")
         return v
         
     @classmethod

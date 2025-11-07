@@ -20,6 +20,11 @@ from ..database.service import DatabaseService
 from ..services.files import discover_files, read_score
 from ..services.metadata import extract_metadata, extract_keywords_from_metadata
 from ..services.nsfw_detection import detect_image_nsfw, is_nsfw_detection_available
+from ..services.thumbnails import (
+    get_thumbnail_path_for,
+    generate_thumbnail_for_image,
+    generate_thumbnail_for_video
+)
 from ..utils.hashing import compute_media_file_id, compute_perceptual_hash
 from ..utils.sanitization import sanitize_file_data
 
@@ -854,6 +859,31 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
         if "keywords" in sanitized_data and sanitized_data["keywords"]:
             db.add_keywords(file_path, sanitized_data["keywords"], keyword_type='extracted', source='comfyui')
             db.session.flush()
+        
+        # Generate thumbnails if enabled
+        state = get_state()
+        if state.settings.generate_thumbnails:
+            try:
+                # Generate regular thumbnail (64px default)
+                thumb_path = get_thumbnail_path_for(file_path, large=False)
+                if not thumb_path.exists():
+                    name_lower = file_path.name.lower()
+                    if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                        generate_thumbnail_for_image(file_path, thumb_path, height=state.settings.thumbnail_height)
+                    elif name_lower.endswith('.mp4'):
+                        generate_thumbnail_for_video(file_path, thumb_path, height=state.settings.thumbnail_height)
+                
+                # Generate large thumbnail (256px default)
+                large_thumb_path = get_thumbnail_path_for(file_path, large=True)
+                if not large_thumb_path.exists():
+                    name_lower = file_path.name.lower()
+                    if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                        generate_thumbnail_for_image(file_path, large_thumb_path, height=state.settings.large_thumbnail_height)
+                    elif name_lower.endswith('.mp4'):
+                        generate_thumbnail_for_video(file_path, large_thumb_path, height=state.settings.large_thumbnail_height)
+            except Exception as e:
+                # Log thumbnail generation errors but don't fail the commit
+                logging.warning(f"Failed to generate thumbnails for {file_path.name}: {e}")
         
         return None  # Success
         

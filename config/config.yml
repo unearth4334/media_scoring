@@ -4,7 +4,8 @@ port: 7862                    # Port to serve
 pattern: "*.mp4|*.png|*.jpg"  # Glob pattern for media files (e.g., *.mp4|*.png|*.jpg)
 style: style_default.css   # CSS theme file (style_default.css, style_pastelcore.css, style_darkcandy.css)
 generate_thumbnails: true     # Generate thumbnail previews for media files
-thumbnail_height: 64          # Height in pixels for thumbnail previews
+thumbnail_height: 64          # Height in pixels for thumbnail previews (used in sidebar)
+large_thumbnail_height: 256   # Height in pixels for large thumbnail previews (used in tile view)
 toggle_extensions: ["jpg", "png", "mp4"]  # File extensions for toggle buttons (default active extensions)
 directory_sort_desc: true     # Sort directory dropdown in descending order (true) or ascending (false)
 

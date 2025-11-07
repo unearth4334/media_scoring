@@ -255,14 +255,23 @@ def download_media(name: str):
 
 
 @router.get("/thumbnail/{name:path}")
-def serve_thumbnail(name: str):
-    """Serve thumbnail image for a media file."""
+def serve_thumbnail(name: str, size: str = "regular"):
+    """Serve thumbnail image for a media file.
+    
+    Args:
+        name: Media file name
+        size: Thumbnail size - 'regular' (64px) or 'large' (256px), defaults to 'regular'
+    """
     from fastapi.responses import Response
     import base64
     state = get_state()
     
     if not state.settings.generate_thumbnails:
         raise HTTPException(404, "Thumbnails not enabled")
+    
+    # Determine if we want large thumbnail
+    use_large = size == "large"
+    thumbnail_size = str(state.settings.large_thumbnail_height) if use_large else "64"
     
     # Initialize variables for database mode
     media_file = None
@@ -281,8 +290,8 @@ def serve_thumbnail(name: str):
                     ).first()
                     
                     if media_file:
-                        # Check for stored thumbnail
-                        thumbnail = db.get_thumbnail(Path(media_file.file_path), "64")
+                        # Check for stored thumbnail with the requested size
+                        thumbnail = db.get_thumbnail(Path(media_file.file_path), thumbnail_size)
                         if thumbnail and thumbnail.thumbnail_data:
                             # Return thumbnail from database
                             thumbnail_bytes = base64.b64decode(thumbnail.thumbnail_data)
@@ -314,16 +323,17 @@ def serve_thumbnail(name: str):
     if not target.exists() or not target.is_file():
         raise HTTPException(404, "Media file not found")
     
-    # Get filesystem thumbnail path
-    thumb_path = get_thumbnail_path_for(target)
+    # Get filesystem thumbnail path (regular or large)
+    thumb_path = get_thumbnail_path_for(target, large=use_large)
     
     if not thumb_path.exists():
         # Try to generate thumbnail on demand
+        height = state.settings.large_thumbnail_height if use_large else state.settings.thumbnail_height
         name_lower = target.name.lower()
         if name_lower.endswith(('.png', '.jpg', '.jpeg')):
-            generate_thumbnail_for_image(target, thumb_path)
+            generate_thumbnail_for_image(target, thumb_path, height=height)
         elif name_lower.endswith('.mp4'):
-            generate_thumbnail_for_video(target, thumb_path)
+            generate_thumbnail_for_video(target, thumb_path, height=height)
     
     if not thumb_path.exists():
         raise HTTPException(404, "Thumbnail not available")

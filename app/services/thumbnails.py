@@ -20,27 +20,52 @@ def get_thumbnails_dir_for(directory: Path) -> Path:
     return thumb_dir
 
 
-def get_thumbnail_path_for(media_path: Path) -> Path:
-    """Get thumbnail path for a media file."""
-    thumb_dir = get_thumbnails_dir_for(media_path.parent)
-    return thumb_dir / f"{media_path.stem}_thumbnail.jpg"
+def get_large_thumbnails_dir_for(directory: Path) -> Path:
+    """Get large thumbnails directory for a media directory."""
+    thumb_dir = directory / ".thumbnails_large"
+    thumb_dir.mkdir(exist_ok=True, parents=True)
+    return thumb_dir
 
 
-def generate_thumbnail_for_image(image_path: Path, output_path: Path) -> bool:
-    """Generate thumbnail for an image file."""
+def get_thumbnail_path_for(media_path: Path, large: bool = False) -> Path:
+    """Get thumbnail path for a media file.
+    
+    Args:
+        media_path: Path to the media file
+        large: If True, get path for large thumbnail, otherwise regular thumbnail
+    """
+    if large:
+        thumb_dir = get_large_thumbnails_dir_for(media_path.parent)
+        return thumb_dir / f"{media_path.stem}_thumbnail_large.jpg"
+    else:
+        thumb_dir = get_thumbnails_dir_for(media_path.parent)
+        return thumb_dir / f"{media_path.stem}_thumbnail.jpg"
+
+
+def generate_thumbnail_for_image(image_path: Path, output_path: Path, height: int = None) -> bool:
+    """Generate thumbnail for an image file.
+    
+    Args:
+        image_path: Path to the source image
+        output_path: Path where thumbnail will be saved
+        height: Height in pixels for the thumbnail (if None, uses settings.thumbnail_height)
+    """
     state = get_state()
     try:
         if Image is None:
             state.logger.warning("PIL not available, cannot generate image thumbnails")
             return False
         
+        if height is None:
+            height = state.settings.thumbnail_height
+        
         with Image.open(image_path) as img:
             # Calculate width to maintain aspect ratio
             aspect_ratio = img.width / img.height
-            width = int(state.settings.thumbnail_height * aspect_ratio)
+            width = int(height * aspect_ratio)
             
             # Resize image
-            img.thumbnail((width, state.settings.thumbnail_height), Image.Resampling.LANCZOS)
+            img.thumbnail((width, height), Image.Resampling.LANCZOS)
             
             # Convert to RGB if needed (for RGBA images)
             if img.mode in ('RGBA', 'P'):
@@ -56,14 +81,23 @@ def generate_thumbnail_for_image(image_path: Path, output_path: Path) -> bool:
         return False
 
 
-def generate_thumbnail_for_video(video_path: Path, output_path: Path) -> bool:
-    """Generate thumbnail for a video file by extracting first frame."""
+def generate_thumbnail_for_video(video_path: Path, output_path: Path, height: int = None) -> bool:
+    """Generate thumbnail for a video file by extracting first frame.
+    
+    Args:
+        video_path: Path to the source video
+        output_path: Path where thumbnail will be saved
+        height: Height in pixels for the thumbnail (if None, uses settings.thumbnail_height)
+    """
     state = get_state()
     try:
+        if height is None:
+            height = state.settings.thumbnail_height
+            
         # Use ffmpeg to extract first frame
         cmd = [
             "ffmpeg", "-y", "-i", str(video_path), 
-            "-vf", f"scale=-1:{state.settings.thumbnail_height}",
+            "-vf", f"scale=-1:{height}",
             "-vframes", "1", "-q:v", "2",
             str(output_path)
         ]
@@ -82,17 +116,19 @@ def generate_thumbnail_for_video(video_path: Path, output_path: Path) -> bool:
 
 
 def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) -> None:
-    """Generate thumbnails for all media files in the directory."""
+    """Generate thumbnails for all media files in the directory.
+    Generates both regular and large thumbnails."""
     state = get_state()
     
     if not state.settings.generate_thumbnails:
         return
     
-    # Initialize progress tracking
+    # Initialize progress tracking - check for both regular and large thumbnails
     files_needing_thumbnails = []
     for media_file in file_list:
-        thumb_path = get_thumbnail_path_for(media_file)
-        if not thumb_path.exists():
+        thumb_path = get_thumbnail_path_for(media_file, large=False)
+        large_thumb_path = get_thumbnail_path_for(media_file, large=True)
+        if not thumb_path.exists() or not large_thumb_path.exists():
             files_needing_thumbnails.append(media_file)
     
     total_files = len(files_needing_thumbnails)
@@ -118,17 +154,49 @@ def generate_thumbnails_for_directory(directory: Path, file_list: List[Path]) ->
                 "current_file": media_file.name
             })
             
-            thumb_path = get_thumbnail_path_for(media_file)
+            thumb_path = get_thumbnail_path_for(media_file, large=False)
+            large_thumb_path = get_thumbnail_path_for(media_file, large=True)
             
-            # Generate thumbnail based on file type
-            success = False
+            # Generate thumbnails based on file type
+            success_regular = False
+            success_large = False
             name_lower = media_file.name.lower()
-            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
-                success = generate_thumbnail_for_image(media_file, thumb_path)
-            elif name_lower.endswith('.mp4'):
-                success = generate_thumbnail_for_video(media_file, thumb_path)
             
-            if success:
+            if name_lower.endswith(('.png', '.jpg', '.jpeg')):
+                # Generate regular thumbnail
+                if not thumb_path.exists():
+                    success_regular = generate_thumbnail_for_image(
+                        media_file, thumb_path, state.settings.thumbnail_height
+                    )
+                else:
+                    success_regular = True
+                    
+                # Generate large thumbnail
+                if not large_thumb_path.exists():
+                    success_large = generate_thumbnail_for_image(
+                        media_file, large_thumb_path, state.settings.large_thumbnail_height
+                    )
+                else:
+                    success_large = True
+                    
+            elif name_lower.endswith('.mp4'):
+                # Generate regular thumbnail
+                if not thumb_path.exists():
+                    success_regular = generate_thumbnail_for_video(
+                        media_file, thumb_path, state.settings.thumbnail_height
+                    )
+                else:
+                    success_regular = True
+                    
+                # Generate large thumbnail
+                if not large_thumb_path.exists():
+                    success_large = generate_thumbnail_for_video(
+                        media_file, large_thumb_path, state.settings.large_thumbnail_height
+                    )
+                else:
+                    success_large = True
+            
+            if success_regular and success_large:
                 generated += 1
                 
     finally:

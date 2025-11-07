@@ -2409,9 +2409,9 @@ function createTileViewItem(item, index) {
   const img = document.createElement('img');
   img.className = 'tile-view-item-image';
   
-  // Use thumbnail if available, otherwise use the full media
+  // Use large thumbnail for tile view if available, otherwise use the full media
   if (thumbnailsEnabled) {
-    img.src = `/thumbnail/${encodeURIComponent(item.name)}`;
+    img.src = `/thumbnail/${encodeURIComponent(item.name)}?size=large`;
     // Fallback to full media if thumbnail fails
     img.onerror = function() {
       if (isImageName(item.name)) {
