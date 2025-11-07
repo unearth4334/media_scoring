@@ -2343,6 +2343,10 @@ document.addEventListener('DOMContentLoaded', function() {
    TILE VIEW FUNCTIONALITY
    --------------------------------------------------------- */
 
+// Constants for tile view
+const TILE_VIEW_LANDSCAPE_THRESHOLD = 1.3; // Width/height ratio to determine landscape orientation
+const TILE_VIEW_VIDEO_PLACEHOLDER_COLOR = '#333'; // Background color for video placeholders
+
 // Open tile view
 function openTileView() {
   const tileViewOverlay = document.getElementById('tile-view-overlay');
@@ -2413,7 +2417,7 @@ function createTileViewItem(item, index) {
         img.src = `/media/${encodeURIComponent(item.name)}`;
       } else {
         // For videos, show a placeholder
-        img.style.backgroundColor = '#333';
+        img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
         img.alt = 'Video: ' + item.name;
       }
     };
@@ -2422,14 +2426,14 @@ function createTileViewItem(item, index) {
       img.src = `/media/${encodeURIComponent(item.name)}`;
     } else {
       // For videos without thumbnails, show placeholder
-      img.style.backgroundColor = '#333';
+      img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
       img.alt = 'Video: ' + item.name;
     }
   }
   
   // When image loads, check its dimensions to determine if landscape
   img.onload = function() {
-    if (img.naturalWidth > img.naturalHeight * 1.3) {
+    if (img.naturalWidth > img.naturalHeight * TILE_VIEW_LANDSCAPE_THRESHOLD) {
       tile.classList.add('landscape');
     }
   };
