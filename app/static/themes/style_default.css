@@ -2519,7 +2519,7 @@ body.maximized .mobile-scorebar {
 
 .tile-view-item-image {
   width: 100%;
-  aspect-ratio: 3/4; /* Default portrait aspect ratio */
+  aspect-ratio: 3/4; /* Portrait aspect ratio (width/height) */
   object-fit: cover;
   display: block;
   background: #1a1a1a;

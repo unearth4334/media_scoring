@@ -2400,12 +2400,6 @@ function createTileViewItem(item, index) {
     tile.classList.add('current');
   }
   
-  // Determine if landscape or portrait
-  // We'll use a heuristic: if the filename contains certain patterns or check metadata
-  // For now, let's use a simple approach: check if it's a video (likely landscape)
-  // or we can fetch dimensions from metadata
-  const isVideo = isVideoName(item.name);
-  
   // Create image element
   const img = document.createElement('img');
   img.className = 'tile-view-item-image';
