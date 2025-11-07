@@ -21,6 +21,7 @@ from ..services.files import discover_files, read_score
 from ..services.metadata import extract_metadata, extract_keywords_from_metadata
 from ..services.nsfw_detection import detect_image_nsfw, is_nsfw_detection_available
 from ..utils.hashing import compute_media_file_id, compute_perceptual_hash
+from ..utils.sanitization import sanitize_file_data
 
 
 router = APIRouter()
@@ -812,19 +813,22 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
     Returns error message if failed, None if successful.
     """
     try:
+        # Sanitize file data to remove NUL characters that would cause database errors
+        sanitized_data = sanitize_file_data(file_data)
+        
         # Create or update media file
-        file_path = Path(file_data["file_path"])
+        file_path = Path(sanitized_data["file_path"])
         media_file = db.get_or_create_media_file(file_path)
         
         # Update file attributes
-        if "score" in file_data:
-            media_file.score = file_data["score"]
+        if "score" in sanitized_data:
+            media_file.score = sanitized_data["score"]
         
         # Handle NSFW detection results
-        if "nsfw_score" in file_data and file_data["nsfw_score"] is not None:
-            media_file.nsfw_score = file_data["nsfw_score"]
-            media_file.nsfw_label = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
-            media_file.nsfw = file_data["nsfw_label"] == "nsfw" if file_data["nsfw_label"] else False
+        if "nsfw_score" in sanitized_data and sanitized_data["nsfw_score"] is not None:
+            media_file.nsfw_score = sanitized_data["nsfw_score"]
+            media_file.nsfw_label = sanitized_data["nsfw_label"] == "nsfw" if sanitized_data["nsfw_label"] else False
+            media_file.nsfw = sanitized_data["nsfw_label"] == "nsfw" if sanitized_data["nsfw_label"] else False
             media_file.nsfw_model = "Marqo/nsfw-image-detection-384"
             media_file.nsfw_model_version = "1.0"
             media_file.nsfw_threshold = parameters["nsfw_threshold"]
@@ -833,27 +837,43 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
             media_file.nsfw = False
             media_file.nsfw_score = None
             media_file.nsfw_label = None
-        if "media_file_id" in file_data:
-            media_file.media_file_id = file_data["media_file_id"]
-        if "phash" in file_data:
-            media_file.phash = file_data["phash"]
+        if "media_file_id" in sanitized_data:
+            media_file.media_file_id = sanitized_data["media_file_id"]
+        if "phash" in sanitized_data:
+            media_file.phash = sanitized_data["phash"]
+        
+        # Flush changes to detect any database errors early
+        db.session.flush()
         
         # Store metadata
-        if "metadata" in file_data:
-            db.store_media_metadata(file_path, file_data["metadata"])
+        if "metadata" in sanitized_data:
+            db.store_media_metadata(file_path, sanitized_data["metadata"])
+            db.session.flush()
         
         # Store keywords
-        if "keywords" in file_data and file_data["keywords"]:
-            db.add_keywords(file_path, file_data["keywords"], keyword_type='extracted', source='comfyui')
+        if "keywords" in sanitized_data and sanitized_data["keywords"]:
+            db.add_keywords(file_path, sanitized_data["keywords"], keyword_type='extracted', source='comfyui')
+            db.session.flush()
         
         return None  # Success
         
     except Exception as e:
-        return f"Error committing {file_data['filename']}: {str(e)}"
+        # If there's an error, rollback this transaction
+        if db.session:
+            db.session.rollback()
+        error_msg = f"Error committing {file_data.get('filename', 'unknown')}: {str(e)}"
+        logging.error(error_msg)
+        return error_msg
 
 
 async def commit_data_background(session_id: str):
-    """Background task to commit processed data to database."""
+    """Background task to commit processed data to database.
+    
+    Note: This function processes all files in a single database transaction.
+    For very large batches (>1000 files), consider processing in smaller chunks
+    to avoid connection timeouts. Individual file errors are handled gracefully
+    via rollback in _commit_single_file, allowing the batch to continue.
+    """
     session = processing_sessions[session_id]
     
     try:
@@ -863,6 +883,8 @@ async def commit_data_background(session_id: str):
         
         processed_data = session["processed_data"]
         parameters = session["parameters"]
+        successful_commits = 0
+        failed_commits = 0
         
         with DatabaseService() as db:
             for i, file_data in enumerate(processed_data):
@@ -874,9 +896,22 @@ async def commit_data_background(session_id: str):
                 
                 # Run database operations in thread pool to prevent blocking
                 error_msg = await asyncio.to_thread(_commit_single_file, db, file_data, parameters)
+                
                 if error_msg:
                     session["commit_errors"].append(error_msg)
+                    failed_commits += 1
                     logging.error(error_msg)
+                else:
+                    successful_commits += 1
+                    
+                    # Log progress periodically
+                    if successful_commits % 10 == 0:
+                        logging.info(f"Successfully processed {successful_commits} files so far")
+            
+            # The context manager will automatically commit all successful changes when exiting
+        
+        # Log final statistics
+        logging.info(f"Commit completed: {successful_commits} successful, {failed_commits} failed")
         
         session["status"] = STATUS_COMMITTED
         session["commit_progress"] = 100
