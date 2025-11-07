@@ -33,6 +33,20 @@ processing_sessions: Dict[str, Dict] = {}
 SESSION_DIR = Path(tempfile.gettempdir()) / "media_scoring_sessions"
 SESSION_DIR.mkdir(exist_ok=True)
 
+# Session status constants
+STATUS_STARTING = "starting"
+STATUS_PROCESSING = "processing"
+STATUS_COMPLETED = "completed"
+STATUS_ERROR = "error"
+STATUS_COMMITTING = "committing"
+STATUS_COMMITTED = "committed"
+STATUS_COMMIT_ERROR = "commit_error"
+
+# Status groups for filtering active sessions
+ACTIVE_PROCESSING_STATUSES = [STATUS_STARTING, STATUS_PROCESSING, STATUS_COMMITTING]
+PERSISTENT_STATUSES = [STATUS_COMPLETED, STATUS_COMMITTED, STATUS_COMMIT_ERROR]
+ALL_ACTIVE_STATUSES = ACTIVE_PROCESSING_STATUSES + PERSISTENT_STATUSES
+
 
 def validate_session_id(session_id: str) -> str:
     """Validate and sanitize session_id to prevent path traversal.
@@ -75,7 +89,8 @@ async def save_session_to_disk(session_id: str, session_data: Dict):
                 "end_time": session_data.get("end_time"),
                 "parameters": session_data.get("parameters"),
                 "commit_progress": session_data.get("commit_progress"),
-                "commit_errors": session_data.get("commit_errors", [])
+                "commit_errors": session_data.get("commit_errors", []),
+                "commit_error": session_data.get("commit_error")  # Main error message
             }
             with open(session_file, 'w') as f:
                 json.dump(save_data, f)
@@ -422,7 +437,7 @@ async def start_processing(request: ProcessRequest, background_tasks: Background
     processing_sessions[session_id] = {
         "session_id": session_id,
         "parameters": request.parameters.dict(),
-        "status": "starting",
+        "status": STATUS_STARTING,
         "progress": 0,
         "total_files": len(files),
         "total_discovered": total_discovered,
@@ -472,7 +487,7 @@ async def get_active_session():
     
     # Check in-memory sessions for active ones
     for session_id, session in processing_sessions.items():
-        if session["status"] in ["starting", "processing", "committing"]:
+        if session["status"] in ALL_ACTIVE_STATUSES:
             start_time = datetime.fromisoformat(session["start_time"])
             if most_recent_time is None or start_time > most_recent_time:
                 most_recent_session = {"session_id": session_id, "status": session["status"]}
@@ -495,7 +510,7 @@ async def get_active_session():
             continue
         
         # Prioritize in-progress sessions
-        if session_data.get("status") in ["starting", "processing", "committing"]:
+        if session_data.get("status") in ACTIVE_PROCESSING_STATUSES:
             if most_recent_time is None or start_time > most_recent_time:
                 # Restore to memory
                 processing_sessions[session_id] = {
@@ -505,8 +520,8 @@ async def get_active_session():
                 }
                 most_recent_session = {"session_id": session_id, "status": session_data["status"]}
                 most_recent_time = start_time
-        # Return most recent completed session (persist until committed or canceled)
-        elif session_data.get("status") == "completed":
+        # Return most recent completed/committed/error sessions (persist until cleared)
+        elif session_data.get("status") in PERSISTENT_STATUSES:
             if most_recent_time is None or start_time > most_recent_time:
                 # Restore to memory for viewing
                 processing_sessions[session_id] = {
@@ -613,7 +628,7 @@ async def commit_to_database(request: CommitRequest, background_tasks: Backgroun
     ensure_processed_data_loaded(session, request.session_id)
     
     # Start background commit
-    session["status"] = "committing"
+    session["status"] = STATUS_COMMITTING
     session["commit_progress"] = 0
     background_tasks.add_task(commit_data_background, request.session_id)
     
@@ -627,7 +642,16 @@ async def commit_to_database(request: CommitRequest, background_tasks: Backgroun
 async def get_commit_status(session_id: str):
     """Get the current commit status."""
     if session_id not in processing_sessions:
-        raise HTTPException(404, "Session not found")
+        # Try loading from disk
+        session_data = load_session_from_disk(session_id)
+        if session_data:
+            processing_sessions[session_id] = {
+                **session_data,
+                "files": [],
+                "processed_data": []
+            }
+        else:
+            raise HTTPException(404, "Session not found")
     
     session = processing_sessions[session_id]
     
@@ -635,7 +659,8 @@ async def get_commit_status(session_id: str):
         "session_id": session_id,
         "status": session["status"],
         "commit_progress": session.get("commit_progress", 0),
-        "commit_errors": session.get("commit_errors", [])[-10:]  # Last 10 errors
+        "commit_errors": session.get("commit_errors", [])[-10:],  # Last 10 errors
+        "commit_error": session.get("commit_error")  # Main error message for commit_error status
     }
 
 
@@ -668,7 +693,7 @@ async def process_files_background(session_id: str, files: List[Path], parameter
     session = processing_sessions[session_id]
     
     try:
-        session["status"] = "processing"
+        session["status"] = STATUS_PROCESSING
         await save_session_to_disk(session_id, session)  # Save initial state
         logging.info(f"Starting background processing for session {session_id} with {len(files)} files")
         
@@ -713,26 +738,17 @@ async def process_files_background(session_id: str, files: List[Path], parameter
                 session["stats"]["errors"] += 1
                 logging.error(error_msg)
         
-        session["status"] = "completed"
+        session["status"] = STATUS_COMPLETED
         session["progress"] = 100
         session["end_time"] = datetime.now().isoformat()
         await save_session_to_disk(session_id, session)  # Save final state
         logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
         
     except Exception as e:
-        session["status"] = "error"
+        session["status"] = STATUS_ERROR
         session["error"] = str(e)
         session["end_time"] = datetime.now().isoformat()
         await save_session_to_disk(session_id, session)  # Save error state
-        logging.error(f"Processing failed for session {session_id}: {e}")
-        session["progress"] = 100
-        session["end_time"] = datetime.now().isoformat()
-        logging.info(f"Completed processing for session {session_id}. Final stats: {session['stats']}")
-        
-    except Exception as e:
-        session["status"] = "error"
-        session["error"] = str(e)
-        session["end_time"] = datetime.now().isoformat()
         logging.error(f"Processing failed for session {session_id}: {e}")
 
 
@@ -843,7 +859,7 @@ async def commit_data_background(session_id: str):
     
     try:
         session["commit_errors"] = []
-        session["status"] = "committing"
+        session["status"] = STATUS_COMMITTING
         await save_session_to_disk(session_id, session)  # Save committing state
         
         processed_data = session["processed_data"]
@@ -863,12 +879,12 @@ async def commit_data_background(session_id: str):
                     session["commit_errors"].append(error_msg)
                     logging.error(error_msg)
         
-        session["status"] = "committed"
+        session["status"] = STATUS_COMMITTED
         session["commit_progress"] = 100
         await save_session_to_disk(session_id, session)  # Save final committed state
         
     except Exception as e:
-        session["status"] = "commit_error"
+        session["status"] = STATUS_COMMIT_ERROR
         session["commit_error"] = str(e)
         await save_session_to_disk(session_id, session)  # Save error state
         logging.error(f"Commit failed for session {session_id}: {e}")

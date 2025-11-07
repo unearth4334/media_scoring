@@ -1215,11 +1215,15 @@
         <div class="success-message">
           <h4>✅ Successfully Committed to Database!</h4>
           <p>All processed data has been saved to your database. You can now view the files in the main application.</p>
+          <p><em>This notice will persist until you clear it or start a new session.</em></p>
           <button type="button" class="btn btn-primary" onclick="window.location.href='/'">
             🏠 Return to Main App
           </button>
           <button type="button" class="btn btn-secondary" onclick="startNewSession()">
             🔄 Process More Files
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="clearSessionNotice()">
+            ❌ Clear Notice
           </button>
         </div>
       `;
@@ -1231,8 +1235,12 @@
         <div class="error-list">
           <h4>❌ Commit Failed</h4>
           <p>Error: ${error}</p>
+          <p><em>This error notice will persist until you clear it or start a new session.</em></p>
           <button type="button" class="btn btn-secondary" onclick="startNewSession()">
             🔄 Start Over
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="clearSessionNotice()">
+            ❌ Clear Notice
           </button>
         </div>
       `;
@@ -1249,6 +1257,49 @@
           </button>
         </div>
       `;
+    }
+
+    function clearSessionNotice() {
+      // Clean up current session without resetting the form
+      if (currentSessionId) {
+        fetch(`/api/ingest/session/${currentSessionId}`, { method: 'DELETE' })
+          .then(() => {
+            console.log('Session cleared');
+            // Reset to initial state
+            currentSessionId = null;
+            updateWorkflowStep(1);
+            showSection('parameters-form');
+            
+            // Reset buttons (with null checks)
+            const processBtn = document.getElementById('process-btn');
+            if (processBtn) {
+              processBtn.disabled = false;
+              processBtn.textContent = '🚀 Start Processing';
+            }
+            const commitBtn = document.getElementById('commit-btn');
+            if (commitBtn) {
+              commitBtn.disabled = false;
+              commitBtn.textContent = '💾 Commit to Database';
+            }
+            
+            // Clear progress bars (with null checks)
+            const progressBar = document.getElementById('progress-bar');
+            if (progressBar) progressBar.style.width = '0%';
+            
+            const commitProgressBar = document.getElementById('commit-progress-bar');
+            if (commitProgressBar) commitProgressBar.style.width = '0%';
+            
+            const errorContainer = document.getElementById('error-container');
+            if (errorContainer) errorContainer.innerHTML = '';
+            
+            const commitResult = document.getElementById('commit-result');
+            if (commitResult) commitResult.innerHTML = '';
+          })
+          .catch(err => {
+            console.error('Failed to clear session:', err);
+            alert('Failed to clear session. Please try again.');
+          });
+      }
     }
 
     function startNewSession() {
@@ -1536,18 +1587,55 @@
             const viewReportBtn = document.getElementById('view-report-btn');
             viewReportBtn.href = `/api/ingest/report/${currentSessionId}`;
           } else if (data.status === 'committing') {
+            // Restore commit in-progress state
             updateWorkflowStep(4);
             showSection('commit-section');
+            
+            // Fetch current commit status to restore progress
+            const statusResponse = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
+            if (statusResponse.ok) {
+              const status = await statusResponse.json();
+              updateCommitDisplay(status);
+            }
+            
+            // Start polling for commit progress
             startCommitPolling();
           } else if (data.status === 'committed') {
+            // Show success message that persists
             updateWorkflowStep(4);
             showSection('commit-section');
-            document.getElementById('commit-result').innerHTML = `
-              <div class="alert alert-success">
-                <strong>✅ Success!</strong> All data has been committed to the database.
-              </div>
-              <button class="btn btn-primary" onclick="startNewSession()">Start New Session</button>
-            `;
+            
+            // Fetch final commit status to show any errors
+            const statusResponse = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
+            if (statusResponse.ok) {
+              const status = await statusResponse.json();
+              // Update progress bar to 100% (with null checks)
+              const progressPercentage = document.getElementById('commit-progress-percentage');
+              if (progressPercentage) progressPercentage.textContent = '100%';
+              
+              const progressBar = document.getElementById('commit-progress-bar');
+              if (progressBar) progressBar.style.width = '100%';
+              
+              const progressText = document.getElementById('commit-progress-text');
+              if (progressText) progressText.textContent = 'Commit completed';
+            }
+            
+            // Show success message
+            showCommitSuccess();
+          } else if (data.status === 'commit_error') {
+            // Show error message that persists
+            updateWorkflowStep(4);
+            showSection('commit-section');
+            
+            // Fetch commit error details
+            const statusResponse = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
+            if (statusResponse.ok) {
+              const status = await statusResponse.json();
+              const errorMsg = status.commit_error || 'Unknown error occurred during commit';
+              showCommitError(errorMsg);
+            } else {
+              showCommitError('Unknown error occurred during commit');
+            }
           }
         }
       } catch (error) {
