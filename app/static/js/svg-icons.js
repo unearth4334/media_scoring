@@ -72,16 +72,20 @@ function svgMinimize() {
 }
 
 /**
- * Thumbnail icon - grid layout (single icon for checkbox toggle)
+ * Thumbnail icon - list view with thumbnails and text (single icon for checkbox toggle)
+ * Shows squares on the left (thumbnails) and horizontal lines on the right (text)
  * @returns {string} SVG markup
  */
 function svgThumbnail() {
   return `
 <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-  <rect x="3" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="14" y="3" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="3" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
-  <rect x="14" y="14" width="7" height="7" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <rect x="3" y="3" width="5" height="5" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <line x1="11" y1="4.5" x2="21" y2="4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="11" y1="7.5" x2="18" y2="7.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="3" y="11" width="5" height="5" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
+  <line x1="11" y1="12.5" x2="21" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="11" y1="15.5" x2="18" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+  <rect x="3" y="19" width="5" height="5" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
 </svg>`;
 }
 
