@@ -1270,17 +1270,30 @@
             updateWorkflowStep(1);
             showSection('parameters-form');
             
-            // Reset buttons
-            document.getElementById('process-btn').disabled = false;
-            document.getElementById('process-btn').textContent = '🚀 Start Processing';
-            document.getElementById('commit-btn').disabled = false;
-            document.getElementById('commit-btn').textContent = '💾 Commit to Database';
+            // Reset buttons (with null checks)
+            const processBtn = document.getElementById('process-btn');
+            if (processBtn) {
+              processBtn.disabled = false;
+              processBtn.textContent = '🚀 Start Processing';
+            }
+            const commitBtn = document.getElementById('commit-btn');
+            if (commitBtn) {
+              commitBtn.disabled = false;
+              commitBtn.textContent = '💾 Commit to Database';
+            }
             
-            // Clear progress bars
-            document.getElementById('progress-bar').style.width = '0%';
-            document.getElementById('commit-progress-bar').style.width = '0%';
-            document.getElementById('error-container').innerHTML = '';
-            document.getElementById('commit-result').innerHTML = '';
+            // Clear progress bars (with null checks)
+            const progressBar = document.getElementById('progress-bar');
+            if (progressBar) progressBar.style.width = '0%';
+            
+            const commitProgressBar = document.getElementById('commit-progress-bar');
+            if (commitProgressBar) commitProgressBar.style.width = '0%';
+            
+            const errorContainer = document.getElementById('error-container');
+            if (errorContainer) errorContainer.innerHTML = '';
+            
+            const commitResult = document.getElementById('commit-result');
+            if (commitResult) commitResult.innerHTML = '';
           })
           .catch(err => {
             console.error('Failed to clear session:', err);
