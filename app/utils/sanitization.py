@@ -25,7 +25,7 @@ def sanitize_string(value: str) -> str:
     sanitized = value.replace('\x00', '')
     
     if sanitized != value:
-        logger.debug(f"Removed {value.count(chr(0))} NUL character(s) from string")
+        logger.debug(f"Removed {value.count('\x00')} NUL character(s) from string")
     
     return sanitized
 
@@ -107,7 +107,7 @@ def sanitize_file_data(file_data: Dict[str, Any]) -> Dict[str, Any]:
             sanitized[key] = sanitize_dict(value)
         elif key == 'keywords' and isinstance(value, list):
             # Sanitize keyword list
-            sanitized[key] = [sanitize_string(k) if isinstance(k, str) else k for k in value]
+            sanitized[key] = sanitize_list(value)
         elif isinstance(value, str):
             # Sanitize string values
             sanitized[key] = sanitize_string(value)
