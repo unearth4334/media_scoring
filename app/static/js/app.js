@@ -2346,6 +2346,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Constants for tile view
 const TILE_VIEW_LANDSCAPE_THRESHOLD = 1.3; // Width/height ratio to determine landscape orientation
 const TILE_VIEW_VIDEO_PLACEHOLDER_COLOR = '#333'; // Background color for video placeholders
+const TILE_VIEW_TRANSPARENT_PIXEL = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'; // 1x1 transparent pixel
 
 // Open tile view
 function openTileView() {
@@ -2430,7 +2431,7 @@ function createTileViewItem(item, index) {
       img.style.backgroundColor = TILE_VIEW_VIDEO_PLACEHOLDER_COLOR;
       img.alt = 'Video: ' + item.name;
       // Use a transparent 1x1 pixel data URI to prevent broken image icon
-      img.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+      img.src = TILE_VIEW_TRANSPARENT_PIXEL;
     }
   }
   
