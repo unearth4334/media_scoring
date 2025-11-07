@@ -85,7 +85,6 @@ function svgThumbnail() {
   <rect x="3" y="11" width="5" height="5" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
   <line x1="11" y1="12.5" x2="21" y2="12.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
   <line x1="11" y1="15.5" x2="18" y2="15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-  <rect x="3" y="19" width="5" height="5" stroke="currentColor" stroke-width="2" fill="currentColor" opacity="0.3"/>
 </svg>`;
 }
 
