@@ -22,10 +22,12 @@ def sanitize_string(value: str) -> str:
         return value
     
     # Remove NUL characters
-    sanitized = value.replace('\x00', '')
+    nul_char = '\x00'
+    sanitized = value.replace(nul_char, '')
     
     if sanitized != value:
-        logger.debug(f"Removed {value.count('\x00')} NUL character(s) from string")
+        nul_count = value.count(nul_char)
+        logger.debug(f"Removed {nul_count} NUL character(s) from string")
     
     return sanitized
 
