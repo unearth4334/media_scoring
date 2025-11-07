@@ -1609,10 +1609,15 @@
             const statusResponse = await fetch(`/api/ingest/commit-status/${currentSessionId}`);
             if (statusResponse.ok) {
               const status = await statusResponse.json();
-              // Update progress bar to 100%
-              document.getElementById('commit-progress-percentage').textContent = '100%';
-              document.getElementById('commit-progress-bar').style.width = '100%';
-              document.getElementById('commit-progress-text').textContent = 'Commit completed';
+              // Update progress bar to 100% (with null checks)
+              const progressPercentage = document.getElementById('commit-progress-percentage');
+              if (progressPercentage) progressPercentage.textContent = '100%';
+              
+              const progressBar = document.getElementById('commit-progress-bar');
+              if (progressBar) progressBar.style.width = '100%';
+              
+              const progressText = document.getElementById('commit-progress-text');
+              if (progressText) progressText.textContent = 'Commit completed';
             }
             
             // Show success message
