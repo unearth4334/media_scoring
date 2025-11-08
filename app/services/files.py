@@ -64,13 +64,34 @@ def read_score(video_path: Path) -> Optional[int]:
         return None
 
 
+def read_favourite(video_path: Path) -> bool:
+    """Read favourite status from sidecar file."""
+    scp = get_sidecar_path_for(video_path)
+    if not scp.exists():
+        return False
+    try:
+        data = json.loads(scp.read_text(encoding="utf-8"))
+        return bool(data.get("favourite", False))
+    except Exception:
+        return False
+
+
 def write_score(video_path: Path, score: int) -> None:
     """Write score to sidecar file and database."""
-    # Write to sidecar file (existing functionality)
+    # Read existing data to preserve favourite status
     scp = get_sidecar_path_for(video_path)
+    existing_data = {}
+    if scp.exists():
+        try:
+            existing_data = json.loads(scp.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    
+    # Write to sidecar file (existing functionality)
     payload = {
         "file": video_path.name,
         "score": int(score),
+        "favourite": existing_data.get("favourite", False),
         "updated": dt.datetime.now().isoformat(timespec="seconds"),
     }
     scp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -83,6 +104,37 @@ def write_score(video_path: Path, score: int) -> None:
                 db.update_media_file_score(video_path, score)
         except Exception as e:
             state.logger.error(f"Failed to update score in database: {e}")
+
+
+def write_favourite(video_path: Path, favourite: bool) -> None:
+    """Write favourite status to sidecar file and database."""
+    # Read existing data to preserve score
+    scp = get_sidecar_path_for(video_path)
+    existing_data = {}
+    if scp.exists():
+        try:
+            existing_data = json.loads(scp.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    
+    # Write to sidecar file
+    payload = {
+        "file": video_path.name,
+        "score": existing_data.get("score", 0),
+        "favourite": bool(favourite),
+        "updated": dt.datetime.now().isoformat(timespec="seconds"),
+    }
+    scp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    
+    # Write to database if enabled
+    state = get_state()
+    if state.database_enabled:
+        try:
+            with state.get_database_service() as db:
+                db.update_media_file_favourite(video_path, favourite)
+        except Exception as e:
+            state.logger.error(f"Failed to update favourite in database: {e}")
+
 
 
 def match_union_pattern(directory: Path, pattern: str) -> List[Path]:

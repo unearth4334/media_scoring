@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from ..state import get_state
-from ..services.files import read_score, write_score, switch_directory
+from ..services.files import read_score, write_score, switch_directory, read_favourite, write_favourite
 from ..services.thumbnails import start_thumbnail_generation
 from ..utils.png_chunks import read_png_parameters_text
 from ..database.models import MediaFile
@@ -146,6 +146,7 @@ async def filter_videos(request: FilterRequest):
                     "name": media_file.filename,
                     "url": f"/media/{relative_path}",
                     "score": media_file.score or 0,
+                    "favourite": media_file.favourite or False,
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
                     "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
@@ -192,6 +193,7 @@ def _get_files_from_filesystem(state):
             "name": p.name,
             "url": f"/media/{p.name}",
             "score": read_score(p) if read_score(p) is not None else 0,
+            "favourite": read_favourite(p),
             "path": str(p),  # Full path
             "created_at": None,  # Not available from filesystem
             "original_created_at": original_created_at,  # Use file modification time
@@ -222,6 +224,7 @@ def _get_files_from_database(state):
                     "name": media_file.filename,
                     "url": f"/media/{relative_path}",
                     "score": media_file.score or 0,
+                    "favourite": media_file.favourite or False,
                     "path": media_file.file_path,
                     "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
                     "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
@@ -723,6 +726,83 @@ async def update_nsfw(req: Request):
     except Exception as e:
         state.logger.error(f"NSFW UPDATE FAILED: file={name} nsfw={nsfw} error={e}")
         raise HTTPException(500, f"Failed to update NSFW status: {str(e)}")
+
+
+@router.post("/favourite")
+async def update_favourite(req: Request):
+    """Update favourite status for a media file."""
+    state = get_state()
+    data = await req.json()
+    name = data.get("name")
+    favourite = bool(data.get("favourite", False))
+    
+    # Initialize variables for database mode
+    media_file = None
+    db_path = None
+    
+    # If database is enabled, find the file by its filename in the database
+    if state.database_enabled:
+        try:
+            db_service = state.get_database_service()
+            if db_service:
+                with db_service as db:
+                    # Find the media file by filename
+                    media_file = db.session.query(MediaFile).filter(
+                        MediaFile.filename == name
+                    ).first()
+                    
+                    if media_file:
+                        # Translate database path (host path) to container path
+                        db_path = media_file.file_path
+                        
+                        # Check if we need to translate from host path to container path
+                        if hasattr(state.settings, 'user_path_prefix') and state.settings.user_path_prefix:
+                            # Replace host path prefix with container path
+                            if db_path.startswith(state.settings.user_path_prefix):
+                                container_path = db_path.replace(state.settings.user_path_prefix, "/media", 1)
+                                target = Path(container_path)
+                            else:
+                                target = Path(db_path)
+                        else:
+                            target = Path(db_path)
+                        
+                        state.logger.info(f"Found file in database for favourite update: {db_path} -> {target}")
+                    else:
+                        state.logger.error(f"File '{name}' not found in database")
+                        raise HTTPException(404, f"File '{name}' not found in database")
+            else:
+                raise HTTPException(503, "Database service not available")
+        except Exception as e:
+            state.logger.error(f"Database error when looking up file for favourite: {e}")
+            raise HTTPException(500, f"Database error: {str(e)}")
+    else:
+        # Original filesystem behavior
+        target = state.video_dir / name
+        if not target.exists() or target not in state.file_list:
+            raise HTTPException(404, "File not found")
+    
+    if not target.exists():
+        state.logger.error(f"File not found on filesystem: {target}")
+        raise HTTPException(404, f"File not found on filesystem: {target}")
+    
+    state.logger.info(f"Updating favourite: file={name} favourite={favourite} path={target}")
+    
+    try:
+        # For database mode, we need to pass the original database path to write_favourite
+        # so the database update uses the correct path for lookup
+        if state.database_enabled and media_file:
+            # Use the original database path for write_favourite to avoid duplicates
+            favourite_path = Path(db_path)
+        else:
+            # Use the translated/filesystem path for non-database mode
+            favourite_path = target
+            
+        write_favourite(favourite_path, favourite)
+        state.logger.info(f"FAVOURITE UPDATE SUCCESS: file={name} favourite={favourite} path={target}")
+        return {"ok": True, "favourite": favourite}
+    except Exception as e:
+        state.logger.error(f"FAVOURITE UPDATE FAILED: file={name} favourite={favourite} error={e}")
+        raise HTTPException(500, f"Failed to update favourite: {str(e)}")
 
 
 @router.post("/key")

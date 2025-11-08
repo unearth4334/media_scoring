@@ -518,6 +518,11 @@ aside#sidebar {
   font-family: monospace;
   white-space: nowrap;
 }
+.item .favourite-indicator {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
 .item.disabled { opacity: 0.4; cursor: default; }
 
 /* =========================================================
@@ -2610,6 +2615,12 @@ body.maximized .mobile-scorebar {
   color: #888;
 }
 
+.tile-view-item-favourite {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
 .tile-view-item-toolbar {
   padding: 8px;
   background: #1a1a1a;
@@ -2660,6 +2671,14 @@ body.maximized .mobile-scorebar {
 
 .tile-view-item-toolbar button.star-btn:hover {
   background: rgba(0, 188, 212, 0.2);
+}
+
+.tile-view-item-toolbar button.favourite-btn {
+  border-color: #ff69b4;
+}
+
+.tile-view-item-toolbar button.favourite-btn:hover {
+  background: rgba(255, 105, 180, 0.2);
 }
 
 /* Star popover for score selection */

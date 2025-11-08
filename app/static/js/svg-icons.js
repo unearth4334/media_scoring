@@ -198,6 +198,32 @@ function svgMenu() {
 }
 
 /**
+ * Heart icon for favourite status (scorebar and toolbar)
+ * @param {boolean} filled - Whether the heart should be filled
+ * @returns {string} SVG markup
+ */
+function svgHeart(filled) {
+  const fill = filled ? "#ff69b4" : "none";  // Hot pink when filled, empty when not
+  const stroke = filled ? "#ff69b4" : "var(--star-stroke-color)";  // Pink stroke when filled, theme stroke when empty
+  return `
+<svg width="40" height="40" viewBox="0 0 40 40">
+  <path d="M20,35 C20,35 4,23 4,13 C4,8 7,5 11,5 C14,5 17,7 20,11 C23,7 26,5 29,5 C33,5 36,8 36,13 C36,23 20,35 20,35 Z"
+    fill="${fill}" stroke="${stroke}" stroke-width="2"/>
+</svg>`;
+}
+
+/**
+ * Small heart icon for indicators in sidebar and tileview
+ * @returns {string} SVG markup
+ */
+function svgHeartSmall() {
+  return `
+<svg width="14" height="14" viewBox="0 0 24 24" fill="#ff69b4" stroke="#ff69b4" stroke-width="1.5">
+  <path d="M12,21 C12,21 3,14 3,8 C3,5 5,3 7.5,3 C9.5,3 11,4.5 12,6.5 C13,4.5 14.5,3 16.5,3 C19,3 21,5 21,8 C21,14 12,21 12,21 Z"/>
+</svg>`;
+}
+
+/**
  * Mobile reject icon - red X in red circle
  * @returns {string} SVG markup
  */

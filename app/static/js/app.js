@@ -564,7 +564,7 @@ function updateThumbnailToggleButton(){
   icon.innerHTML = svgThumbnail();
   icon.title = showThumbnails ? 'Hide thumbnails' : 'Show thumbnails';
 }
-function renderScoreBar(score){
+function renderScoreBar(score, favourite){
   const bar = document.getElementById("scorebar");
   let html = `<div style="display:flex; gap:8px; align-items:center; justify-content:space-between;">`;
   html += `<div style="display:flex; gap:8px; align-items:center;">`;
@@ -589,6 +589,10 @@ function renderScoreBar(score){
   
   html += `</div>`;
   html += `<div style="display:flex; gap:8px; align-items:center;">`;
+  // Add favourite toggle
+  html += `<button id="scorebar-favourite" class="scorebar-icon-btn" title="${favourite ? 'Remove from favourites' : 'Add to favourites'}" style="background:none; border:none; padding:0; cursor:pointer;">`;
+  html += svgHeart(favourite);
+  html += `</button>`;
   html += `<button id="media-download-btn" class="maximize-btn" title="Download current media" disabled>`;
   html += svgDownload();
   html += `</button>`;
@@ -632,6 +636,14 @@ function renderScoreBar(score){
         postScore(i);
       });
     }
+  }
+  
+  // Attach event listener to favourite toggle
+  const favouriteBtn = document.getElementById('scorebar-favourite');
+  if (favouriteBtn) {
+    favouriteBtn.addEventListener('click', () => {
+      postFavourite(!favourite);
+    });
   }
 }
 
@@ -1157,6 +1169,7 @@ function renderSidebar(){
             `<div class="name" title="${v.name}">${v.name}</div>` +
             `<div class="meta-row">` +
             `<div class="score">${s}</div>` +
+            (v.favourite ? `<span class="favourite-indicator">${svgHeartSmall()}</span>` : '') +
             (datePill ? `<div class="date-pill">${datePill}</div>` : '') +
             `</div>` +
             `</div>` +
@@ -1303,7 +1316,7 @@ function show(i){
     clipboardBtn.style.display = 'none';
     const player = document.getElementById('player');
     player.removeAttribute('src'); player.load();
-    renderScoreBar(0);
+    renderScoreBar(0, false);
     updateDownloadButton(null);
     updateMediaDownloadButton(null);
     const controls = document.getElementById('pnginfo_controls'); if (controls) controls.style.display='none';
@@ -1361,7 +1374,7 @@ function show(i){
     }).catch(()=>{ setupPngInfo(null, v.name); });
 
   updateDownloadButton(v.name);
-  renderScoreBar(v.score || 0);
+  renderScoreBar(v.score || 0, v.favourite || false);
   updateMediaDownloadButton(v.name);
   renderSidebar();
 }
@@ -1505,6 +1518,41 @@ async function postScore(score){
     renderSidebar();
   } catch (error) {
     console.error('Network error updating score:', error);
+  }
+}
+
+async function postFavourite(favourite){
+  const v = filtered[idx];
+  if (!v) return;
+  
+  try {
+    const response = await fetch('/api/favourite', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ name: v.name, favourite: favourite })
+    });
+    
+    if (!response.ok) {
+      console.error('Failed to update favourite:', response.status, response.statusText);
+      return; // Don't update local state if API call failed
+    }
+    
+    const result = await response.json();
+    if (!result.ok) {
+      console.error('Favourite update failed:', result);
+      return; // Don't update local state if API returned error
+    }
+    
+    // Only update local state if API call succeeded
+    const source = videos.find(x => x.name === v.name);
+    if (source) source.favourite = favourite;
+    v.favourite = favourite;
+    
+    // Refresh the view to show updated favourite status
+    renderScoreBar(v.score || 0, v.favourite || false);
+    renderSidebar();
+  } catch (error) {
+    console.error('Network error updating favourite:', error);
   }
 }
 
@@ -2558,6 +2606,20 @@ function createTileViewItem(item, index) {
     });
     toolbar.appendChild(starBtn);
     
+    // Favourite button
+    const favouriteBtn = document.createElement('button');
+    favouriteBtn.className = 'toolbar-btn favourite-btn';
+    favouriteBtn.innerHTML = svgHeart(item.favourite);
+    favouriteBtn.title = item.favourite ? 'Remove from favourites' : 'Add to favourites';
+    favouriteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeStarPopover();
+      // Set current item and toggle favourite
+      idx = index;
+      postFavourite(!item.favourite);
+    });
+    toolbar.appendChild(favouriteBtn);
+    
     tile.appendChild(toolbar);
   } else {
     // Create info section (normal mode)
@@ -2588,6 +2650,14 @@ function createTileViewItem(item, index) {
       score.textContent = '—';
     }
     meta.appendChild(score);
+    
+    // Favourite indicator
+    if (item.favourite) {
+      const favourite = document.createElement('span');
+      favourite.className = 'tile-view-item-favourite';
+      favourite.innerHTML = svgHeartSmall();
+      meta.appendChild(favourite);
+    }
     
     // Date if available
     if (item.original_created_at) {

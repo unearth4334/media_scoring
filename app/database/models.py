@@ -26,6 +26,7 @@ class MediaFile(Base):
     file_type = Column(String(50))  # 'video', 'image'
     extension = Column(String(10))
     score = Column(Integer, default=0)  # -1 to 5
+    favourite = Column(Boolean, nullable=False, default=False)  # Favourite flag
     # NSFW detection fields
     nsfw = Column(Boolean, nullable=False, default=False)  # Main NSFW boolean flag
     nsfw_score = Column(Float, nullable=True)  # NSFW probability score (0.0-1.0)
@@ -62,6 +63,7 @@ class MediaFile(Base):
         Index('idx_media_nsfw', 'nsfw'),
         Index('idx_media_nsfw_score', 'nsfw_score'),
         Index('idx_media_nsfw_label', 'nsfw_label'),
+        Index('idx_media_favourite', 'favourite'),
     )
     
     def __repr__(self):

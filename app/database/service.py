@@ -97,6 +97,23 @@ class DatabaseService:
         ).first()
         return media_file.score if media_file else None
     
+    @log_db_operation("update_media_file_favourite")
+    def update_media_file_favourite(self, file_path: Path, favourite: bool) -> bool:
+        """Update the favourite status for a media file."""
+        media_file = self.get_or_create_media_file(file_path)
+        media_file.favourite = favourite
+        media_file.updated_at = datetime.utcnow()
+        return True
+    
+    @log_db_operation("get_media_file_favourite")
+    def get_media_file_favourite(self, file_path: Path) -> bool:
+        """Get the favourite status for a media file."""
+        file_path_str = str(file_path.resolve())
+        media_file = self.session.query(MediaFile).filter(
+            MediaFile.file_path == file_path_str
+        ).first()
+        return media_file.favourite if media_file else False
+    
     @log_db_operation("media_file_exists")
     def media_file_exists(self, file_path: Path) -> bool:
         """Check if a media file already exists in the database."""
