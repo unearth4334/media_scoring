@@ -1,6 +1,9 @@
 // Toolbar collapse functionality
 let toolbarCollapsed = false;
 
+// Quick score mode for tile view
+let quickScoreMode = false;
+
 function toggleToolbar() {
   const container = document.getElementById('toolbar-container');
   const toggleBtn = document.getElementById('toolbar-toggle');
@@ -2395,6 +2398,36 @@ function populateTileView() {
   });
 }
 
+// Toggle quick score mode for tile view
+function toggleQuickScoreMode() {
+  quickScoreMode = !quickScoreMode;
+  
+  const toggleBtn = document.getElementById('quick-score-toggle');
+  if (toggleBtn) {
+    if (quickScoreMode) {
+      toggleBtn.classList.add('active');
+      toggleBtn.title = 'Disable Quick Score Mode';
+    } else {
+      toggleBtn.classList.remove('active');
+      toggleBtn.title = 'Enable Quick Score Mode';
+    }
+  }
+  
+  // Close any open popover
+  closeStarPopover();
+  
+  // Repopulate the tile grid to show/hide toolbars
+  populateTileView();
+}
+
+// Close any open star popover
+function closeStarPopover() {
+  const openPopover = document.querySelector('.star-popover');
+  if (openPopover) {
+    openPopover.remove();
+  }
+}
+
 // Create a single tile view item
 function createTileViewItem(item, index) {
   const tile = document.createElement('div');
@@ -2444,48 +2477,137 @@ function createTileViewItem(item, index) {
   
   tile.appendChild(img);
   
-  // Create info section
-  const info = document.createElement('div');
-  info.className = 'tile-view-item-info';
-  
-  // Filename
-  const name = document.createElement('div');
-  name.className = 'tile-view-item-name';
-  name.textContent = item.name;
-  name.title = item.name;
-  info.appendChild(name);
-  
-  // Meta info (score, date)
-  const meta = document.createElement('div');
-  meta.className = 'tile-view-item-meta';
-  
-  // Score badge
-  const score = document.createElement('span');
-  score.className = 'tile-view-item-score';
-  if (item.score === -1) {
-    score.textContent = 'R';
-    score.classList.add('rejected');
-  } else if (item.score && item.score > 0) {
-    score.textContent = item.score + '★';
-    score.classList.add('rated');
+  // Conditionally create info section or toolbar based on quick score mode
+  if (quickScoreMode) {
+    // Create toolbar for quick scoring
+    const toolbar = document.createElement('div');
+    toolbar.className = 'tile-view-item-toolbar';
+    
+    // Reject button
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'toolbar-btn reject-btn';
+    rejectBtn.innerHTML = svgReject(item.score === -1);
+    rejectBtn.title = 'Reject';
+    rejectBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeStarPopover();
+      // Set current item and post score
+      idx = index;
+      postScore(-1);
+    });
+    toolbar.appendChild(rejectBtn);
+    
+    // Clear button
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'toolbar-btn clear-btn';
+    clearBtn.innerHTML = svgClear(item.score === 0);
+    clearBtn.title = 'Clear Score';
+    clearBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeStarPopover();
+      // Set current item and post score
+      idx = index;
+      postScore(0);
+    });
+    toolbar.appendChild(clearBtn);
+    
+    // Star button (opens popover)
+    const starBtn = document.createElement('button');
+    starBtn.className = 'toolbar-btn star-btn';
+    starBtn.style.position = 'relative';
+    starBtn.innerHTML = svgStar(item.score > 0);
+    starBtn.title = 'Assign Score';
+    starBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      
+      // Close any existing popover
+      closeStarPopover();
+      
+      // Create popover
+      const popover = document.createElement('div');
+      popover.className = 'star-popover';
+      
+      // Create 5 star buttons
+      for (let i = 1; i <= 5; i++) {
+        const starScoreBtn = document.createElement('button');
+        starScoreBtn.className = 'star-popover-btn';
+        starScoreBtn.innerHTML = svgStar(false);
+        starScoreBtn.title = `Score ${i}`;
+        starScoreBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeStarPopover();
+          // Set current item and post score
+          idx = index;
+          postScore(i);
+        });
+        popover.appendChild(starScoreBtn);
+      }
+      
+      // Add popover to button
+      starBtn.appendChild(popover);
+      
+      // Close popover when clicking outside
+      setTimeout(() => {
+        document.addEventListener('click', function closePopoverOnClickOutside(e) {
+          if (!popover.contains(e.target)) {
+            closeStarPopover();
+            document.removeEventListener('click', closePopoverOnClickOutside);
+          }
+        });
+      }, 0);
+    });
+    toolbar.appendChild(starBtn);
+    
+    tile.appendChild(toolbar);
   } else {
-    score.textContent = '—';
+    // Create info section (normal mode)
+    const info = document.createElement('div');
+    info.className = 'tile-view-item-info';
+    
+    // Filename
+    const name = document.createElement('div');
+    name.className = 'tile-view-item-name';
+    name.textContent = item.name;
+    name.title = item.name;
+    info.appendChild(name);
+    
+    // Meta info (score, date)
+    const meta = document.createElement('div');
+    meta.className = 'tile-view-item-meta';
+    
+    // Score badge
+    const score = document.createElement('span');
+    score.className = 'tile-view-item-score';
+    if (item.score === -1) {
+      score.textContent = 'R';
+      score.classList.add('rejected');
+    } else if (item.score && item.score > 0) {
+      score.textContent = item.score + '★';
+      score.classList.add('rated');
+    } else {
+      score.textContent = '—';
+    }
+    meta.appendChild(score);
+    
+    // Date if available
+    if (item.original_created_at) {
+      const date = document.createElement('span');
+      date.className = 'tile-view-item-date';
+      date.textContent = formatDatePill(item.original_created_at);
+      meta.appendChild(date);
+    }
+    
+    info.appendChild(meta);
+    tile.appendChild(info);
   }
-  meta.appendChild(score);
   
-  // Date if available
-  if (item.original_created_at) {
-    const date = document.createElement('span');
-    date.className = 'tile-view-item-date';
-    date.textContent = formatDatePill(item.original_created_at);
-    meta.appendChild(date);
-  }
-  
-  info.appendChild(meta);
-  tile.appendChild(info);
-  
-  // Click handler
-  tile.addEventListener('click', () => {
+  // Click handler (only for non-toolbar clicks)
+  tile.addEventListener('click', (e) => {
+    // Don't navigate if clicking toolbar buttons
+    if (quickScoreMode && e.target.closest('.tile-view-item-toolbar')) {
+      return;
+    }
+    
     // Close tile view
     closeTileView();
     
@@ -2534,5 +2656,16 @@ document.addEventListener('DOMContentLoaded', function() {
         closeTileView();
       }
     });
+  }
+  
+  // Quick score toggle button
+  const quickScoreToggle = document.getElementById('quick-score-toggle');
+  if (quickScoreToggle) {
+    // Initialize with star icon
+    quickScoreToggle.innerHTML = svgStar(false);
+    quickScoreToggle.title = 'Enable Quick Score Mode';
+    
+    // Add click handler
+    quickScoreToggle.addEventListener('click', toggleQuickScoreMode);
   }
 });
