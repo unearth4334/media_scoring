@@ -271,9 +271,18 @@ async def get_file_types_in_directories(directories: List[str]):
     """Get available file types in the selected directories."""
     try:
         file_types = set()
+        media_root = Path("/media").resolve()
         
         for dir_path in directories:
             directory = Path(dir_path).expanduser().resolve()
+            
+            # Security check: ensure path is within /media/ to prevent path traversal
+            try:
+                directory.relative_to(media_root)
+            except ValueError:
+                # Path is outside /media/, skip it
+                continue
+            
             if not directory.exists() or not directory.is_dir():
                 continue
             
