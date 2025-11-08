@@ -266,6 +266,34 @@ async def ingest_v2_page(request: Request):
     )
 
 
+@router.post("/api/ingest/file-types")
+async def get_file_types_in_directories(directories: List[str]):
+    """Get available file types in the selected directories."""
+    try:
+        file_types = set()
+        
+        for dir_path in directories:
+            directory = Path(dir_path).expanduser().resolve()
+            if not directory.exists() or not directory.is_dir():
+                continue
+            
+            try:
+                for item in directory.iterdir():
+                    if item.is_file():
+                        ext = item.suffix.lower()
+                        if ext in ['.mp4', '.png', '.jpg', '.jpeg']:
+                            file_types.add(ext)
+            except PermissionError:
+                pass
+        
+        # Return as sorted list of extensions without the dot
+        return {
+            "file_types": sorted([ext[1:] for ext in file_types])
+        }
+    except Exception as e:
+        raise HTTPException(500, f"Failed to get file types: {str(e)}")
+
+
 @router.get("/api/ingest/directories")
 async def list_directories_tree(path: str = ""):
     """List directories with file counts for tree view."""
