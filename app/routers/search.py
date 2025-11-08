@@ -3,15 +3,30 @@
 import json
 import subprocess
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 
 from fastapi import APIRouter, HTTPException, Request, Query
 from pydantic import BaseModel
 
 from ..state import get_state
 from ..database.service import DatabaseService
+from ..database.buffer_service import BufferService, FilterCriteria
 
 router = APIRouter(prefix="/api/search")
+
+# Global buffer service instance
+_buffer_service: Optional[BufferService] = None
+
+
+def get_buffer_service() -> BufferService:
+    """Get or create the buffer service instance."""
+    global _buffer_service
+    if _buffer_service is None:
+        state = get_state()
+        # Store buffer database in the scores directory
+        buffer_db_path = state.get_scores_dir() / "buffer.db"
+        _buffer_service = BufferService(buffer_db_path)
+    return _buffer_service
 
 
 class SearchRequest(BaseModel):
@@ -259,3 +274,255 @@ async def sync_directory_to_database():
     except Exception as e:
         state.logger.error(f"Failed to sync directory: {e}")
         raise HTTPException(500, f"Failed to sync directory: {str(e)}")
+
+
+# New buffered search endpoints
+
+class FilterRequest(BaseModel):
+    """Request model for filter operations."""
+    keywords: Optional[List[str]] = None
+    match_all: bool = False
+    file_types: Optional[List[str]] = None
+    min_score: Optional[int] = None
+    max_score: Optional[int] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    nsfw_filter: Optional[str] = None
+    sort_field: str = "date"
+    sort_direction: str = "desc"
+
+
+@router.post("/refresh")
+async def refresh_buffer(request: FilterRequest):
+    """Refresh the buffer with current filter criteria.
+    
+    This endpoint triggers a rebuild of the materialized buffer table
+    based on the provided filters. Should be called when user presses
+    the Refresh button.
+    """
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality is disabled")
+    
+    try:
+        db_service = state.get_database_service()
+        if db_service is None:
+            raise HTTPException(503, "Database service is not available")
+        
+        buffer_service = get_buffer_service()
+        
+        # Convert request to FilterCriteria
+        filters = FilterCriteria(
+            keywords=request.keywords,
+            match_all=request.match_all,
+            file_types=request.file_types,
+            min_score=request.min_score,
+            max_score=request.max_score,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            nsfw_filter=request.nsfw_filter,
+            sort_field=request.sort_field,
+            sort_direction=request.sort_direction
+        )
+        
+        # Create or reuse buffer
+        with db_service as db:
+            filter_hash, item_count = buffer_service.get_or_create_buffer(filters, db)
+        
+        # Save as active filter state
+        buffer_service.save_ui_state("active_filter", {
+            "filter_hash": filter_hash,
+            "filters": filters.to_dict()
+        })
+        
+        state.logger.info(f"Buffer refreshed: {filter_hash[:8]} with {item_count} items")
+        
+        return {
+            "ok": True,
+            "filter_hash": filter_hash,
+            "item_count": item_count,
+            "message": f"Buffer created with {item_count} items"
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to refresh buffer: {e}", exc_info=True)
+        raise HTTPException(500, f"Failed to refresh buffer: {str(e)}")
+
+
+@router.get("/page")
+async def get_page(
+    filter_hash: str = Query(..., description="Filter hash from refresh operation"),
+    cursor_created_at: Optional[str] = Query(None, description="Cursor created_at from previous page"),
+    cursor_id: Optional[int] = Query(None, description="Cursor id from previous page"),
+    limit: int = Query(50, ge=1, le=200, description="Number of items per page")
+):
+    """Get a page of results using keyset pagination.
+    
+    This endpoint provides fast pagination through buffered results.
+    Pass cursor values from the previous page to get the next page.
+    """
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(503, "Database functionality is disabled")
+    
+    try:
+        buffer_service = get_buffer_service()
+        
+        # Build cursor if provided
+        cursor = None
+        if cursor_created_at and cursor_id:
+            cursor = {
+                "created_at": cursor_created_at,
+                "id": cursor_id
+            }
+        
+        # Get page from buffer
+        items, next_cursor = buffer_service.get_page(filter_hash, cursor, limit)
+        
+        return {
+            "items": items,
+            "count": len(items),
+            "next_cursor": next_cursor,
+            "has_more": next_cursor is not None
+        }
+    
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    except Exception as e:
+        state.logger.error(f"Failed to get page: {e}", exc_info=True)
+        raise HTTPException(500, f"Failed to get page: {str(e)}")
+
+
+@router.get("/filters/active")
+async def get_active_filters():
+    """Get the currently active filter state.
+    
+    This endpoint returns the last applied filter configuration,
+    allowing UI to restore state after browser refresh.
+    """
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        active_state = buffer_service.get_ui_state("active_filter")
+        
+        if active_state:
+            return {
+                "ok": True,
+                "filter_hash": active_state.get("filter_hash"),
+                "filters": active_state.get("filters")
+            }
+        else:
+            return {
+                "ok": True,
+                "filter_hash": None,
+                "filters": None
+            }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to get active filters: {e}")
+        raise HTTPException(500, f"Failed to get active filters: {str(e)}")
+
+
+@router.post("/filters/active")
+async def set_active_filters(request: FilterRequest):
+    """Set the active filter state without rebuilding buffer.
+    
+    This endpoint updates the local filter state that will be
+    used when the user presses Refresh. Does not trigger buffer rebuild.
+    """
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        
+        # Convert request to FilterCriteria to compute hash
+        filters = FilterCriteria(
+            keywords=request.keywords,
+            match_all=request.match_all,
+            file_types=request.file_types,
+            min_score=request.min_score,
+            max_score=request.max_score,
+            start_date=request.start_date,
+            end_date=request.end_date,
+            nsfw_filter=request.nsfw_filter,
+            sort_field=request.sort_field,
+            sort_direction=request.sort_direction
+        )
+        
+        filter_hash = filters.compute_hash()
+        
+        # Save as pending filter state (not active until refresh)
+        buffer_service.save_ui_state("pending_filter", {
+            "filter_hash": filter_hash,
+            "filters": filters.to_dict()
+        })
+        
+        return {
+            "ok": True,
+            "filter_hash": filter_hash,
+            "message": "Filter state updated (press Refresh to apply)"
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to set active filters: {e}")
+        raise HTTPException(500, f"Failed to set active filters: {str(e)}")
+
+
+@router.get("/buffer/stats")
+async def get_buffer_stats():
+    """Get statistics about buffered results."""
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        stats = buffer_service.get_buffer_stats()
+        
+        return {
+            "ok": True,
+            "stats": stats
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to get buffer stats: {e}")
+        raise HTTPException(500, f"Failed to get buffer stats: {str(e)}")
+
+
+@router.delete("/buffer/{filter_hash}")
+async def delete_buffer(filter_hash: str):
+    """Delete a specific buffer by its hash."""
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        buffer_service.delete_buffer(filter_hash)
+        
+        return {
+            "ok": True,
+            "message": f"Buffer {filter_hash[:8]} deleted"
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to delete buffer: {e}")
+        raise HTTPException(500, f"Failed to delete buffer: {str(e)}")
+
+
+@router.delete("/buffer")
+async def clear_all_buffers():
+    """Clear all buffers."""
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        buffer_service.clear_all_buffers()
+        
+        return {
+            "ok": True,
+            "message": "All buffers cleared"
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to clear buffers: {e}")
+        raise HTTPException(500, f"Failed to clear buffers: {str(e)}")
