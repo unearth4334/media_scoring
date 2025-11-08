@@ -861,30 +861,29 @@ function applyCurrentFilters() {
   }
 }
 
+// Store current buffer hash for pagination
+let currentBufferHash = null;
+
 async function applyDatabaseFilters() {
-  console.log('Applying database filters with sort...', searchToolbarFilters);
+  console.log('Applying database filters with buffering...', searchToolbarFilters);
   
   try {
-    // Build comprehensive filter request
+    // Build comprehensive filter request for buffered search
     const filterRequest = {
-      // Existing filters
+      // File type filters
       file_types: searchToolbarFilters.filetype,
+      
+      // Date filters
       start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
       end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
       
-      // NEW: Add sorting parameters
+      // Sorting parameters
       sort_field: searchToolbarFilters.sort,      // 'name', 'date', 'size', 'rating'
       sort_direction: searchToolbarFilters.sortDirection,  // 'asc' or 'desc'
       
-      // NEW: Add NSFW filter
+      // NSFW filter
       nsfw_filter: searchToolbarFilters.nsfw,  // 'all', 'sfw', 'nsfw'
-      
-      // NEW: Add pagination (future-proofing)
-      offset: null,
-      limit: null  // null for all results
     };
-    
-    console.log('Filter request:', filterRequest);
     
     // Add rating filters
     if (searchToolbarFilters.rating !== 'none') {
@@ -900,15 +899,104 @@ async function applyDatabaseFilters() {
       }
     }
     
-    const response = await fetch('/api/filter', {
+    console.log('Buffered filter request:', filterRequest);
+    
+    // Step 1: Refresh buffer with current filters
+    const refreshResponse = await fetch('/api/search/refresh', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(filterRequest)
     });
     
+    if (!refreshResponse.ok) {
+      console.error('Buffer refresh failed:', refreshResponse.status, refreshResponse.statusText);
+      // Fallback to old unbuffered endpoint
+      return await applyDatabaseFiltersUnbuffered(filterRequest);
+    }
+    
+    const refreshData = await refreshResponse.json();
+    console.log('Buffer refreshed:', refreshData);
+    currentBufferHash = refreshData.filter_hash;
+    
+    // Step 2: Fetch all pages from buffer (for now, fetch large batch)
+    // TODO: Implement true pagination with lazy loading
+    const pageResponse = await fetch(`/api/search/page?filter_hash=${currentBufferHash}&limit=10000`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    if (!pageResponse.ok) {
+      console.error('Page fetch failed:', pageResponse.status, pageResponse.statusText);
+      // Fallback to old unbuffered endpoint
+      return await applyDatabaseFiltersUnbuffered(filterRequest);
+    }
+    
+    const pageData = await pageResponse.json();
+    console.log('Buffered page received:', pageData.count, 'items');
+    
+    // Convert buffer items to video format
+    videos = pageData.items.map(item => ({
+      name: item.filename,
+      url: `/media/${item.filename}`,
+      score: item.score || 0,
+      path: item.file_path,
+      created_at: item.created_at,
+      original_created_at: item.original_created_at,
+      file_type: item.file_type,
+      extension: item.extension,
+      file_size: item.file_size || 0,
+      nsfw: item.nsfw || false
+    }));
+    
+    // Apply search filter client-side
+    if (searchToolbarFilters.search) {
+      filtered = videos.filter(video => 
+        video.name.toLowerCase().includes(searchToolbarFilters.search.toLowerCase())
+      );
+    } else {
+      filtered = [...videos];
+    }
+    
+    console.log('Filtered results:', filtered.length);
+    
+    // NO client-side sorting needed - buffer already sorted
+    
+    // Update display
+    if (typeof renderSidebar === 'function') {
+      renderSidebar();
+    }
+    
+    if (filtered.length > 0) {
+      show(0);
+    }
+  } catch (error) {
+    console.error('Buffered database filter failed:', error);
+    // Fallback to client-side filtering
+    applyClientSideFilters();
+  }
+}
+
+// Fallback function for unbuffered filtering (when buffer service fails)
+async function applyDatabaseFiltersUnbuffered(filterRequest) {
+  console.log('Falling back to unbuffered filter...');
+  
+  // Convert buffered filter format to old format
+  const unbufferedRequest = {
+    ...filterRequest,
+    offset: null,
+    limit: null
+  };
+  
+  try {
+    const response = await fetch('/api/filter', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(unbufferedRequest)
+    });
+    
     if (response.ok) {
       const data = await response.json();
-      console.log('Filter response received:', data);
+      console.log('Unbuffered filter response received:', data);
       videos = data.videos;
       
       // Apply search filter client-side
@@ -922,9 +1010,6 @@ async function applyDatabaseFilters() {
       
       console.log('Filtered results:', filtered.length);
       
-      // NO client-side sorting needed - backend did it!
-      // applySortFilter(); ← REMOVED: Backend handles sorting
-      
       // Update display
       if (typeof renderSidebar === 'function') {
         renderSidebar();
@@ -934,13 +1019,11 @@ async function applyDatabaseFilters() {
         show(0);
       }
     } else {
-      console.error('Filter request failed:', response.status, response.statusText);
-      const errorText = await response.text();
-      console.error('Error response:', errorText);
+      console.error('Unbuffered filter request failed:', response.status, response.statusText);
+      applyClientSideFilters();
     }
   } catch (error) {
-    console.error('Database filter failed:', error);
-    // Fallback to client-side filtering
+    console.error('Unbuffered filter failed:', error);
     applyClientSideFilters();
   }
 }
