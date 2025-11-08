@@ -826,8 +826,9 @@ async def get_daily_media_counts():
                 media_files = db.get_all_media_files()
                 
                 for media_file in media_files:
-                    # Use created_at if available, otherwise original_created_at
-                    date_obj = media_file.created_at or media_file.original_created_at
+                    # Use original_created_at (actual file creation date) if available, 
+                    # otherwise fall back to created_at (database record creation)
+                    date_obj = media_file.original_created_at or media_file.created_at
                     if date_obj:
                         date_str = date_obj.strftime('%Y-%m-%d')
                         daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
