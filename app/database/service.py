@@ -212,6 +212,56 @@ class DatabaseService:
             
         return query.all()
     
+    @log_db_operation("get_media_files_count")
+    def get_media_files_count(self, 
+                              min_score: Optional[int] = None,
+                              max_score: Optional[int] = None,
+                              file_types: Optional[List[str]] = None,
+                              start_date: Optional[datetime] = None,
+                              end_date: Optional[datetime] = None,
+                              nsfw_filter: Optional[str] = None) -> int:
+        """Get count of media files matching filters (for pagination)."""
+        query = self.session.query(func.count(MediaFile.id))
+        
+        # Apply score filters
+        if min_score is not None:
+            query = query.filter(MediaFile.score >= min_score)
+        if max_score is not None:
+            query = query.filter(MediaFile.score <= max_score)
+        
+        # Apply file type filters
+        if file_types:
+            extensions = []
+            for ext in file_types:
+                if not ext.startswith('.'):
+                    extensions.append(f'.{ext}')
+                else:
+                    extensions.append(ext)
+            query = query.filter(MediaFile.extension.in_(extensions))
+        
+        # Apply date filters using original_created_at with fallback to created_at
+        if start_date is not None:
+            query = query.filter(
+                func.coalesce(MediaFile.original_created_at, MediaFile.created_at) >= start_date
+            )
+        if end_date is not None:
+            query = query.filter(
+                func.coalesce(MediaFile.original_created_at, MediaFile.created_at) <= end_date
+            )
+        
+        # Apply NSFW filter
+        if nsfw_filter and nsfw_filter != 'all':
+            if nsfw_filter == 'sfw':
+                query = query.filter(
+                    (MediaFile.nsfw == False) | (MediaFile.nsfw_label == False)
+                )
+            elif nsfw_filter == 'nsfw':
+                query = query.filter(
+                    (MediaFile.nsfw == True) | (MediaFile.nsfw_label == True)
+                )
+        
+        return query.scalar()
+    
     # Metadata Operations
     
     @log_db_operation("store_media_metadata")

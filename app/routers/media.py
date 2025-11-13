@@ -51,6 +51,25 @@ class FilterRequest(BaseModel):
     limit: Optional[int] = Field(None, ge=1, le=10000)
 
 
+class PaginationRequest(BaseModel):
+    """Request model for paginated media listing."""
+    # Pagination
+    page: int = Field(1, ge=1, description="Page number (1-indexed)")
+    page_size: int = Field(100, ge=10, le=500, description="Items per page")
+    
+    # Filtering parameters
+    min_score: Optional[int] = Field(None, ge=0, le=5, description="Minimum score filter")
+    max_score: Optional[int] = Field(None, ge=0, le=5, description="Maximum score filter")
+    file_types: Optional[List[str]] = Field(None, description="File type filters (e.g., ['mp4', 'png'])")
+    start_date: Optional[str] = Field(None, description="Start date filter (ISO format)")
+    end_date: Optional[str] = Field(None, description="End date filter (ISO format)")
+    nsfw_filter: Optional[str] = Field(None, description="NSFW filter: 'all', 'sfw', or 'nsfw'")
+    
+    # Sorting parameters
+    sort_field: SortField = Field(SortField.NAME, description="Field to sort by")
+    sort_direction: SortDirection = Field(SortDirection.ASC, description="Sort direction")
+
+
 try:
     from PIL import Image
 except ImportError:
@@ -175,6 +194,126 @@ async def filter_videos(request: FilterRequest):
     except Exception as e:
         state.logger.error(f"Filter failed: {e}")
         raise HTTPException(500, f"Filter failed: {str(e)}")
+
+
+@router.post("/videos/paginated")
+async def get_paginated_videos(request: PaginationRequest):
+    """Return paginated list of media files with filtering and sorting.
+    
+    This endpoint is optimized for mobile performance with large datasets.
+    It returns only the requested page of results instead of all files.
+    """
+    state = get_state()
+    
+    if not state.database_enabled:
+        raise HTTPException(
+            503, 
+            "Pagination requires database mode. Please enable database functionality."
+        )
+    
+    # Convert date strings to datetime objects if provided
+    start_date_obj = None
+    end_date_obj = None
+    
+    if request.start_date:
+        try:
+            start_date_obj = datetime.fromisoformat(request.start_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(400, f"Invalid start_date format: {request.start_date}")
+    
+    if request.end_date:
+        try:
+            end_date_obj = datetime.fromisoformat(request.end_date.replace('Z', '+00:00'))
+        except ValueError:
+            raise HTTPException(400, f"Invalid end_date format: {request.end_date}")
+    
+    try:
+        db_service = state.get_database_service()
+        if db_service is None:
+            raise HTTPException(503, "Database service is not available")
+            
+        with db_service as db:
+            # Calculate offset from page number
+            offset = (request.page - 1) * request.page_size
+            
+            # Get total count of items matching filters
+            total_count = db.get_media_files_count(
+                min_score=request.min_score,
+                max_score=request.max_score,
+                file_types=request.file_types,
+                start_date=start_date_obj,
+                end_date=end_date_obj,
+                nsfw_filter=request.nsfw_filter
+            )
+            
+            # Get paginated results
+            media_files = db.get_all_media_files(
+                min_score=request.min_score,
+                max_score=request.max_score,
+                file_types=request.file_types,
+                start_date=start_date_obj,
+                end_date=end_date_obj,
+                nsfw_filter=request.nsfw_filter,
+                sort_field=request.sort_field.value,
+                sort_direction=request.sort_direction.value,
+                offset=offset,
+                limit=request.page_size
+            )
+            
+            # Format items
+            items = []
+            for media_file in media_files:
+                file_path = Path(media_file.file_path)
+                relative_path = file_path.name
+                
+                items.append({
+                    "name": media_file.filename,
+                    "url": f"/media/{relative_path}",
+                    "score": media_file.score or 0,
+                    "path": media_file.file_path,
+                    "created_at": media_file.created_at.isoformat() if media_file.created_at else None,
+                    "original_created_at": media_file.original_created_at.isoformat() if media_file.original_created_at else None,
+                    "file_type": media_file.file_type,
+                    "extension": media_file.extension,
+                    "file_size": media_file.file_size or 0,
+                    "nsfw": media_file.nsfw or False
+                })
+            
+            # Calculate pagination metadata
+            total_pages = (total_count + request.page_size - 1) // request.page_size if total_count > 0 else 0
+            
+            return {
+                "items": items,
+                "pagination": {
+                    "page": request.page,
+                    "page_size": request.page_size,
+                    "total_items": total_count,
+                    "total_pages": total_pages,
+                    "has_next": request.page < total_pages,
+                    "has_prev": request.page > 1,
+                    "start_index": offset + 1 if total_count > 0 else 0,
+                    "end_index": min(offset + request.page_size, total_count)
+                },
+                "filters_applied": {
+                    "min_score": request.min_score,
+                    "max_score": request.max_score,
+                    "file_types": request.file_types,
+                    "start_date": request.start_date,
+                    "end_date": request.end_date,
+                    "nsfw_filter": request.nsfw_filter
+                },
+                "sorting": {
+                    "sort_field": request.sort_field.value,
+                    "sort_direction": request.sort_direction.value
+                }
+            }
+    
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        state.logger.error(f"Pagination failed: {e}")
+        raise HTTPException(500, f"Pagination failed: {str(e)}")
 
 
 def _get_files_from_filesystem(state):
