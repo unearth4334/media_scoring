@@ -65,6 +65,21 @@ function restoreAppState() {
   isMaximized = loadState('isMaximized') || false;
   idx = loadState('currentVideoIndex') || 0;
   
+  // Restore image view settings
+  const savedZoomRatio = loadState('imageZoomRatio');
+  const savedRotation = loadState('imageRotation');
+  const savedAspectRatio = loadState('imageAspectRatio');
+  
+  if (savedZoomRatio !== null && savedZoomRatio !== undefined) {
+    imageZoomRatio = savedZoomRatio;
+  }
+  if (savedRotation !== null && savedRotation !== undefined) {
+    currentRotation = savedRotation;
+  }
+  if (savedAspectRatio !== null && savedAspectRatio !== undefined) {
+    currentAspectRatio = savedAspectRatio;
+  }
+  
   const savedExtensions = loadState('toggleExtensions');
   if (savedExtensions && Array.isArray(savedExtensions)) {
     toggleExtensions = savedExtensions;
@@ -150,6 +165,8 @@ let toggleExtensions = ["jpg", "png", "mp4"]; // configurable extensions for tog
 let userPathPrefix = null; // User's local mount path for NAS (for clipboard path translation)
 let currentZoom = 100; // Current zoom level for mobile image viewing (percentage)
 let currentRotation = 0; // Current rotation angle for mobile image viewing (0 or -90 degrees)
+let imageZoomRatio = 1.0; // Persistent zoom ratio (ratio of image display size to video-wrap size)
+let currentAspectRatio = 'free'; // Current aspect ratio setting
 
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
@@ -1021,6 +1038,71 @@ function calculateFitToWidthZoom() {
   return Math.max(50, Math.min(500, zoomPercent));
 }
 
+// Calculate zoom percentage from a saved ratio
+function calculateZoomFromRatio(ratio) {
+  const imgview = document.getElementById('imgview');
+  const videoWrap = document.querySelector('.video-wrap');
+  
+  if (!imgview || imgview.style.display === 'none') return 100;
+  if (!isMobileDevice()) return 100;
+  if (!isCurrentMediaAnImage()) return 100;
+  if (!ratio || ratio <= 0) return 100;
+  
+  // Get the natural image dimensions
+  const imageWidth = imgview.naturalWidth;
+  const imageHeight = imgview.naturalHeight;
+  
+  if (!imageWidth || !imageHeight) return 100;
+  
+  // Get the video-wrap dimensions (excluding padding)
+  const videoWrapRect = videoWrap.getBoundingClientRect();
+  const computedStyle = window.getComputedStyle(videoWrap);
+  const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+  const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+  const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
+  
+  // Calculate the base rendered size of the image (without any zoom)
+  // The image respects max-width and max-height constraints
+  const maxWidth = imgview.style.maxWidth ? parseFloat(imgview.style.maxWidth) : 960;
+  const maxHeight = imgview.style.maxHeight ? parseFloat(imgview.style.maxHeight) : 540;
+  
+  let baseWidth, baseHeight;
+  const imageAspect = imageWidth / imageHeight;
+  const maxAspect = maxWidth / maxHeight;
+  
+  if (imageAspect > maxAspect) {
+    // Image is wider - constrained by width
+    baseWidth = Math.min(imageWidth, maxWidth);
+    baseHeight = baseWidth / imageAspect;
+  } else {
+    // Image is taller - constrained by height
+    baseHeight = Math.min(imageHeight, maxHeight);
+    baseWidth = baseHeight * imageAspect;
+  }
+  
+  // Determine which dimension to use for ratio calculation
+  let baseDimension;
+  if (currentRotation === -90) {
+    // When rotated, height becomes the horizontal dimension
+    baseDimension = baseHeight;
+  } else {
+    // Normal orientation: use width
+    baseDimension = baseWidth;
+  }
+  
+  // Calculate the desired display dimension based on ratio
+  const desiredDimension = wrapWidth * ratio;
+  
+  // Calculate zoom percentage
+  if (baseDimension > 0) {
+    const zoomPercent = (desiredDimension / baseDimension) * 100;
+    // Clamp to reasonable values (min 50%, max 500%)
+    return Math.max(50, Math.min(500, zoomPercent));
+  }
+  
+  return 100;
+}
+
 function applyImageZoom(zoomPercent) {
   const imgview = document.getElementById('imgview');
   const videoWrap = document.querySelector('.video-wrap');
@@ -1034,6 +1116,38 @@ function applyImageZoom(zoomPercent) {
   // Apply transform for zoom and rotation with transform-origin at center
   imgview.style.transformOrigin = 'center';
   imgview.style.transform = `scale(${scale}) rotate(${currentRotation}deg)`;
+  
+  // Calculate and save the zoom ratio (ratio of displayed size to wrap size)
+  if (videoWrap) {
+    const videoWrapRect = videoWrap.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(videoWrap);
+    const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+    const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+    const wrapWidth = videoWrapRect.width - paddingLeft - paddingRight;
+    
+    // Get the base rendered size (without zoom)
+    const baseWidth = imgview.offsetWidth / scale;
+    const baseHeight = imgview.offsetHeight / scale;
+    
+    // Determine which dimension to use based on rotation
+    let baseDimension;
+    if (currentRotation === -90) {
+      baseDimension = baseHeight;
+    } else {
+      baseDimension = baseWidth;
+    }
+    
+    // Calculate the ratio of the zoomed dimension to the wrap width
+    const displayedDimension = baseDimension * scale;
+    if (wrapWidth > 0) {
+      imageZoomRatio = displayedDimension / wrapWidth;
+      
+      // Save the ratio to persistent storage
+      if (typeof saveState === 'function') {
+        saveState('imageZoomRatio', imageZoomRatio);
+      }
+    }
+  }
   
   // Enable touch panning when zoomed in
   if (scale > 1) {
@@ -1060,6 +1174,11 @@ function toggleImageRotation() {
   // Toggle rotation between 0 and -90 degrees (counterclockwise)
   currentRotation = currentRotation === 0 ? -90 : 0;
   
+  // Save rotation state
+  if (typeof saveState === 'function') {
+    saveState('imageRotation', currentRotation);
+  }
+  
   // Update button state
   if (mobileZoomRotateBtn) {
     if (currentRotation === -90) {
@@ -1069,7 +1188,7 @@ function toggleImageRotation() {
     }
   }
   
-  // Apply the rotation with current zoom
+  // Apply the rotation with current zoom (this will also recalculate and save the zoom ratio)
   applyImageZoom(currentZoom);
 }
 
@@ -1077,6 +1196,12 @@ function applyAspectRatio(aspectRatio) {
   const videoWrap = document.querySelector('.video-wrap');
   if (!videoWrap) return;
   if (!isMobileDevice()) return; // Only apply on mobile
+  
+  // Save the aspect ratio to persistent storage
+  currentAspectRatio = aspectRatio;
+  if (typeof saveState === 'function') {
+    saveState('imageAspectRatio', aspectRatio);
+  }
   
   // Remove any existing aspect ratio class
   videoWrap.classList.remove('aspect-free', 'aspect-1-1', 'aspect-4-3', 'aspect-16-9', 'aspect-21-9', 'aspect-9-16', 'aspect-3-4');
@@ -1227,15 +1352,6 @@ function showMedia(url, name){
   const mobileZoomRotateBtn = document.getElementById('mobile-zoom-rotate-btn');
   const videoWrap = document.querySelector('.video-wrap');
   
-  // Reset zoom and rotation state when switching media
-  currentZoom = 100;
-  currentRotation = 0;
-  const mobileZoomSlider = document.getElementById('mobile-zoom-slider');
-  const mobileZoomValue = document.getElementById('mobile-zoom-value');
-  if (mobileZoomSlider) mobileZoomSlider.value = 100;
-  if (mobileZoomValue) mobileZoomValue.textContent = '100%';
-  if (mobileZoomRotateBtn) mobileZoomRotateBtn.classList.remove('rotated');
-  
   if (isVideoName(name)){
     itag.style.display = 'none'; itag.removeAttribute('src');
     vtag.style.display = ''; vtag.src = url + '#t=0.001';
@@ -1270,13 +1386,34 @@ function showMedia(url, name){
     vtag.pause && vtag.pause(); vtag.removeAttribute('src'); vtag.load && vtag.load(); vtag.style.display='none';
     itag.style.display = ''; itag.src = url;
     
-    // Reset image transform
-    itag.style.transform = '';
-    itag.style.transformOrigin = '';
-    if (videoWrap) {
-      videoWrap.style.overflow = 'hidden';
-      videoWrap.style.touchAction = 'auto';
-    }
+    // Wait for image to load before applying persistent view settings
+    itag.addEventListener('load', function restoreImageViewSettings() {
+      // Restore aspect ratio
+      if (currentAspectRatio && videoWrap) {
+        applyAspectRatio(currentAspectRatio);
+      }
+      
+      // Restore rotation state
+      if (mobileZoomRotateBtn) {
+        if (currentRotation === -90) {
+          mobileZoomRotateBtn.classList.add('rotated');
+        } else {
+          mobileZoomRotateBtn.classList.remove('rotated');
+        }
+      }
+      
+      // Calculate zoom from saved ratio
+      if (imageZoomRatio && isMobileDevice() && isCurrentMediaAnImage()) {
+        const calculatedZoom = calculateZoomFromRatio(imageZoomRatio);
+        currentZoom = calculatedZoom;
+        const mobileZoomSlider = document.getElementById('mobile-zoom-slider');
+        if (mobileZoomSlider) mobileZoomSlider.value = calculatedZoom;
+        applyImageZoom(calculatedZoom);
+      }
+      
+      // Remove the event listener to avoid multiple calls
+      itag.removeEventListener('load', restoreImageViewSettings);
+    }, { once: true });
     
     // Initialize Viewer.js for this image when it loads
     itag.addEventListener('load', function initViewerOnLoad() {
