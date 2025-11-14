@@ -151,6 +151,15 @@ let userPathPrefix = null; // User's local mount path for NAS (for clipboard pat
 let currentZoom = 100; // Current zoom level for mobile image viewing (percentage)
 let currentRotation = 0; // Current rotation angle for mobile image viewing (0 or -90 degrees)
 
+// Pagination state variables
+let currentPage = 1;
+let pageSize = 100;
+let totalPages = 1;
+let totalItems = 0;
+let isLoadingMore = false;
+let hasMorePages = false;
+let paginationEnabled = false; // Will be set based on database availability
+
 // Thumbnail progress tracking
 let thumbnailProgressInterval = null;
 
@@ -1424,50 +1433,248 @@ function resizeDirectoryInput() {
   }
 }
 
-async function loadVideos(){
-  const res = await fetch("/api/videos");
-  const data = await res.json();
-  videos = data.videos || [];
-  currentDir = data.dir || "";
-  currentPattern = data.pattern || currentPattern;
-  thumbnailsEnabled = data.thumbnails_enabled || false;
-  thumbnailHeight = data.thumbnail_height || 64;
-  toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
-  userPathPrefix = data.user_path_prefix || null;
+async function loadVideos(page = 1, append = false){
+  // Prevent multiple simultaneous loads
+  if (isLoadingMore) return;
+  isLoadingMore = true;
   
-  // Store database flag globally for search toolbar to use
-  window.databaseEnabled = data.database_enabled || false;
-  
-  document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
-  const dirInput = document.getElementById('dir');
-  if (dirInput && !dirInput.value) dirInput.value = currentDir;
-  const patInput = document.getElementById('pattern');
-  if (patInput && !patInput.value) patInput.value = currentPattern;
-  
-  // Resize directory input after updating dir_display
-  resizeDirectoryInput();
-  
-  // Initialize toggle buttons
-  initializeToggleButtons();
-  
-  // Show/hide thumbnail controls
-  const sidebarControls = document.getElementById('sidebar_controls');
-  if (sidebarControls) {
-    sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
+  try {
+    // Show loading indicator
+    if (!append) {
+      showLoadingIndicator('sidebar_list', 'Loading media files...');
+    }
+    
+    // Check if database is enabled and use paginated endpoint
+    if (window.databaseEnabled && paginationEnabled) {
+      const response = await fetch("/api/videos/paginated", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          page: page,
+          page_size: pageSize,
+          min_score: minFilter && typeof minFilter === 'number' ? minFilter : null,
+          sort_field: "name",
+          sort_direction: "asc"
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Update pagination state
+      currentPage = data.pagination.page;
+      totalPages = data.pagination.total_pages;
+      totalItems = data.pagination.total_items;
+      hasMorePages = data.pagination.has_next;
+      
+      // Append or replace videos array
+      if (append) {
+        videos = [...videos, ...data.items];
+      } else {
+        videos = data.items;
+      }
+      
+      console.log(`Loaded page ${currentPage}/${totalPages}, ${videos.length}/${totalItems} items total`);
+      
+    } else {
+      // Fallback to original non-paginated endpoint
+      const res = await fetch("/api/videos");
+      const data = await res.json();
+      videos = data.videos || [];
+      currentDir = data.dir || "";
+      currentPattern = data.pattern || currentPattern;
+      thumbnailsEnabled = data.thumbnails_enabled || false;
+      thumbnailHeight = data.thumbnail_height || 64;
+      toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
+      userPathPrefix = data.user_path_prefix || null;
+      
+      // Store database flag globally for search toolbar to use
+      window.databaseEnabled = data.database_enabled || false;
+      paginationEnabled = window.databaseEnabled; // Enable pagination if database is available
+      
+      // Reset pagination state for non-paginated mode
+      currentPage = 1;
+      totalPages = 1;
+      totalItems = videos.length;
+      hasMorePages = false;
+      
+      document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
+      const dirInput = document.getElementById('dir');
+      if (dirInput && !dirInput.value) dirInput.value = currentDir;
+      const patInput = document.getElementById('pattern');
+      if (patInput && !patInput.value) patInput.value = currentPattern;
+      
+      // Resize directory input after updating dir_display
+      resizeDirectoryInput();
+      
+      // Initialize toggle buttons
+      initializeToggleButtons();
+      
+      // Show/hide thumbnail controls
+      const sidebarControls = document.getElementById('sidebar_controls');
+      if (sidebarControls) {
+        sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
+      }
+      
+      // Initialize thumbnail toggle button icon
+      updateThumbnailToggleButton();
+      
+      // Start monitoring thumbnail progress if thumbnails are enabled
+      if (thumbnailsEnabled) {
+        updateThumbnailStatus();
+      }
+    }
+    
+    applyFilter();
+    renderSidebar();
+    
+    // Only show first item on initial load (not when appending pages)
+    if (!append) {
+      show(0);
+    }
+    
+    // Setup infinite scroll observer after first load
+    if (paginationEnabled && currentPage === 1) {
+      setupInfiniteScroll();
+    }
+    
+  } catch (error) {
+    console.error('Failed to load videos:', error);
+    showError('Failed to load media files. Please try again.');
+  } finally {
+    isLoadingMore = false;
+    hideLoadingIndicator('sidebar_list');
   }
-  
-  // Initialize thumbnail toggle button icon
-  updateThumbnailToggleButton();
-  
-  // Start monitoring thumbnail progress if thumbnails are enabled
-  if (thumbnailsEnabled) {
-    updateThumbnailStatus();
-  }
-  
-  applyFilter();
-  renderSidebar();
-  show(0);
 }
+
+// Infinite scroll setup for sidebar pagination
+let scrollObserver = null;
+let scrollSentinel = null;
+
+function setupInfiniteScroll() {
+  // Clean up existing observer and sentinel
+  if (scrollObserver) {
+    scrollObserver.disconnect();
+    scrollObserver = null;
+  }
+  if (scrollSentinel) {
+    scrollSentinel.remove();
+    scrollSentinel = null;
+  }
+  
+  const sidebarList = document.getElementById('sidebar_list');
+  if (!sidebarList || !paginationEnabled) return;
+  
+  // Create sentinel element at the bottom of sidebar
+  scrollSentinel = document.createElement('div');
+  scrollSentinel.id = 'scroll-sentinel';
+  scrollSentinel.className = 'scroll-sentinel';
+  scrollSentinel.style.height = '1px';
+  scrollSentinel.style.width = '100%';
+  sidebarList.appendChild(scrollSentinel);
+  
+  // Create intersection observer for infinite scroll
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && hasMorePages && !isLoadingMore) {
+        console.log('Loading next page:', currentPage + 1);
+        loadNextPage();
+      }
+    });
+  }, {
+    root: sidebarList,
+    rootMargin: '200px', // Trigger 200px before sentinel becomes visible
+    threshold: 0.01
+  });
+  
+  scrollObserver.observe(scrollSentinel);
+}
+
+function loadNextPage() {
+  if (!hasMorePages || isLoadingMore) return;
+  
+  // Show loading indicator before loading next page
+  showLoadingMoreIndicator();
+  
+  loadVideos(currentPage + 1, true);
+}
+
+function resetPagination() {
+  // Reset pagination state and reload from page 1
+  currentPage = 1;
+  totalPages = 1;
+  totalItems = 0;
+  hasMorePages = false;
+  videos = []; // Clear existing videos
+  
+  // Reload videos from page 1
+  loadVideos(1, false);
+}
+
+function showLoadingIndicator(containerId, message = 'Loading...') {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const loader = document.createElement('div');
+  loader.id = 'loading-indicator';
+  loader.className = 'loading-indicator';
+  loader.innerHTML = `
+    <div class="loading-spinner"></div>
+    <div class="loading-text">${message}</div>
+  `;
+  container.innerHTML = '';
+  container.appendChild(loader);
+}
+
+function hideLoadingIndicator(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  const loader = document.getElementById('loading-indicator');
+  if (loader) {
+    loader.remove();
+  }
+}
+
+function showLoadingMoreIndicator() {
+  const sidebarList = document.getElementById('sidebar_list');
+  if (!sidebarList) return;
+  
+  // Check if indicator already exists
+  let indicator = document.getElementById('loading-more-indicator');
+  if (!indicator) {
+    indicator = document.createElement('div');
+    indicator.id = 'loading-more-indicator';
+    indicator.className = 'loading-more-indicator';
+    indicator.innerHTML = `
+      <div class="loading-spinner-small"></div>
+      <span>Loading more...</span>
+    `;
+    // Insert before sentinel
+    if (scrollSentinel) {
+      sidebarList.insertBefore(indicator, scrollSentinel);
+    } else {
+      sidebarList.appendChild(indicator);
+    }
+  }
+}
+
+function hideLoadingMoreIndicator() {
+  const indicator = document.getElementById('loading-more-indicator');
+  if (indicator) {
+    indicator.remove();
+  }
+}
+
+function showError(message) {
+  console.error(message);
+  // You can enhance this with a proper UI notification
+  alert(message);
+}
+
 async function postScore(score){
   const v = filtered[idx];
   if (!v) return;
@@ -1623,7 +1830,13 @@ document.getElementById('min_filter').addEventListener('change', () => {
   saveState('minFilter', filterValue);
   
   fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(typeof minFilter === 'string'?minFilter:('>='+minFilter))), name: '' })});
-  applyFilter(); renderSidebar(); show(0);
+  
+  // Reset pagination when filter changes
+  if (paginationEnabled) {
+    resetPagination();
+  } else {
+    applyFilter(); renderSidebar(); show(0);
+  }
 });
 document.getElementById('dir').addEventListener('keydown', (e) => {
   if (e.key === "Enter"){
