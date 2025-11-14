@@ -1444,101 +1444,124 @@ async function loadVideos(page = 1, append = false){
       showLoadingIndicator('sidebar_list', 'Loading media files...');
     }
     
-    // Check if database is enabled and use paginated endpoint
-    if (window.databaseEnabled && paginationEnabled) {
-      const response = await fetch("/api/videos/paginated", {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-          page: page,
-          page_size: pageSize,
-          min_score: minFilter && typeof minFilter === 'number' ? minFilter : null,
-          sort_field: "name",
-          sort_direction: "asc"
-        })
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+    // Try paginated endpoint if database is available (check first time)
+    const usePagination = window.databaseEnabled || paginationEnabled;
+    
+    if (usePagination) {
+      try {
+        const response = await fetch("/api/videos/paginated", {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            page: page,
+            page_size: pageSize,
+            min_score: minFilter && typeof minFilter === 'number' ? minFilter : null,
+            sort_field: "name",
+            sort_direction: "asc"
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Successfully used pagination - enable it going forward
+          paginationEnabled = true;
+          window.databaseEnabled = true;
+          
+          // Update pagination state
+          currentPage = data.pagination.page;
+          totalPages = data.pagination.total_pages;
+          totalItems = data.pagination.total_items;
+          hasMorePages = data.pagination.has_next;
+          
+          // Append or replace videos array
+          if (append) {
+            videos = [...videos, ...data.items];
+          } else {
+            videos = data.items;
+          }
+          
+          console.log(`Loaded page ${currentPage}/${totalPages}, ${videos.length}/${totalItems} items total`);
+          
+          applyFilter();
+          renderSidebar();
+          
+          // Only show first item on initial load (not when appending pages)
+          if (!append) {
+            show(0);
+          }
+          
+          // Setup infinite scroll observer after first load
+          if (currentPage === 1) {
+            setupInfiniteScroll();
+          }
+          
+          return; // Success - exit function
+        } else if (response.status === 503) {
+          // Database not available, fall through to non-paginated mode
+          console.log('Pagination not available (503), using non-paginated mode');
+          paginationEnabled = false;
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+      } catch (error) {
+        console.log('Pagination failed, falling back to non-paginated mode:', error.message);
+        paginationEnabled = false;
       }
-      
-      const data = await response.json();
-      
-      // Update pagination state
-      currentPage = data.pagination.page;
-      totalPages = data.pagination.total_pages;
-      totalItems = data.pagination.total_items;
-      hasMorePages = data.pagination.has_next;
-      
-      // Append or replace videos array
-      if (append) {
-        videos = [...videos, ...data.items];
-      } else {
-        videos = data.items;
-      }
-      
-      console.log(`Loaded page ${currentPage}/${totalPages}, ${videos.length}/${totalItems} items total`);
-      
-    } else {
-      // Fallback to original non-paginated endpoint
-      const res = await fetch("/api/videos");
-      const data = await res.json();
-      videos = data.videos || [];
-      currentDir = data.dir || "";
-      currentPattern = data.pattern || currentPattern;
-      thumbnailsEnabled = data.thumbnails_enabled || false;
-      thumbnailHeight = data.thumbnail_height || 64;
-      toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
-      userPathPrefix = data.user_path_prefix || null;
-      
-      // Store database flag globally for search toolbar to use
-      window.databaseEnabled = data.database_enabled || false;
-      paginationEnabled = window.databaseEnabled; // Enable pagination if database is available
-      
-      // Reset pagination state for non-paginated mode
-      currentPage = 1;
-      totalPages = 1;
-      totalItems = videos.length;
-      hasMorePages = false;
-      
-      document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
-      const dirInput = document.getElementById('dir');
-      if (dirInput && !dirInput.value) dirInput.value = currentDir;
-      const patInput = document.getElementById('pattern');
-      if (patInput && !patInput.value) patInput.value = currentPattern;
-      
-      // Resize directory input after updating dir_display
-      resizeDirectoryInput();
-      
-      // Initialize toggle buttons
-      initializeToggleButtons();
-      
-      // Show/hide thumbnail controls
-      const sidebarControls = document.getElementById('sidebar_controls');
-      if (sidebarControls) {
-        sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
-      }
-      
-      // Initialize thumbnail toggle button icon
-      updateThumbnailToggleButton();
-      
-      // Start monitoring thumbnail progress if thumbnails are enabled
-      if (thumbnailsEnabled) {
-        updateThumbnailStatus();
-      }
+    }
+    
+    // Fallback to original non-paginated endpoint
+    const res = await fetch("/api/videos");
+    const data = await res.json();
+    videos = data.videos || [];
+    currentDir = data.dir || "";
+    currentPattern = data.pattern || currentPattern;
+    thumbnailsEnabled = data.thumbnails_enabled || false;
+    thumbnailHeight = data.thumbnail_height || 64;
+    toggleExtensions = data.toggle_extensions || ["jpg", "png", "mp4"];
+    userPathPrefix = data.user_path_prefix || null;
+    
+    // Store database flag globally for search toolbar to use
+    window.databaseEnabled = data.database_enabled || false;
+    
+    // Reset pagination state for non-paginated mode
+    currentPage = 1;
+    totalPages = 1;
+    totalItems = videos.length;
+    hasMorePages = false;
+    
+    document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
+    const dirInput = document.getElementById('dir');
+    if (dirInput && !dirInput.value) dirInput.value = currentDir;
+    const patInput = document.getElementById('pattern');
+    if (patInput && !patInput.value) patInput.value = currentPattern;
+    
+    // Resize directory input after updating dir_display
+    resizeDirectoryInput();
+    
+    // Initialize toggle buttons
+    initializeToggleButtons();
+    
+    // Show/hide thumbnail controls
+    const sidebarControls = document.getElementById('sidebar_controls');
+    if (sidebarControls) {
+      sidebarControls.style.display = thumbnailsEnabled ? 'block' : 'none';
+    }
+    
+    // Initialize thumbnail toggle button icon
+    updateThumbnailToggleButton();
+    
+    // Start monitoring thumbnail progress if thumbnails are enabled
+    if (thumbnailsEnabled) {
+      updateThumbnailStatus();
     }
     
     applyFilter();
     renderSidebar();
     
-    // Only show first item on initial load (not when appending pages)
+    // Only show first item on initial load
     if (!append) {
       show(0);
-    }
-    
-    // Setup infinite scroll observer after first load
-    if (paginationEnabled && currentPage === 1) {
-      setupInfiniteScroll();
     }
     
   } catch (error) {
