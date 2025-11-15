@@ -1139,6 +1139,11 @@ function formatDatePill(isoDateString){
   }
 }
 function renderSidebar(){
+  // Start performance timer
+  if (window.perfDiag) {
+    window.perfDiag.startTimer('render-sidebar');
+  }
+  
   const list = document.getElementById('sidebar_list');
   if (!list) return;
   let html = '';
@@ -1186,8 +1191,22 @@ function renderSidebar(){
     // Use setTimeout to defer observation until after DOM updates
     setTimeout(() => observeThumbnails(), 0);
   }
+  
+  // End performance timer
+  if (window.perfDiag) {
+    window.perfDiag.endTimer('render-sidebar', {
+      totalItems: videos.length,
+      filteredItems: filtered.length,
+      thumbnailsEnabled: thumbnailsEnabled && showThumbnails
+    });
+  }
 }
 function applyFilter(){
+  // Start performance timer
+  if (window.perfDiag) {
+    window.perfDiag.startTimer('apply-filter');
+  }
+  
   if (minFilter === null) {
     filtered = videos.slice();
   } else if (minFilter === 'rejected') {
@@ -1213,6 +1232,15 @@ function applyFilter(){
     label = 'rating ≥ ' + minFilter;
   }
   info.textContent = `${label} — showing ${filtered.length}/${videos.length}`;
+  
+  // End performance timer
+  if (window.perfDiag) {
+    window.perfDiag.endTimer('apply-filter', {
+      filterType: minFilter === null ? 'none' : minFilter,
+      resultCount: filtered.length,
+      totalCount: videos.length
+    });
+  }
 }
 function isVideoName(n){ return n.toLowerCase().endsWith('.mp4'); }
 function isImageName(n){ const s=n.toLowerCase(); return s.endsWith('.png')||s.endsWith('.jpg')||s.endsWith('.jpeg'); }
@@ -1438,6 +1466,11 @@ async function loadVideos(page = 1, append = false){
   if (isLoadingMore) return;
   isLoadingMore = true;
   
+  // Start performance timer
+  if (window.perfDiag) {
+    window.perfDiag.startTimer('api-fetch');
+  }
+  
   try {
     // Show loading indicator
     if (!append) {
@@ -1482,6 +1515,16 @@ async function loadVideos(page = 1, append = false){
           }
           
           console.log(`Loaded page ${currentPage}/${totalPages}, ${videos.length}/${totalItems} items total`);
+          
+          // End performance timer
+          if (window.perfDiag) {
+            window.perfDiag.endTimer('api-fetch', {
+              page,
+              itemsLoaded: data.items.length,
+              totalItems,
+              paginated: true
+            });
+          }
           
           applyFilter();
           renderSidebar();
@@ -1529,6 +1572,14 @@ async function loadVideos(page = 1, append = false){
     totalPages = 1;
     totalItems = videos.length;
     hasMorePages = false;
+    
+    // End performance timer for non-paginated
+    if (window.perfDiag) {
+      window.perfDiag.endTimer('api-fetch', {
+        itemsLoaded: videos.length,
+        paginated: false
+      });
+    }
     
     document.getElementById('dir_display').textContent = currentDir + '  •  ' + currentPattern;
     const dirInput = document.getElementById('dir');
