@@ -1542,7 +1542,8 @@
         
         // Add click handlers for toggles
         container.querySelectorAll('.file-type-toggle').forEach(toggle => {
-          toggle.addEventListener('click', function() {
+          toggle.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default label behavior
             this.classList.toggle('active');
             const checkbox = this.querySelector('input[type="checkbox"]');
             checkbox.checked = this.classList.contains('active');
