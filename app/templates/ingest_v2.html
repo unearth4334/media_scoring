@@ -1391,6 +1391,7 @@
         updateSelectedDirectoriesDisplay();
         updateBrowserSelectedDisplay();
         updateFileTypes();  // Update available file types
+        updateTreeItemState(path, true);  // Update tree item appearance
       }
     }
     
@@ -1399,6 +1400,7 @@
       updateSelectedDirectoriesDisplay();
       updateBrowserSelectedDisplay();
       updateFileTypes();  // Update available file types
+      updateTreeItemState(path, false);  // Update tree item appearance
     }
     
     function clearAllDirectories() {
@@ -1410,6 +1412,35 @@
     
     function isDirectorySelected(path) {
       return selectedDirectories.includes(path);
+    }
+    
+    // Update the visual state of a tree item
+    function updateTreeItemState(path, selected) {
+      // Find all tree items with this path
+      const directoryTree = document.getElementById('directory-tree');
+      const treeItems = directoryTree.querySelectorAll('.tree-item');
+      
+      treeItems.forEach(item => {
+        const actions = item.querySelector('.tree-item-actions');
+        if (!actions) return;
+        
+        // Check if this is the item we're looking for by finding the button with this path
+        const addBtn = actions.querySelector(`.tree-add-btn[onclick*="${path.replace(/'/g, "\\'")}"]`);
+        const removeBtn = actions.querySelector(`.tree-remove-btn[onclick*="${path.replace(/'/g, "\\'")}"]`);
+        
+        if (addBtn || removeBtn) {
+          // This is the item we're looking for
+          if (selected) {
+            // Change to selected state
+            item.classList.add('selected');
+            actions.innerHTML = `<button class="tree-remove-btn" onclick="event.stopPropagation(); removeDirectory('${path.replace(/'/g, "\\'")}')">−</button>`;
+          } else {
+            // Change to unselected state
+            item.classList.remove('selected');
+            actions.innerHTML = `<button class="tree-add-btn" onclick="event.stopPropagation(); addDirectory('${path.replace(/'/g, "\\'")}')">+</button>`;
+          }
+        }
+      });
     }
     
     // Update available file types based on selected directories
