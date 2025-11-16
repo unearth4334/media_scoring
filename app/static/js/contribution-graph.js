@@ -75,11 +75,27 @@ function renderContributionGraph() {
   console.log('contributionGraphData keys:', Object.keys(contributionGraphData));
   console.log('contributionGraphData values sample:', Object.entries(contributionGraphData).slice(0, 5));
   
-  // Calculate date range (last 12 months)
-  const endDate = new Date();
+  // Calculate date range (last 12 months, but extend to include future dates if they exist in data)
+  const today = new Date();
   const startDate = new Date();
   startDate.setMonth(startDate.getMonth() - 12);
   startDate.setDate(1); // Start from beginning of month
+  
+  // Find the latest date in the data
+  const datesInData = Object.keys(contributionGraphData);
+  let endDate = new Date(today);
+  
+  if (datesInData.length > 0) {
+    // Parse all dates and find the maximum
+    const maxDateInData = datesInData.reduce((max, dateStr) => {
+      const date = new Date(dateStr + 'T00:00:00'); // Ensure proper parsing
+      return date > max ? date : max;
+    }, today);
+    
+    // Use the later of today or max date in data
+    endDate = maxDateInData > today ? maxDateInData : today;
+    console.log('Max date in data:', formatDateYMD(maxDateInData), 'Using end date:', formatDateYMD(endDate));
+  }
   
   // Adjust to start on Sunday for calendar grid
   const dayOfWeek = startDate.getDay();
