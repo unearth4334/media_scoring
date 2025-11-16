@@ -618,10 +618,38 @@
       border-radius: 4px;
       cursor: pointer;
       margin-bottom: 10px;
+      margin-right: 8px;
     }
 
     .tree-nav-btn:hover {
       background: var(--accent-hover, #357abd);
+    }
+    
+    .tree-nav-controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    
+    .tree-sort-btn {
+      padding: 8px 12px;
+      background: var(--border-color, #444);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+    }
+    
+    .tree-sort-btn:hover {
+      background: #555;
+    }
+    
+    .tree-sort-btn.active {
+      background: var(--accent-color, #4a90e2);
     }
 
     .tree-select-btn {
@@ -1003,7 +1031,13 @@
         <button class="directory-close-btn" id="directory-close-btn">×</button>
       </div>
       <div class="directory-content">
-        <button class="tree-nav-btn" id="parent-btn" style="display: none;">↑ Parent Directory</button>
+        <div class="tree-nav-controls">
+          <button class="tree-nav-btn" id="parent-btn" style="display: none;">↑ Parent Directory</button>
+          <button class="tree-sort-btn" id="sort-btn" title="Toggle sort order">
+            <span id="sort-icon">⬇</span>
+            <span id="sort-label">A-Z</span>
+          </button>
+        </div>
         <div class="current-path" id="current-path"></div>
         <div class="directory-loading" id="directory-loading">
           <div class="loading-spinner"></div>
@@ -1027,6 +1061,8 @@
     let commitTimer = null;
     let currentPath = '';
     let selectedDirectories = [];  // Array to store selected directories
+    let sortOrder = 'asc';  // 'asc' for A-Z, 'desc' for Z-A
+    let currentDirectoryData = null;  // Cache current directory data for re-sorting
 
     function updateWorkflowStep(stepNumber) {
       // Reset all steps
@@ -1414,6 +1450,29 @@
       return selectedDirectories.includes(path);
     }
     
+    // Toggle sort order and re-render the directory tree
+    function toggleSortOrder() {
+      sortOrder = sortOrder === 'asc' ? 'desc' : 'asc';
+      
+      // Update button appearance
+      const sortBtn = document.getElementById('sort-btn');
+      const sortIcon = document.getElementById('sort-icon');
+      const sortLabel = document.getElementById('sort-label');
+      
+      if (sortOrder === 'asc') {
+        sortIcon.textContent = '⬇';
+        sortLabel.textContent = 'A-Z';
+      } else {
+        sortIcon.textContent = '⬆';
+        sortLabel.textContent = 'Z-A';
+      }
+      
+      // Re-render the current directory with new sort order
+      if (currentDirectoryData) {
+        renderDirectoryTree(currentDirectoryData);
+      }
+    }
+    
     // Update the visual state of a tree item
     function updateTreeItemState(path, selected) {
       // Find all tree items with this path
@@ -1546,6 +1605,7 @@
       const addCurrentBtn = document.getElementById('add-current-btn');
       const clearSelectionBtn = document.getElementById('clear-selection-btn');
       const parentBtn = document.getElementById('parent-btn');
+      const sortBtn = document.getElementById('sort-btn');
       
       // Set up event listeners if not already set
       if (!directoryOverlay.dataset.initialized) {
@@ -1581,6 +1641,11 @@
                 loadDirectory(data.parent);
               }
             });
+        });
+        
+        // Toggle sort order
+        sortBtn.addEventListener('click', () => {
+          toggleSortOrder();
         });
         
         directoryOverlay.dataset.initialized = 'true';
@@ -1619,70 +1684,9 @@
           parentBtn.style.display = 'none';
         }
         
-        // Render directory tree
-        directoryTree.innerHTML = '';
-        
-        if (data.directories.length === 0 && data.file_summary === 'No files') {
-          directoryTree.innerHTML = '<div style="color: #888; padding: 10px;">Empty directory</div>';
-        } else {
-          // Show file summary
-          if (data.file_summary && data.file_summary !== 'No files') {
-            const filesDiv = document.createElement('div');
-            filesDiv.className = 'tree-files';
-            filesDiv.textContent = `📄 ${data.file_summary}`;
-            directoryTree.appendChild(filesDiv);
-          }
-          
-          // Show subdirectories
-          data.directories.forEach(dir => {
-            const item = document.createElement('div');
-            item.className = 'tree-item';
-            
-            // Check if this directory is selected
-            const selected = isDirectorySelected(dir.path);
-            if (selected) {
-              item.classList.add('selected');
-            }
-            
-            // Determine pill class based on ingestion status
-            let pillClass = 'empty';
-            let pillText = '(0/0)';
-            let pillHtml = '';
-            
-            if (dir.total_files > 0) {
-              const ingested = dir.ingested_files || 0;
-              const total = dir.total_files;
-              pillText = `(${ingested}/${total})`;
-              
-              if (ingested === 0) {
-                pillClass = 'empty';
-              } else if (ingested >= total) {
-                pillClass = 'complete';
-              } else {
-                pillClass = 'partial';
-              }
-              pillHtml = `<span class="ingest-stats-pill ${pillClass}">${pillText}</span>`;
-            }
-            
-            // Create item content
-            const contentHtml = `
-              <div class="tree-item-content" onclick="loadDirectory('${dir.path.replace(/'/g, "\\'")}')">
-                ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
-                📁 ${dir.name}
-                ${pillHtml}
-              </div>
-              <div class="tree-item-actions">
-                ${selected 
-                  ? `<button class="tree-remove-btn" onclick="event.stopPropagation(); removeDirectory('${dir.path.replace(/'/g, "\\'")}')">−</button>`
-                  : `<button class="tree-add-btn" onclick="event.stopPropagation(); addDirectory('${dir.path.replace(/'/g, "\\'")}')">+</button>`
-                }
-              </div>
-            `;
-            
-            item.innerHTML = contentHtml;
-            directoryTree.appendChild(item);
-          });
-        }
+        // Cache the data and render
+        currentDirectoryData = data;
+        renderDirectoryTree(data);
         
         // Update browser selected display
         updateBrowserSelectedDisplay();
@@ -1696,6 +1700,84 @@
         directoryTree.style.display = 'block';
         directoryTree.innerHTML = `<div style="color: #ff4444; padding: 10px;">Error: ${err.message}</div>`;
       }
+    }
+    
+    // Render directory tree with current sort order
+    function renderDirectoryTree(data) {
+      const directoryTree = document.getElementById('directory-tree');
+      directoryTree.innerHTML = '';
+      
+      if (data.directories.length === 0 && data.file_summary === 'No files') {
+        directoryTree.innerHTML = '<div style="color: #888; padding: 10px;">Empty directory</div>';
+        return;
+      }
+      
+      // Show file summary
+      if (data.file_summary && data.file_summary !== 'No files') {
+        const filesDiv = document.createElement('div');
+        filesDiv.className = 'tree-files';
+        filesDiv.textContent = `📄 ${data.file_summary}`;
+        directoryTree.appendChild(filesDiv);
+      }
+      
+      // Sort directories based on current sort order
+      const sortedDirectories = [...data.directories].sort((a, b) => {
+        if (sortOrder === 'asc') {
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        } else {
+          return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
+        }
+      });
+      
+      // Show subdirectories
+      sortedDirectories.forEach(dir => {
+        const item = document.createElement('div');
+        item.className = 'tree-item';
+        
+        // Check if this directory is selected
+        const selected = isDirectorySelected(dir.path);
+        if (selected) {
+          item.classList.add('selected');
+        }
+        
+        // Determine pill class based on ingestion status
+        let pillClass = 'empty';
+        let pillText = '(0/0)';
+        let pillHtml = '';
+        
+        if (dir.total_files > 0) {
+          const ingested = dir.ingested_files || 0;
+          const total = dir.total_files;
+          pillText = `(${ingested}/${total})`;
+          
+          if (ingested === 0) {
+            pillClass = 'empty';
+          } else if (ingested >= total) {
+            pillClass = 'complete';
+          } else {
+            pillClass = 'partial';
+          }
+          pillHtml = `<span class="ingest-stats-pill ${pillClass}">${pillText}</span>`;
+        }
+        
+        // Create item content
+        const contentHtml = `
+          <div class="tree-item-content" onclick="loadDirectory('${dir.path.replace(/'/g, "\\'")}')">
+            ${dir.has_children ? '<span class="tree-caret"></span>' : '<span style="width: 12px; display: inline-block;"></span>'}
+            📁 ${dir.name}
+            ${pillHtml}
+          </div>
+          <div class="tree-item-actions">
+            ${selected 
+              ? `<button class="tree-remove-btn" onclick="event.stopPropagation(); removeDirectory('${dir.path.replace(/'/g, "\\'")}')">−</button>`
+              : `<button class="tree-add-btn" onclick="event.stopPropagation(); addDirectory('${dir.path.replace(/'/g, "\\'")}')">+</button>`
+            }
+          </div>
+        `;
+        
+        item.innerHTML = contentHtml;
+        directoryTree.appendChild(item);
+      });
     }
 
     // Check for active session on page load
