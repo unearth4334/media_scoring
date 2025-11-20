@@ -1544,10 +1544,9 @@ async function loadBufferFirstPage() {
     
     // Clear existing items and load new ones
     videos = [];
-    filtered = pageData.items || [];
     
     // Convert buffer items to video format
-    videos = filtered.map(item => ({
+    const convertedItems = (pageData.items || []).map(item => ({
       name: item.filename || item.name,
       url: item.url || `/media/${item.filename || item.name}`,
       score: item.score || 0,
@@ -1559,6 +1558,9 @@ async function loadBufferFirstPage() {
       extension: item.extension,
       nsfw: item.nsfw || false
     }));
+    
+    videos = convertedItems;
+    filtered = convertedItems;
     
     renderSidebar();
     show(0);
