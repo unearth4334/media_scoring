@@ -1595,6 +1595,12 @@ async function refreshBufferWithFilters() {
     // Save active filters to server for persistence
     await window.BufferClient.setActiveFilters(filters);
     
+    // Refresh contribution graph to show newly ingested dates
+    if (typeof renderContributionGraph === 'function') {
+      console.info('[App] Refreshing contribution graph...');
+      renderContributionGraph();
+    }
+    
     // Load first page
     await loadBufferFirstPage();
     
@@ -1610,6 +1616,14 @@ async function refreshBufferWithFilters() {
  * Build filter criteria from current search toolbar state
  */
 function buildFilterCriteria() {
+  console.info('[App] Building filter criteria from toolbar state:', {
+    dateStart: searchToolbarFilters.dateStart,
+    dateEnd: searchToolbarFilters.dateEnd,
+    rating: searchToolbarFilters.rating,
+    filetype: searchToolbarFilters.filetype,
+    nsfw: searchToolbarFilters.nsfw
+  });
+  
   const filters = {
     sort_field: searchToolbarFilters.sort || 'name',
     sort_direction: searchToolbarFilters.sortDirection || 'asc',
@@ -1632,6 +1646,8 @@ function buildFilterCriteria() {
       filters.min_score = parseInt(searchToolbarFilters.rating);
     }
   }
+  
+  console.info('[App] Built filter criteria:', filters);
   
   return filters;
 }
