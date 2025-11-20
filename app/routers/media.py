@@ -884,8 +884,11 @@ async def list_sibling_directories(path: str = ""):
 
 
 @router.get("/media/daily-counts")
-async def get_daily_media_counts():
+async def get_daily_media_counts(rebuild: bool = False):
     """Get media file counts grouped by creation date for contribution graph.
+    
+    Args:
+        rebuild: If True, force rebuild of daily_contributions table from media files
     
     Returns a dictionary mapping dates (YYYY-MM-DD) to the count of media files
     created on that date. Uses the pre-computed daily_contributions table when
@@ -903,6 +906,12 @@ async def get_daily_media_counts():
                 return _get_daily_counts_from_filesystem(state)
                 
             with db_service as db:
+                # If rebuild is requested, force rebuild the table
+                if rebuild:
+                    state.logger.info("Rebuilding daily contributions table (rebuild=true)")
+                    db.rebuild_daily_contributions()
+                    db.session.commit()
+                
                 # First, try to use the pre-computed daily_contributions table
                 contributions = db.get_all_daily_contributions()
                 

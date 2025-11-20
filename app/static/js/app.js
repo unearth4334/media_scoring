@@ -1596,9 +1596,10 @@ async function refreshBufferWithFilters() {
     await window.BufferClient.setActiveFilters(filters);
     
     // Refresh contribution graph to show newly ingested dates
-    if (typeof renderContributionGraph === 'function') {
-      console.info('[App] Refreshing contribution graph...');
-      renderContributionGraph();
+    // Use forceRebuild=true to ensure daily_contributions table is rebuilt from latest media files
+    if (typeof loadContributionGraphData === 'function') {
+      console.info('[App] Refreshing contribution graph with rebuild...');
+      await loadContributionGraphData(true); // Force rebuild
     }
     
     // Load first page

@@ -30,15 +30,18 @@ async function initContributionGraph() {
 
 /**
  * Load daily media counts from API
+ * @param {boolean} forceRebuild - If true, force rebuild of daily contributions table
  */
-async function loadContributionGraphData() {
+async function loadContributionGraphData(forceRebuild = false) {
   const graphContainer = document.getElementById('contribution-graph');
   if (!graphContainer) return;
   
   try {
     graphContainer.innerHTML = '<div class="graph-loading">Loading activity data...</div>';
     
-    const response = await fetch('/api/media/daily-counts');
+    // Add rebuild parameter if requested
+    const url = forceRebuild ? '/api/media/daily-counts?rebuild=true' : '/api/media/daily-counts';
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to load data: ${response.statusText}`);
     }
@@ -46,7 +49,7 @@ async function loadContributionGraphData() {
     const data = await response.json();
     contributionGraphData = data.daily_counts || {};
     
-    console.log(`Loaded ${data.total_files} files across ${data.total_days} days`);
+    console.log(`Loaded ${data.total_files} files across ${data.total_days} days ${forceRebuild ? '(rebuilt)' : ''}`);
     console.log('Daily counts sample:', Object.entries(contributionGraphData).slice(0, 5));
     console.log('Total entries in contributionGraphData:', Object.keys(contributionGraphData).length);
     
