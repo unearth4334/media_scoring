@@ -192,3 +192,22 @@ class MediaThumbnail(Base):
     
     def __repr__(self):
         return f"<MediaThumbnail(id={self.id}, media_file_id={self.media_file_id}, size='{self.thumbnail_size}')>"
+
+
+class DailyContribution(Base):
+    """Model for daily contribution counts (for contribution graph optimization)."""
+    __tablename__ = "daily_contributions"
+    
+    id = Column(Integer, primary_key=True)
+    date = Column(DateTime, nullable=False, unique=True)  # Date (midnight UTC) for the contribution
+    count = Column(Integer, default=0, nullable=False)  # Number of files created on this date
+    created_at = Column(DateTime, default=dt.datetime.utcnow)
+    updated_at = Column(DateTime, default=dt.datetime.utcnow, onupdate=dt.datetime.utcnow)
+    
+    # Indexes for performance
+    __table_args__ = (
+        Index('idx_daily_contribution_date', 'date'),
+    )
+    
+    def __repr__(self):
+        return f"<DailyContribution(date={self.date.strftime('%Y-%m-%d') if self.date else 'None'}, count={self.count})>"

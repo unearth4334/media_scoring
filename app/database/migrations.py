@@ -13,6 +13,25 @@ def migrate_database(engine) -> None:
         # Check if new columns exist
         inspector = inspect(engine)
         
+        # Create daily_contributions table if it doesn't exist
+        if 'daily_contributions' not in inspector.get_table_names():
+            logger.info("Creating daily_contributions table")
+            with engine.connect() as connection:
+                connection.execute(text("""
+                    CREATE TABLE daily_contributions (
+                        id INTEGER PRIMARY KEY,
+                        date TIMESTAMP NOT NULL UNIQUE,
+                        count INTEGER NOT NULL DEFAULT 0,
+                        created_at TIMESTAMP,
+                        updated_at TIMESTAMP
+                    )
+                """))
+                connection.execute(text(
+                    "CREATE INDEX idx_daily_contribution_date ON daily_contributions (date)"
+                ))
+                connection.commit()
+                logger.info("Created daily_contributions table successfully")
+        
         # Check if media_files table has new columns
         if 'media_files' in inspector.get_table_names():
             columns = [col['name'] for col in inspector.get_columns('media_files')]
