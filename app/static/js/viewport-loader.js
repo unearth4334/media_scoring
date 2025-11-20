@@ -218,7 +218,7 @@ function unobserveItem(itemElement) {
 function observeAllItems() {
   if (!viewportObserver) return;
   
-  const items = document.querySelectorAll('#sidebar_list .sidebar_item');
+  const items = document.querySelectorAll('#sidebar_list .item');
   items.forEach(item => observeItem(item));
   
   console.info('[Viewport] Observing', items.length, 'items');

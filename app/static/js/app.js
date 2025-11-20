@@ -1662,50 +1662,69 @@ function renderNewSidebarItems(newItems) {
   
   newItems.forEach((v, localIdx) => {
     const globalIdx = videos.length - newItems.length + localIdx;
-    const li = createSidebarItem(v, globalIdx);
-    sidebarList.appendChild(li);
+    const itemDiv = createSidebarItem(v, globalIdx);
+    sidebarList.appendChild(itemDiv);
     
-    // Observe the new item for lazy loading
+    // Observe the new item for lazy loading (viewport-based)
     if (window.ViewportLoader) {
-      window.ViewportLoader.observeItem(li);
+      window.ViewportLoader.observeItem(itemDiv);
     }
   });
+  
+  // Also observe thumbnails for lazy loading
+  if (thumbnailsEnabled && showThumbnails) {
+    setTimeout(() => observeThumbnails(), 0);
+  }
 }
 
 /**
  * Create a sidebar item element
  */
 function createSidebarItem(v, i) {
-  const li = document.createElement('li');
-  li.className = 'sidebar_item';
-  li.setAttribute('data-filename', v.name);
-  li.setAttribute('data-index', i);
+  const div = document.createElement('div');
   
-  // Add click handler
-  li.addEventListener('click', () => {
-    idx = i;
-    show(i);
-  });
+  // Build classes - match the structure from renderSidebar()
+  const classes = ['item'];
+  if (i === idx) classes.push('current');
   
-  // Build item content
-  const scoreDisplay = getScoreDisplay(v.score);
-  const favourite = v.favourite ? '♥' : '';
+  // Set attributes
+  div.className = classes.join(' ');
+  div.setAttribute('data-name', v.name);
+  div.setAttribute('data-index', i);
   
-  let thumbnailHtml = '';
-  if (showThumbnails && thumbnailsEnabled) {
-    const thumbnailUrl = `/api/thumbnails/${encodeURIComponent(v.name)}?height=${thumbnailHeight}`;
-    thumbnailHtml = `<span class="thumbnail"><img data-thumbnail-src="${thumbnailUrl}" alt="" /></span>`;
+  // Build thumbnail HTML
+  let thumbHtml = '';
+  if (thumbnailsEnabled && showThumbnails) {
+    thumbHtml = `<div class="thumbnail"><img data-thumbnail-src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
+    classes.push('with-thumbnails');
+    div.className = classes.join(' '); // Update classes with with-thumbnails
   }
   
-  li.innerHTML = `
-    ${thumbnailHtml}
-    <span class="filename">${v.name}</span>
-    <span class="resolution" data-metadata-placeholder="true"></span>
-    <span class="score-badge">${scoreDisplay}</span>
-    ${favourite ? `<span class="favourite-badge">${favourite}</span>` : ''}
-  `;
+  // Build date pill
+  const datePill = formatDatePill(v.original_created_at);
   
-  return li;
+  // Build score badge
+  const s = scoreBadge(v.score || 0);
+  
+  // Build HTML content - match the structure from renderSidebar()
+  div.innerHTML = thumbHtml +
+    `<div class="content">` +
+    `<div class="name" title="${v.name}">${v.name}</div>` +
+    `<div class="meta-row">` +
+    `<div class="score">${s}</div>` +
+    (v.favourite ? `<span class="favourite-indicator">${svgHeartSmall()}</span>` : '') +
+    (datePill ? `<div class="date-pill">${datePill}</div>` : '') +
+    `</div>` +
+    `</div>`;
+  
+  // Add click handler
+  div.addEventListener('click', () => {
+    const name = div.getAttribute('data-name');
+    const j = filtered.findIndex(x => x.name === name);
+    if (j >= 0) show(j);
+  });
+  
+  return div;
 }
 
 /**
