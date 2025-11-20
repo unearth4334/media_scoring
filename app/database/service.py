@@ -553,3 +553,92 @@ class DatabaseService:
         # Similar cleanup for keywords and thumbnails can be added here
         
         return counts
+    
+    # Daily Contribution Operations
+    
+    @log_db_operation("increment_daily_contribution")
+    def increment_daily_contribution(self, date: datetime, count: int = 1) -> None:
+        """Increment the contribution count for a specific date.
+        
+        Args:
+            date: The date to increment (time component will be normalized to midnight UTC)
+            count: The amount to increment by (default: 1)
+        """
+        from .models import DailyContribution
+        
+        # Normalize to midnight UTC
+        date_normalized = date.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        # Find or create the daily contribution record
+        daily_contrib = self.session.query(DailyContribution).filter(
+            DailyContribution.date == date_normalized
+        ).first()
+        
+        if daily_contrib:
+            daily_contrib.count += count
+            daily_contrib.updated_at = datetime.utcnow()
+        else:
+            daily_contrib = DailyContribution(
+                date=date_normalized,
+                count=count
+            )
+            self.session.add(daily_contrib)
+        
+        logger.debug(f"Incremented contribution for {date_normalized.strftime('%Y-%m-%d')} by {count}")
+    
+    @log_db_operation("get_all_daily_contributions")
+    def get_all_daily_contributions(self) -> List[Tuple[datetime, int]]:
+        """Get all daily contribution records as a list of (date, count) tuples.
+        
+        Returns:
+            List of tuples (date, count) sorted by date
+        """
+        from .models import DailyContribution
+        
+        results = self.session.query(
+            DailyContribution.date,
+            DailyContribution.count
+        ).order_by(DailyContribution.date).all()
+        
+        return [(row.date, row.count) for row in results]
+    
+    @log_db_operation("rebuild_daily_contributions")
+    def rebuild_daily_contributions(self) -> int:
+        """Rebuild the daily contributions table from scratch by scanning all media files.
+        
+        This is useful for initializing the table or fixing inconsistencies.
+        
+        Returns:
+            Number of daily contribution records created/updated
+        """
+        from .models import DailyContribution
+        
+        # Clear existing records
+        self.session.query(DailyContribution).delete()
+        
+        # Get all media files and group them manually in Python
+        # This is simpler than dealing with database-specific date functions
+        media_files = self.session.query(MediaFile).all()
+        
+        # Group files by date
+        date_counts = {}
+        for media_file in media_files:
+            # Use original_created_at if available, otherwise fall back to created_at
+            date_obj = media_file.original_created_at or media_file.created_at
+            if date_obj:
+                # Normalize to midnight UTC
+                date_normalized = date_obj.replace(hour=0, minute=0, second=0, microsecond=0)
+                date_counts[date_normalized] = date_counts.get(date_normalized, 0) + 1
+        
+        # Create daily contribution records
+        records_created = 0
+        for date_obj, count in date_counts.items():
+            daily_contrib = DailyContribution(
+                date=date_obj,
+                count=count
+            )
+            self.session.add(daily_contrib)
+            records_created += 1
+        
+        logger.info(f"Rebuilt daily contributions table with {records_created} records")
+        return records_created

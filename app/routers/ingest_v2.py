@@ -897,6 +897,13 @@ def _commit_single_file(db: DatabaseService, file_data: Dict, parameters: Dict) 
             db.add_keywords(file_path, sanitized_data["keywords"], keyword_type='extracted', source='comfyui')
             db.session.flush()
         
+        # Update daily contribution tally based on file creation date
+        # Use original_created_at if available from metadata, otherwise fall back to created_at
+        contribution_date = media_file.original_created_at or media_file.created_at
+        if contribution_date:
+            db.increment_daily_contribution(contribution_date, count=1)
+            db.session.flush()
+        
         # Generate thumbnails if enabled
         state = get_state()
         if state.settings.generate_thumbnails:

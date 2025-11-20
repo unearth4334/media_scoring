@@ -888,30 +888,40 @@ async def get_daily_media_counts():
     """Get media file counts grouped by creation date for contribution graph.
     
     Returns a dictionary mapping dates (YYYY-MM-DD) to the count of media files
-    created on that date. Uses original_created_at (file modification time) for
-    files from filesystem, or created_at from database.
+    created on that date. Uses the pre-computed daily_contributions table when
+    database is enabled, falling back to filesystem scanning otherwise.
     """
     state = get_state()
     daily_counts = {}
     
     try:
         if state.database_enabled:
-            # Get from database
+            # Get from database using pre-computed daily_contributions table
             db_service = state.get_database_service()
             if db_service is None:
                 state.logger.error("Database service is not available")
                 return _get_daily_counts_from_filesystem(state)
                 
             with db_service as db:
-                media_files = db.get_all_media_files()
+                # First, try to use the pre-computed daily_contributions table
+                contributions = db.get_all_daily_contributions()
                 
-                for media_file in media_files:
-                    # Use original_created_at (actual file creation date) if available, 
-                    # otherwise fall back to created_at (database record creation)
-                    date_obj = media_file.original_created_at or media_file.created_at
-                    if date_obj:
+                if contributions:
+                    # Convert the results to the expected format
+                    for date_obj, count in contributions:
                         date_str = date_obj.strftime('%Y-%m-%d')
-                        daily_counts[date_str] = daily_counts.get(date_str, 0) + 1
+                        daily_counts[date_str] = count
+                else:
+                    # If the table is empty, rebuild it from media files and try again
+                    state.logger.info("Daily contributions table is empty, rebuilding...")
+                    db.rebuild_daily_contributions()
+                    db.session.commit()  # Ensure changes are committed
+                    
+                    # Now fetch the rebuilt data
+                    contributions = db.get_all_daily_contributions()
+                    for date_obj, count in contributions:
+                        date_str = date_obj.strftime('%Y-%m-%d')
+                        daily_counts[date_str] = count
         else:
             # Get from filesystem
             daily_counts = _get_daily_counts_from_filesystem(state)
