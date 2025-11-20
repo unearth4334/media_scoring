@@ -125,8 +125,10 @@ function renderContributionGraph() {
     console.log('All dates in data (last 5):', sortedDates.slice(-5));
   }
   
-  // Calculate max count for color scaling
+  // Calculate min non-zero and max count for color scaling
   const counts = Object.values(contributionGraphData);
+  const nonZeroCounts = counts.filter(c => c > 0);
+  const minNonZeroCount = nonZeroCounts.length > 0 ? Math.min(...nonZeroCounts) : 1;
   const maxCount = Math.max(...counts, 1);
   
   // Build the graph HTML
@@ -140,7 +142,7 @@ function renderContributionGraph() {
   while (currentDate <= endDate) {
     const dateStr = formatDateYMD(currentDate);
     const count = contributionGraphData[dateStr] || 0;
-    const level = getActivityLevel(count, maxCount);
+    const level = getActivityLevel(count, minNonZeroCount, maxCount);
     
     daysGenerated++;
     
@@ -256,12 +258,22 @@ function renderContributionGraph() {
 
 /**
  * Get activity level (0-4) based on count
+ * @param {number} count - The count for this day
+ * @param {number} minNonZeroCount - The minimum non-zero count across all days
+ * @param {number} maxCount - The maximum count across all days
+ * @returns {number} Activity level from 0 (zero count/black) to 4 (highest)
  */
-function getActivityLevel(count, maxCount) {
+function getActivityLevel(count, minNonZeroCount, maxCount) {
+  // Zero count gets level 0 (will be styled as black)
   if (count === 0) return 0;
-  if (maxCount === 0) return 0;
   
-  const percentage = count / maxCount;
+  // Handle edge case where all non-zero values are the same
+  if (minNonZeroCount === maxCount) return 4;
+  
+  // Calculate percentage within the non-zero range
+  const percentage = (count - minNonZeroCount) / (maxCount - minNonZeroCount);
+  
+  // Distribute levels 1-4 based on percentage within non-zero range
   if (percentage >= 0.75) return 4;
   if (percentage >= 0.50) return 3;
   if (percentage >= 0.25) return 2;
@@ -322,10 +334,15 @@ function attachGraphEventListeners() {
       }
     });
     
-    // Click - toggle date selection
+    // Click - toggle date selection (only for non-zero cells)
     day.addEventListener('click', () => {
       const date = day.getAttribute('data-date');
-      toggleDateSelection(date);
+      const count = parseInt(day.getAttribute('data-count'));
+      
+      // Only allow selection of cells with non-zero count
+      if (count > 0) {
+        toggleDateSelection(date);
+      }
     });
   });
 }

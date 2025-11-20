@@ -1202,7 +1202,7 @@ aside#sidebar {
 }
 
 .legend-square[data-level="0"] {
-  background: rgba(0, 255, 255, 0.1);
+  background: #000000;
 }
 
 .legend-square[data-level="1"] {
@@ -1300,7 +1300,9 @@ aside#sidebar {
 }
 
 .graph-day[data-level="0"] {
-  background: rgba(0, 255, 255, 0.1);
+  background: #000000;
+  cursor: default;
+  pointer-events: none;
 }
 
 .graph-day[data-level="1"] {
