@@ -369,6 +369,24 @@ Sample:
 
 ---
 
+## 📁 Repository Structure
+
+The repository is organized as follows:
+
+- **`app/`** - Main application code (routers, services, database, utils)
+- **`config/`** - Configuration files
+- **`docs/`** - Documentation files (see [`docs/README.md`](docs/README.md))
+- **`examples/`** - Example scripts and demos
+- **`media/`** - Production media directory (for runtime-generated content)
+- **`migrations/`** - Database migrations
+- **`scripts/`** - Deployment and utility scripts
+- **`tests/`** - Test suite with fixtures in `tests/fixtures/`
+- **`tools/`** - CLI utilities
+
+For detailed information, see [`docs/REPOSITORY_STRUCTURE.md`](docs/REPOSITORY_STRUCTURE.md).
+
+---
+
 ## ⚖ License
 
 This project is licensed under the [Apache License 2.0](LICENSE).

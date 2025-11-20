@@ -64,6 +64,7 @@ media/test_*.png
 media/test_*.jpg
 media/blue_*.jpg
 media/red_*.png
+# Note: Test fixtures are tracked in tests/fixtures/
 
 # Ignore self-generated files
 .thumbnails/
@@ -77,5 +78,5 @@ app/.logs/*.log
 docker-compose.override.yml.bak
 
 results/
-
-authorized_keysscreenshots/
+authorized_keys
+screenshots/
