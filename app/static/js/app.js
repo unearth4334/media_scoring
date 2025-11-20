@@ -1889,6 +1889,11 @@ document.getElementById("load").addEventListener("click", () => {
 
 // Refresh content button - uses buffer service when database is enabled
 document.getElementById("refresh-content").addEventListener("click", async () => {
+  // Clear the filters changed indicator
+  if (typeof clearFiltersChanged === 'function') {
+    clearFiltersChanged();
+  }
+  
   // Check if database and buffer service are available
   if (window.databaseEnabled && window.BufferClient) {
     // Use buffered mode

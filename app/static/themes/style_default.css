@@ -2773,3 +2773,66 @@ body.maximized .mobile-scorebar {
     padding: 12px;
   }
 }
+
+/* Refresh indicator styles */
+.refresh-indicator {
+  display: inline-block;
+  margin-left: 10px;
+  padding: 6px 12px;
+  background: rgba(255, 152, 0, 0.2);
+  border: 1px solid rgba(255, 152, 0, 0.5);
+  border-radius: 4px;
+  color: #ff9800;
+  font-size: 12px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.refresh-indicator.visible {
+  display: inline-block;
+}
+
+/* Buffer loading indicator */
+.buffer-loading {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.9);
+  padding: 20px 40px;
+  border-radius: 8px;
+  color: #fff;
+  z-index: 10000;
+  font-size: 16px;
+  display: none;
+}
+
+.buffer-loading.visible {
+  display: block;
+}
+
+.buffer-loading::after {
+  content: '';
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-left: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
