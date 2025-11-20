@@ -1190,6 +1190,11 @@ function renderSidebar(){
     // Use setTimeout to defer observation until after DOM updates
     setTimeout(() => observeThumbnails(), 0);
   }
+  
+  // Initialize viewport loader for buffer pagination
+  if (window.ViewportLoader && window.BufferClient && window.BufferClient.isActive()) {
+    setTimeout(() => window.ViewportLoader.observeAll(), 0);
+  }
 }
 function applyFilter(){
   if (minFilter === null) {
@@ -1481,6 +1486,252 @@ async function loadVideos(){
   renderSidebar();
   show(0);
 }
+
+// Buffer-aware loading mode
+let useBufferedMode = false;
+let bufferInitialized = false;
+
+/**
+ * Initialize buffer service and restore state if available
+ */
+async function initializeBufferMode() {
+  if (bufferInitialized) return;
+  
+  try {
+    console.info('[App] Initializing buffer mode...');
+    
+    // Initialize buffer client
+    const state = await window.BufferClient.initialize();
+    
+    if (state.restored) {
+      // Restore previous buffer state
+      console.info('[App] Buffer state restored, loading first page...');
+      await loadBufferFirstPage();
+    }
+    
+    // Initialize viewport loader
+    window.ViewportLoader.initialize();
+    
+    bufferInitialized = true;
+    console.info('[App] Buffer mode initialized');
+  } catch (error) {
+    console.error('[App] Failed to initialize buffer mode:', error);
+  }
+}
+
+/**
+ * Load the first page from buffer
+ */
+async function loadBufferFirstPage() {
+  try {
+    const bufferInfo = window.BufferClient.getInfo();
+    
+    if (!bufferInfo.isActive) {
+      console.warn('[App] No active buffer to load from');
+      return;
+    }
+    
+    showProgress('Loading items...');
+    
+    // Load first page
+    const pageData = await window.BufferClient.getPage(bufferInfo.filterHash, null, 50);
+    
+    // Clear existing items and load new ones
+    videos = [];
+    filtered = pageData.items || [];
+    
+    // Convert buffer items to video format
+    videos = filtered.map(item => ({
+      name: item.filename || item.name,
+      url: item.url || `/media/${item.filename || item.name}`,
+      score: item.score || 0,
+      favourite: item.favourite || false,
+      path: item.file_path || item.path,
+      created_at: item.created_at,
+      original_created_at: item.original_created_at,
+      file_type: item.file_type,
+      extension: item.extension,
+      nsfw: item.nsfw || false
+    }));
+    
+    renderSidebar();
+    show(0);
+    
+    hideProgress();
+    
+    console.info('[App] Loaded first page:', videos.length, 'items');
+  } catch (error) {
+    console.error('[App] Failed to load first page:', error);
+    hideProgress();
+    showNotification('Failed to load items', 'error');
+  }
+}
+
+/**
+ * Refresh buffer with current filters
+ */
+async function refreshBufferWithFilters() {
+  try {
+    showProgress('Refreshing buffer...');
+    
+    // Build filter criteria from current state
+    const filters = buildFilterCriteria();
+    
+    console.info('[App] Refreshing buffer with filters:', filters);
+    
+    // Trigger buffer refresh
+    const result = await window.BufferClient.refresh(filters);
+    
+    console.info('[App] Buffer refreshed:', result.item_count, 'items');
+    
+    // Save active filters to server for persistence
+    await window.BufferClient.setActiveFilters(filters);
+    
+    // Load first page
+    await loadBufferFirstPage();
+    
+    showNotification(`Buffer refreshed with ${result.item_count} items`, 'success');
+  } catch (error) {
+    console.error('[App] Failed to refresh buffer:', error);
+    hideProgress();
+    showNotification('Failed to refresh buffer: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Build filter criteria from current search toolbar state
+ */
+function buildFilterCriteria() {
+  const filters = {
+    sort_field: searchToolbarFilters.sort || 'name',
+    sort_direction: searchToolbarFilters.sortDirection || 'asc',
+    file_types: searchToolbarFilters.filetype || null,
+    start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
+    end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
+    nsfw_filter: searchToolbarFilters.nsfw || 'all'
+  };
+  
+  // Add rating filters
+  if (searchToolbarFilters.rating && searchToolbarFilters.rating !== 'none') {
+    if (searchToolbarFilters.rating === 'rejected') {
+      filters.min_score = -1;
+      filters.max_score = -1;
+    } else if (searchToolbarFilters.rating === 'unrated') {
+      filters.max_score = 0;
+    } else if (searchToolbarFilters.rating === 'unrated_and_above') {
+      filters.min_score = 0;
+    } else {
+      filters.min_score = parseInt(searchToolbarFilters.rating);
+    }
+  }
+  
+  return filters;
+}
+
+/**
+ * Append items to sidebar (for pagination)
+ */
+function appendSidebarItems(items) {
+  // Convert buffer items to video format and append
+  const newVideos = items.map(item => ({
+    name: item.filename || item.name,
+    url: item.url || `/media/${item.filename || item.name}`,
+    score: item.score || 0,
+    favourite: item.favourite || false,
+    path: item.file_path || item.path,
+    created_at: item.created_at,
+    original_created_at: item.original_created_at,
+    file_type: item.file_type,
+    extension: item.extension,
+    nsfw: item.nsfw || false
+  }));
+  
+  videos.push(...newVideos);
+  filtered.push(...newVideos);
+  
+  // Render new items in sidebar
+  renderNewSidebarItems(newVideos);
+}
+
+/**
+ * Render new items in sidebar without clearing existing ones
+ */
+function renderNewSidebarItems(newItems) {
+  const sidebarList = document.getElementById('sidebar_list');
+  if (!sidebarList) return;
+  
+  newItems.forEach((v, localIdx) => {
+    const globalIdx = videos.length - newItems.length + localIdx;
+    const li = createSidebarItem(v, globalIdx);
+    sidebarList.appendChild(li);
+    
+    // Observe the new item for lazy loading
+    if (window.ViewportLoader) {
+      window.ViewportLoader.observeItem(li);
+    }
+  });
+}
+
+/**
+ * Create a sidebar item element
+ */
+function createSidebarItem(v, i) {
+  const li = document.createElement('li');
+  li.className = 'sidebar_item';
+  li.setAttribute('data-filename', v.name);
+  li.setAttribute('data-index', i);
+  
+  // Add click handler
+  li.addEventListener('click', () => {
+    idx = i;
+    show(i);
+  });
+  
+  // Build item content
+  const scoreDisplay = getScoreDisplay(v.score);
+  const favourite = v.favourite ? '♥' : '';
+  
+  let thumbnailHtml = '';
+  if (showThumbnails && thumbnailsEnabled) {
+    const thumbnailUrl = `/api/thumbnails/${encodeURIComponent(v.name)}?height=${thumbnailHeight}`;
+    thumbnailHtml = `<span class="thumbnail"><img data-thumbnail-src="${thumbnailUrl}" alt="" /></span>`;
+  }
+  
+  li.innerHTML = `
+    ${thumbnailHtml}
+    <span class="filename">${v.name}</span>
+    <span class="resolution" data-metadata-placeholder="true"></span>
+    <span class="score-badge">${scoreDisplay}</span>
+    ${favourite ? `<span class="favourite-badge">${favourite}</span>` : ''}
+  `;
+  
+  return li;
+}
+
+/**
+ * Get score display string
+ */
+function getScoreDisplay(score) {
+  if (score === -1 || score === 'rejected') return '❌';
+  if (score > 0) return '⭐'.repeat(score);
+  return '—';
+}
+
+/**
+ * Show a notification message
+ */
+function showNotification(message, type = 'info') {
+  // Simple console-based notification for now
+  // TODO: Integrate with existing UI notification system if available
+  if (type === 'error') {
+    console.error(message);
+  } else if (type === 'success') {
+    console.info(message);
+  } else {
+    console.log(message);
+  }
+}
+
 async function postScore(score){
   const v = filtered[idx];
   if (!v) return;
@@ -1636,19 +1887,25 @@ document.getElementById("load").addEventListener("click", () => {
   setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 
-// Refresh content button - reloads all data then applies current filters  
+// Refresh content button - uses buffer service when database is enabled
 document.getElementById("refresh-content").addEventListener("click", async () => {
-  // First, reload all videos from the server (like initial page load)
-  await loadVideos();
-  
-  // Then apply current filters if available
-  if (typeof applyCurrentFilters === 'function') {
-    applyCurrentFilters();
+  // Check if database and buffer service are available
+  if (window.databaseEnabled && window.BufferClient) {
+    // Use buffered mode
+    await refreshBufferWithFilters();
   } else {
-    // Fallback to basic filtering if search toolbar not available
-    applyFilter();
-    renderSidebar();
-    show(0);
+    // Fallback to traditional loading
+    await loadVideos();
+    
+    // Then apply current filters if available
+    if (typeof applyCurrentFilters === 'function') {
+      applyCurrentFilters();
+    } else {
+      // Fallback to basic filtering if search toolbar not available
+      applyFilter();
+      renderSidebar();
+      show(0);
+    }
   }
 });
 
@@ -1961,7 +2218,15 @@ if (extractOneBtn) extractOneBtn.addEventListener("click", extractCurrent);
 const extractFilteredBtn = document.getElementById("extract_filtered");
 if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
-window.addEventListener("load", loadVideos);
+window.addEventListener("load", async () => {
+  // Load videos first
+  await loadVideos();
+  
+  // Initialize buffer mode if database is enabled
+  if (window.databaseEnabled && window.BufferClient) {
+    await initializeBufferMode();
+  }
+});
 
 /* =========================================================
    INFO PANE FUNCTIONALITY
