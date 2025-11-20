@@ -1145,8 +1145,14 @@ function renderSidebar(){
   const list = document.getElementById('sidebar_list');
   if (!list) return;
   let html = '';
+  
+  // In buffer mode, render only filtered items (not all videos)
+  // In normal mode, render all videos but mark non-filtered as disabled
+  const isBufferMode = window.BufferClient && window.BufferClient.isActive();
+  const itemsToRender = isBufferMode ? filtered : videos;
+  
   const namesInFiltered = new Set(filtered.map(v => v.name));
-  videos.forEach((v) => {
+  itemsToRender.forEach((v) => {
     const inFiltered = namesInFiltered.has(v.name);
     const s = scoreBadge(v.score || 0);
     const classes = ['item'];
