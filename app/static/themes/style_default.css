@@ -1301,6 +1301,8 @@ aside#sidebar {
 
 .graph-day[data-level="0"] {
   background: #000000;
+  cursor: default;
+  pointer-events: none;
 }
 
 .graph-day[data-level="1"] {

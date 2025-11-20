@@ -334,10 +334,15 @@ function attachGraphEventListeners() {
       }
     });
     
-    // Click - toggle date selection
+    // Click - toggle date selection (only for non-zero cells)
     day.addEventListener('click', () => {
       const date = day.getAttribute('data-date');
-      toggleDateSelection(date);
+      const count = parseInt(day.getAttribute('data-count'));
+      
+      // Only allow selection of cells with non-zero count
+      if (count > 0) {
+        toggleDateSelection(date);
+      }
     });
   });
 }
