@@ -135,19 +135,40 @@ class BufferService:
         return f"buffer_items_{filter_hash[:16]}"
     
     def get_or_create_buffer(self, filters: FilterCriteria, 
-                            db_service: DatabaseService) -> Tuple[str, int]:
+                            db_service: DatabaseService,
+                            force_rebuild: bool = False) -> Tuple[str, int]:
         """Get existing buffer or create new one for given filters.
         
         Args:
             filters: Filter criteria for the buffer
             db_service: Database service to query media files
+            force_rebuild: If True, delete existing buffer and rebuild from scratch
             
         Returns:
             Tuple of (filter_hash, item_count)
         """
         filter_hash = filters.compute_hash()
         
-        # Check if buffer already exists
+        # If force_rebuild, delete existing buffer first
+        if force_rebuild:
+            logger.info(f"Force rebuild requested for filter hash {filter_hash[:8]}")
+            with self.session_factory() as session:
+                result = session.execute(
+                    text("SELECT buffer_table_name FROM buffer_registry WHERE filter_hash = :hash"),
+                    {"hash": filter_hash}
+                ).fetchone()
+                
+                if result:
+                    buffer_table_name = result[0]
+                    logger.info(f"Deleting existing buffer table {buffer_table_name}")
+                    session.execute(text(f"DROP TABLE IF EXISTS {buffer_table_name}"))
+                    session.execute(
+                        text("DELETE FROM buffer_registry WHERE filter_hash = :hash"),
+                        {"hash": filter_hash}
+                    )
+                    session.commit()
+        
+        # Check if buffer already exists (will be False if force_rebuild was True)
         with self.session_factory() as session:
             result = session.execute(
                 text("SELECT buffer_table_name, item_count FROM buffer_registry WHERE filter_hash = :hash"),

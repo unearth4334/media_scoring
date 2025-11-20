@@ -51,18 +51,25 @@ async function initializeBufferClient() {
  * This triggers a buffer rebuild on the server
  * 
  * @param {Object} filters - Filter criteria
+ * @param {boolean} forceRebuild - Force rebuild of cached buffer (default true)
  * @returns {Promise<Object>} Response with filter_hash and item_count
  */
-async function refreshBuffer(filters) {
-  console.info('[Buffer] Refreshing buffer with filters:', filters);
+async function refreshBuffer(filters, forceRebuild = true) {
+  console.info('[Buffer] Refreshing buffer with filters:', filters, 'forceRebuild:', forceRebuild);
   
   try {
+    // Add force_rebuild flag to ensure cached buffers are invalidated
+    const requestBody = {
+      ...filters,
+      force_rebuild: forceRebuild
+    };
+    
     const response = await fetch('/api/search/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(filters)
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {

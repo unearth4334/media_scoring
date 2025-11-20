@@ -290,6 +290,7 @@ class FilterRequest(BaseModel):
     nsfw_filter: Optional[str] = None
     sort_field: str = "date"
     sort_direction: str = "desc"
+    force_rebuild: bool = True  # Default to True for refresh operations
 
 
 @router.post("/refresh")
@@ -299,6 +300,10 @@ async def refresh_buffer(request: FilterRequest):
     This endpoint triggers a rebuild of the materialized buffer table
     based on the provided filters. Should be called when user presses
     the Refresh button.
+    
+    The force_rebuild parameter (default True) ensures that cached buffers
+    are invalidated and rebuilt from current database state, allowing
+    newly ingested media to appear even when filter criteria unchanged.
     """
     state = get_state()
     
@@ -326,9 +331,11 @@ async def refresh_buffer(request: FilterRequest):
             sort_direction=request.sort_direction
         )
         
-        # Create or reuse buffer
+        # Create or reuse buffer (force rebuild by default)
         with db_service as db:
-            filter_hash, item_count = buffer_service.get_or_create_buffer(filters, db)
+            filter_hash, item_count = buffer_service.get_or_create_buffer(
+                filters, db, force_rebuild=request.force_rebuild
+            )
         
         # Save as active filter state
         buffer_service.save_ui_state("active_filter", {
