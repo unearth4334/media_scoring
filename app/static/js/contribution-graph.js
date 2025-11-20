@@ -30,15 +30,18 @@ async function initContributionGraph() {
 
 /**
  * Load daily media counts from API
+ * @param {boolean} forceRebuild - If true, force rebuild of daily contributions table
  */
-async function loadContributionGraphData() {
+async function loadContributionGraphData(forceRebuild = false) {
   const graphContainer = document.getElementById('contribution-graph');
   if (!graphContainer) return;
   
   try {
     graphContainer.innerHTML = '<div class="graph-loading">Loading activity data...</div>';
     
-    const response = await fetch('/api/media/daily-counts');
+    // Add rebuild parameter if requested
+    const url = forceRebuild ? '/api/media/daily-counts?rebuild=true' : '/api/media/daily-counts';
+    const response = await fetch(url);
     if (!response.ok) {
       throw new Error(`Failed to load data: ${response.statusText}`);
     }
@@ -46,7 +49,7 @@ async function loadContributionGraphData() {
     const data = await response.json();
     contributionGraphData = data.daily_counts || {};
     
-    console.log(`Loaded ${data.total_files} files across ${data.total_days} days`);
+    console.log(`Loaded ${data.total_files} files across ${data.total_days} days ${forceRebuild ? '(rebuilt)' : ''}`);
     console.log('Daily counts sample:', Object.entries(contributionGraphData).slice(0, 5));
     console.log('Total entries in contributionGraphData:', Object.keys(contributionGraphData).length);
     
@@ -75,11 +78,36 @@ function renderContributionGraph() {
   console.log('contributionGraphData keys:', Object.keys(contributionGraphData));
   console.log('contributionGraphData values sample:', Object.entries(contributionGraphData).slice(0, 5));
   
-  // Calculate date range (last 12 months)
-  const endDate = new Date();
-  const startDate = new Date();
+  // Calculate date range (last 12 months, but extend to include future dates if they exist in data)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Normalize to midnight
+  
+  const startDate = new Date(today);
   startDate.setMonth(startDate.getMonth() - 12);
   startDate.setDate(1); // Start from beginning of month
+  
+  // Find the latest date in the data
+  const datesInData = Object.keys(contributionGraphData);
+  let endDate = new Date(today);
+  
+  if (datesInData.length > 0) {
+    // Parse all dates and find the maximum (compare as date strings to avoid timezone issues)
+    const sortedDates = datesInData.sort();
+    const maxDateStr = sortedDates[sortedDates.length - 1];
+    const maxDateInData = new Date(maxDateStr + 'T00:00:00');
+    
+    console.log('Today (normalized):', formatDateYMD(today));
+    console.log('Max date string in data:', maxDateStr);
+    console.log('Max date parsed:', formatDateYMD(maxDateInData));
+    
+    // Use the later of today or max date in data
+    if (maxDateInData > today) {
+      endDate = maxDateInData;
+      console.log('Extended graph to include future date:', formatDateYMD(endDate));
+    } else {
+      console.log('Using today as end date:', formatDateYMD(endDate));
+    }
+  }
   
   // Adjust to start on Sunday for calendar grid
   const dayOfWeek = startDate.getDay();
@@ -89,6 +117,13 @@ function renderContributionGraph() {
   
   console.log('Graph date range:', formatDateYMD(startDate), 'to', formatDateYMD(endDate));
   console.log('contributionGraphData has', Object.keys(contributionGraphData).length, 'dates');
+  
+  // Debug: List all dates in the data
+  if (datesInData.length > 0) {
+    const sortedDates = datesInData.sort();
+    console.log('All dates in data (first 5):', sortedDates.slice(0, 5));
+    console.log('All dates in data (last 5):', sortedDates.slice(-5));
+  }
   
   // Calculate max count for color scaling
   const counts = Object.values(contributionGraphData);
@@ -100,11 +135,14 @@ function renderContributionGraph() {
   let currentDate = new Date(startDate);
   let currentWeek = [];
   let lastMonth = -1;
+  let daysGenerated = 0;
   
   while (currentDate <= endDate) {
     const dateStr = formatDateYMD(currentDate);
     const count = contributionGraphData[dateStr] || 0;
     const level = getActivityLevel(count, maxCount);
+    
+    daysGenerated++;
     
     // Debug: Log dates with data
     if (contributionGraphData[dateStr] !== undefined) {
@@ -114,6 +152,14 @@ function renderContributionGraph() {
     // Debug: Log first few days with their counts AND what's in data
     if (weeks.length === 0 && currentWeek.length < 5) {
       console.log(`Date: ${dateStr}, Count: ${count}, In data: ${contributionGraphData[dateStr] !== undefined}, Value in data: ${contributionGraphData[dateStr]}`);
+    }
+    
+    // Debug: Log last 5 days
+    if (daysGenerated > 0) {
+      const daysUntilEnd = Math.floor((endDate - currentDate) / (1000 * 60 * 60 * 24));
+      if (daysUntilEnd < 5) {
+        console.log(`Near end - Date: ${dateStr}, Days until end: ${daysUntilEnd}, Count: ${count}, In data: ${contributionGraphData[dateStr] !== undefined}`);
+      }
     }
     
     // Track month labels
@@ -142,6 +188,9 @@ function renderContributionGraph() {
     
     currentDate.setDate(currentDate.getDate() + 1);
   }
+  
+  console.log(`Generated ${daysGenerated} days in graph (${weeks.length} weeks)`);
+  console.log('Last date generated should be:', formatDateYMD(new Date(endDate)));
   
   // Add remaining days
   if (currentWeek.length > 0) {

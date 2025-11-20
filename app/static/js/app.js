@@ -1145,8 +1145,14 @@ function renderSidebar(){
   const list = document.getElementById('sidebar_list');
   if (!list) return;
   let html = '';
+  
+  // In buffer mode, render only filtered items (not all videos)
+  // In normal mode, render all videos but mark non-filtered as disabled
+  const isBufferMode = window.BufferClient && window.BufferClient.isActive();
+  const itemsToRender = isBufferMode ? filtered : videos;
+  
   const namesInFiltered = new Set(filtered.map(v => v.name));
-  videos.forEach((v) => {
+  itemsToRender.forEach((v) => {
     const inFiltered = namesInFiltered.has(v.name);
     const s = scoreBadge(v.score || 0);
     const classes = ['item'];
@@ -1189,6 +1195,11 @@ function renderSidebar(){
   if (thumbnailsEnabled && showThumbnails) {
     // Use setTimeout to defer observation until after DOM updates
     setTimeout(() => observeThumbnails(), 0);
+  }
+  
+  // Initialize viewport loader for buffer pagination
+  if (window.ViewportLoader && window.BufferClient && window.BufferClient.isActive()) {
+    setTimeout(() => window.ViewportLoader.observeAll(), 0);
   }
 }
 function applyFilter(){
@@ -1481,6 +1492,290 @@ async function loadVideos(){
   renderSidebar();
   show(0);
 }
+
+// Buffer-aware loading mode
+let useBufferedMode = false;
+let bufferInitialized = false;
+
+/**
+ * Initialize buffer service and restore state if available
+ */
+async function initializeBufferMode() {
+  if (bufferInitialized) return;
+  
+  try {
+    console.info('[App] Initializing buffer mode...');
+    
+    // Initialize buffer client
+    const state = await window.BufferClient.initialize();
+    
+    if (state.restored) {
+      // Restore previous buffer state
+      console.info('[App] Buffer state restored, loading first page...');
+      await loadBufferFirstPage();
+    }
+    
+    // Initialize viewport loader
+    window.ViewportLoader.initialize();
+    
+    bufferInitialized = true;
+    console.info('[App] Buffer mode initialized');
+  } catch (error) {
+    console.error('[App] Failed to initialize buffer mode:', error);
+  }
+}
+
+/**
+ * Load the first page from buffer
+ */
+async function loadBufferFirstPage() {
+  try {
+    const bufferInfo = window.BufferClient.getInfo();
+    
+    if (!bufferInfo.isActive) {
+      console.warn('[App] No active buffer to load from');
+      return;
+    }
+    
+    showProgress('Loading items...');
+    
+    // Load first page
+    const pageData = await window.BufferClient.getPage(bufferInfo.filterHash, null, 50);
+    
+    // Clear existing items and load new ones
+    videos = [];
+    
+    // Convert buffer items to video format
+    const convertedItems = (pageData.items || []).map(item => ({
+      name: item.filename || item.name,
+      url: item.url || `/media/${item.filename || item.name}`,
+      score: item.score || 0,
+      favourite: item.favourite || false,
+      path: item.file_path || item.path,
+      created_at: item.created_at,
+      original_created_at: item.original_created_at,
+      file_type: item.file_type,
+      extension: item.extension,
+      nsfw: item.nsfw || false
+    }));
+    
+    videos = convertedItems;
+    filtered = convertedItems;
+    
+    renderSidebar();
+    show(0);
+    
+    hideProgress();
+    
+    console.info('[App] Loaded first page:', videos.length, 'items');
+  } catch (error) {
+    console.error('[App] Failed to load first page:', error);
+    hideProgress();
+    showNotification('Failed to load items', 'error');
+  }
+}
+
+/**
+ * Refresh buffer with current filters
+ */
+async function refreshBufferWithFilters() {
+  try {
+    showProgress('Refreshing buffer...');
+    
+    // Build filter criteria from current state
+    const filters = buildFilterCriteria();
+    
+    console.info('[App] Refreshing buffer with filters:', filters);
+    
+    // Trigger buffer refresh
+    const result = await window.BufferClient.refresh(filters);
+    
+    console.info('[App] Buffer refreshed:', result.item_count, 'items');
+    
+    // Save active filters to server for persistence
+    await window.BufferClient.setActiveFilters(filters);
+    
+    // Refresh contribution graph to show newly ingested dates
+    // Use forceRebuild=true to ensure daily_contributions table is rebuilt from latest media files
+    if (typeof loadContributionGraphData === 'function') {
+      console.info('[App] Refreshing contribution graph with rebuild...');
+      await loadContributionGraphData(true); // Force rebuild
+    }
+    
+    // Load first page
+    await loadBufferFirstPage();
+    
+    showNotification(`Buffer refreshed with ${result.item_count} items`, 'success');
+  } catch (error) {
+    console.error('[App] Failed to refresh buffer:', error);
+    hideProgress();
+    showNotification('Failed to refresh buffer: ' + error.message, 'error');
+  }
+}
+
+/**
+ * Build filter criteria from current search toolbar state
+ */
+function buildFilterCriteria() {
+  console.info('[App] Building filter criteria from toolbar state:', {
+    dateStart: searchToolbarFilters.dateStart,
+    dateEnd: searchToolbarFilters.dateEnd,
+    rating: searchToolbarFilters.rating,
+    filetype: searchToolbarFilters.filetype,
+    nsfw: searchToolbarFilters.nsfw
+  });
+  
+  const filters = {
+    sort_field: searchToolbarFilters.sort || 'name',
+    sort_direction: searchToolbarFilters.sortDirection || 'asc',
+    file_types: searchToolbarFilters.filetype || null,
+    start_date: searchToolbarFilters.dateStart ? `${searchToolbarFilters.dateStart}T00:00:00Z` : null,
+    end_date: searchToolbarFilters.dateEnd ? `${searchToolbarFilters.dateEnd}T23:59:59Z` : null,
+    nsfw_filter: searchToolbarFilters.nsfw || 'all'
+  };
+  
+  // Add rating filters
+  if (searchToolbarFilters.rating && searchToolbarFilters.rating !== 'none') {
+    if (searchToolbarFilters.rating === 'rejected') {
+      filters.min_score = -1;
+      filters.max_score = -1;
+    } else if (searchToolbarFilters.rating === 'unrated') {
+      filters.max_score = 0;
+    } else if (searchToolbarFilters.rating === 'unrated_and_above') {
+      filters.min_score = 0;
+    } else {
+      filters.min_score = parseInt(searchToolbarFilters.rating);
+    }
+  }
+  
+  console.info('[App] Built filter criteria:', filters);
+  
+  return filters;
+}
+
+/**
+ * Append items to sidebar (for pagination)
+ */
+function appendSidebarItems(items) {
+  // Convert buffer items to video format and append
+  const newVideos = items.map(item => ({
+    name: item.filename || item.name,
+    url: item.url || `/media/${item.filename || item.name}`,
+    score: item.score || 0,
+    favourite: item.favourite || false,
+    path: item.file_path || item.path,
+    created_at: item.created_at,
+    original_created_at: item.original_created_at,
+    file_type: item.file_type,
+    extension: item.extension,
+    nsfw: item.nsfw || false
+  }));
+  
+  videos.push(...newVideos);
+  filtered.push(...newVideos);
+  
+  // Render new items in sidebar
+  renderNewSidebarItems(newVideos);
+}
+
+/**
+ * Render new items in sidebar without clearing existing ones
+ */
+function renderNewSidebarItems(newItems) {
+  const sidebarList = document.getElementById('sidebar_list');
+  if (!sidebarList) return;
+  
+  newItems.forEach((v, localIdx) => {
+    const globalIdx = videos.length - newItems.length + localIdx;
+    const itemDiv = createSidebarItem(v, globalIdx);
+    sidebarList.appendChild(itemDiv);
+    
+    // Observe the new item for lazy loading (viewport-based)
+    if (window.ViewportLoader) {
+      window.ViewportLoader.observeItem(itemDiv);
+    }
+  });
+  
+  // Also observe thumbnails for lazy loading
+  if (thumbnailsEnabled && showThumbnails) {
+    setTimeout(() => observeThumbnails(), 0);
+  }
+}
+
+/**
+ * Create a sidebar item element
+ */
+function createSidebarItem(v, i) {
+  const div = document.createElement('div');
+  
+  // Build classes - match the structure from renderSidebar()
+  const classes = ['item'];
+  if (i === idx) classes.push('current');
+  
+  // Set attributes
+  div.className = classes.join(' ');
+  div.setAttribute('data-name', v.name);
+  div.setAttribute('data-index', i);
+  
+  // Build thumbnail HTML
+  let thumbHtml = '';
+  if (thumbnailsEnabled && showThumbnails) {
+    thumbHtml = `<div class="thumbnail"><img data-thumbnail-src="/thumbnail/${encodeURIComponent(v.name)}" alt="" style="height:${thumbnailHeight}px" onerror="this.style.display='none'"></div>`;
+    classes.push('with-thumbnails');
+    div.className = classes.join(' '); // Update classes with with-thumbnails
+  }
+  
+  // Build date pill
+  const datePill = formatDatePill(v.original_created_at);
+  
+  // Build score badge
+  const s = scoreBadge(v.score || 0);
+  
+  // Build HTML content - match the structure from renderSidebar()
+  div.innerHTML = thumbHtml +
+    `<div class="content">` +
+    `<div class="name" title="${v.name}">${v.name}</div>` +
+    `<div class="meta-row">` +
+    `<div class="score">${s}</div>` +
+    (v.favourite ? `<span class="favourite-indicator">${svgHeartSmall()}</span>` : '') +
+    (datePill ? `<div class="date-pill">${datePill}</div>` : '') +
+    `</div>` +
+    `</div>`;
+  
+  // Add click handler
+  div.addEventListener('click', () => {
+    const name = div.getAttribute('data-name');
+    const j = filtered.findIndex(x => x.name === name);
+    if (j >= 0) show(j);
+  });
+  
+  return div;
+}
+
+/**
+ * Get score display string
+ */
+function getScoreDisplay(score) {
+  if (score === -1 || score === 'rejected') return '❌';
+  if (score > 0) return '⭐'.repeat(score);
+  return '—';
+}
+
+/**
+ * Show a notification message
+ */
+function showNotification(message, type = 'info') {
+  // Simple console-based notification for now
+  // TODO: Integrate with existing UI notification system if available
+  if (type === 'error') {
+    console.error(message);
+  } else if (type === 'success') {
+    console.info(message);
+  } else {
+    console.log(message);
+  }
+}
+
 async function postScore(score){
   const v = filtered[idx];
   if (!v) return;
@@ -1636,19 +1931,30 @@ document.getElementById("load").addEventListener("click", () => {
   setTimeout(resizeDirectoryInput, 100); // Small delay to ensure DOM updates
 });
 
-// Refresh content button - reloads all data then applies current filters  
+// Refresh content button - uses buffer service when database is enabled
 document.getElementById("refresh-content").addEventListener("click", async () => {
-  // First, reload all videos from the server (like initial page load)
-  await loadVideos();
+  // Clear the filters changed indicator
+  if (typeof clearFiltersChanged === 'function') {
+    clearFiltersChanged();
+  }
   
-  // Then apply current filters if available
-  if (typeof applyCurrentFilters === 'function') {
-    applyCurrentFilters();
+  // Check if database and buffer service are available
+  if (window.databaseEnabled && window.BufferClient) {
+    // Use buffered mode
+    await refreshBufferWithFilters();
   } else {
-    // Fallback to basic filtering if search toolbar not available
-    applyFilter();
-    renderSidebar();
-    show(0);
+    // Fallback to traditional loading
+    await loadVideos();
+    
+    // Then apply current filters if available
+    if (typeof applyCurrentFilters === 'function') {
+      applyCurrentFilters();
+    } else {
+      // Fallback to basic filtering if search toolbar not available
+      applyFilter();
+      renderSidebar();
+      show(0);
+    }
   }
 });
 
@@ -1961,7 +2267,15 @@ if (extractOneBtn) extractOneBtn.addEventListener("click", extractCurrent);
 const extractFilteredBtn = document.getElementById("extract_filtered");
 if (extractFilteredBtn) extractFilteredBtn.addEventListener("click", extractFiltered);
 document.getElementById("export_filtered_btn").addEventListener("click", exportFiltered);
-window.addEventListener("load", loadVideos);
+window.addEventListener("load", async () => {
+  // Load videos first
+  await loadVideos();
+  
+  // Initialize buffer mode if database is enabled
+  if (window.databaseEnabled && window.BufferClient) {
+    await initializeBufferMode();
+  }
+});
 
 /* =========================================================
    INFO PANE FUNCTIONALITY

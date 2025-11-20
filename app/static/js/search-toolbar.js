@@ -15,6 +15,47 @@ let searchToolbarFilters = {
   nsfw: 'all'
 };
 
+// Track if filters have changed and need refresh
+let filtersChanged = false;
+
+/**
+ * Mark filters as changed and show refresh indicator
+ */
+function markFiltersChanged() {
+  filtersChanged = true;
+  const indicator = document.getElementById('refresh-indicator');
+  const refreshBtn = document.getElementById('refresh-content');
+  
+  if (indicator) {
+    indicator.style.display = 'inline-block';
+    indicator.classList.add('visible');
+  }
+  
+  if (refreshBtn) {
+    refreshBtn.style.borderColor = '#ff9800';
+    refreshBtn.style.boxShadow = '0 0 10px rgba(255, 152, 0, 0.5)';
+  }
+}
+
+/**
+ * Clear filters changed state
+ */
+function clearFiltersChanged() {
+  filtersChanged = false;
+  const indicator = document.getElementById('refresh-indicator');
+  const refreshBtn = document.getElementById('refresh-content');
+  
+  if (indicator) {
+    indicator.style.display = 'none';
+    indicator.classList.remove('visible');
+  }
+  
+  if (refreshBtn) {
+    refreshBtn.style.borderColor = '';
+    refreshBtn.style.boxShadow = '';
+  }
+}
+
 // Function to restore search toolbar state from cookies
 function restoreSearchToolbarState() {
   if (typeof loadState !== 'function') {
@@ -527,6 +568,22 @@ function applySearchToolbarFilter(pillType) {
   
   // Save search toolbar state
   saveSearchToolbarState();
+  
+  // Mark filters as changed if using buffer mode
+  if (window.databaseEnabled && window.BufferClient && window.BufferClient.isActive()) {
+    markFiltersChanged();
+    // Save filter state to server for persistence
+    if (typeof buildFilterCriteria === 'function') {
+      window.BufferClient.setActiveFilters(buildFilterCriteria()).catch(err => {
+        console.error('Failed to save filter state:', err);
+      });
+    }
+  } else {
+    // Apply filters immediately in non-buffer mode
+    if (typeof applyCurrentFilters === 'function') {
+      applyCurrentFilters();
+    }
+  }
 }
 
 function clearFilter(pillType) {

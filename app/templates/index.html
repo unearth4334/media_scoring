@@ -23,6 +23,7 @@
         <!-- Refresh button (moved to top) -->
         <button id="refresh-content" class="refresh-btn" title="Refresh content based on current filters">
         </button>
+        <span id="refresh-indicator" class="refresh-indicator" style="display: none;">Filters changed - Click to refresh</span>
 
         <!-- File type pill -->
         <div class="pill pill-filetype" id="pill-filetype" data-pill="filetype">
@@ -375,6 +376,8 @@
 <script src="/static/vendor/viewerjs/viewer.min.js"></script>
 <script src="/static/js/viewer-integration.js"></script>
 <script src="/static/js/svg-icons.js"></script>
+<script src="/static/js/buffer-client.js"></script>
+<script src="/static/js/viewport-loader.js"></script>
 <script src="/static/js/search-toolbar.js"></script>
 <script src="/static/js/contribution-graph.js"></script>
 <script src="/static/js/app.js"></script>
