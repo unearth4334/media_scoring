@@ -337,9 +337,8 @@ function applyDateFilter() {
     searchToolbarFilters.dateEnd = sortedDates[sortedDates.length - 1];
   }
   
-  // Update pill value and apply filter
+  // Update pill value (but don't apply filter yet)
   updateDatePillValue();
-  applyCurrentFilters();
   
   // Save state
   saveSearchToolbarState();
@@ -406,7 +405,6 @@ function clearDateFilter() {
   });
   
   updateDatePillValue();
-  applyCurrentFilters();
   saveSearchToolbarState();
 }
 
