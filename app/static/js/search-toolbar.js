@@ -364,17 +364,17 @@ function setupEditorActions() {
     sortCloseIcon.addEventListener('click', closePillEditor);
   }
 
-  // Sort field select - apply instantly
+  // Sort field select - update state only
   const sortSelect = document.getElementById('sort-select');
   if (sortSelect) {
     sortSelect.addEventListener('change', () => {
       searchToolbarFilters.sort = sortSelect.value;
       updatePillValues();
-      applyCurrentFilters();
+      saveSearchToolbarState();
     });
   }
 
-  // Sort direction toggle buttons - apply instantly
+  // Sort direction toggle buttons - update state only
   const ascBtn = document.getElementById('sort-asc-btn');
   const descBtn = document.getElementById('sort-desc-btn');
   if (ascBtn && descBtn) {
@@ -383,7 +383,6 @@ function setupEditorActions() {
       ascBtn.classList.add('active');
       descBtn.classList.remove('active');
       updatePillValues();
-      applyCurrentFilters();
       saveSearchToolbarState();
     });
     descBtn.addEventListener('click', () => {
@@ -391,7 +390,6 @@ function setupEditorActions() {
       descBtn.classList.add('active');
       ascBtn.classList.remove('active');
       updatePillValues();
-      applyCurrentFilters();
       saveSearchToolbarState();
     });
   }
@@ -430,7 +428,7 @@ function setupEditorActions() {
   document.getElementById('nsfw-clear').addEventListener('click', () => clearFilter('nsfw'));
   document.getElementById('nsfw-close').addEventListener('click', closePillEditor);
   
-  // NSFW filter toggle buttons
+  // NSFW filter toggle buttons - update state only
   const nsfwAllBtn = document.getElementById('nsfw-all-btn');
   const nsfwSfwBtn = document.getElementById('nsfw-sfw-btn');
   const nsfwNsfwBtn = document.getElementById('nsfw-nsfw-btn');
@@ -441,7 +439,6 @@ function setupEditorActions() {
       nsfwSfwBtn.classList.remove('active');
       nsfwNsfwBtn.classList.remove('active');
       updatePillValues();
-      applyCurrentFilters();
       saveSearchToolbarState();
     });
     nsfwSfwBtn.addEventListener('click', () => {
@@ -450,7 +447,6 @@ function setupEditorActions() {
       nsfwAllBtn.classList.remove('active');
       nsfwNsfwBtn.classList.remove('active');
       updatePillValues();
-      applyCurrentFilters();
       saveSearchToolbarState();
     });
     nsfwNsfwBtn.addEventListener('click', () => {
@@ -459,7 +455,6 @@ function setupEditorActions() {
       nsfwAllBtn.classList.remove('active');
       nsfwSfwBtn.classList.remove('active');
       updatePillValues();
-      applyCurrentFilters();
       saveSearchToolbarState();
     });
   }
@@ -528,7 +523,6 @@ function applySearchToolbarFilter(pillType) {
   }
   
   updatePillValues();
-  applyCurrentFilters();
   closePillEditor();
   
   // Save search toolbar state
@@ -590,7 +584,6 @@ function clearFilter(pillType) {
   }
   
   updatePillValues();
-  applyCurrentFilters();
   
   // Save search toolbar state
   saveSearchToolbarState();
