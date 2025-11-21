@@ -478,6 +478,57 @@ async def set_active_filters(request: FilterRequest):
         raise HTTPException(500, f"Failed to set active filters: {str(e)}")
 
 
+@router.post("/view-state")
+async def save_view_state(request: Request):
+    """Save current view state (selected file and scroll position).
+    
+    This endpoint stores the user's current viewing position to enable
+    restoration after browser refresh.
+    """
+    state = get_state()
+    
+    try:
+        view_state = await request.json()
+        
+        buffer_service = get_buffer_service()
+        buffer_service.save_ui_state("view_state", view_state)
+        
+        state.logger.info(f"View state saved: {view_state.get('current_file', 'unknown')}")
+        
+        return {
+            "ok": True,
+            "message": "View state saved"
+        }
+    
+    except Exception as e:
+        state.logger.error(f"Failed to save view state: {e}")
+        raise HTTPException(500, f"Failed to save view state: {str(e)}")
+
+
+@router.get("/view-state")
+async def get_view_state():
+    """Get the saved view state.
+    
+    Returns the last saved viewing position (file and scroll).
+    """
+    state = get_state()
+    
+    try:
+        buffer_service = get_buffer_service()
+        view_state = buffer_service.get_ui_state("view_state")
+        
+        if view_state:
+            return view_state
+        else:
+            raise HTTPException(404, "No saved view state")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        state.logger.error(f"Failed to get view state: {e}")
+        raise HTTPException(500, f"Failed to get view state: {str(e)}")
+
+
 @router.get("/buffer/stats")
 async def get_buffer_stats():
     """Get statistics about buffered results."""

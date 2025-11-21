@@ -1535,7 +1535,7 @@ async function initializeBufferMode() {
 /**
  * Load the first page from buffer
  */
-async function loadBufferFirstPage() {
+async function loadBufferFirstPage(restoreState = true) {
   try {
     const bufferInfo = window.BufferClient.getInfo();
     
@@ -1570,7 +1570,17 @@ async function loadBufferFirstPage() {
     filtered = convertedItems;
     
     renderSidebar();
-    show(0);
+    
+    // Try to restore view state if requested
+    if (restoreState) {
+      const restored = await restoreViewState();
+      if (!restored) {
+        // If restore failed, show first item
+        show(0);
+      }
+    } else {
+      show(0);
+    }
     
     hideProgress();
     
@@ -1583,11 +1593,100 @@ async function loadBufferFirstPage() {
 }
 
 /**
+ * Save current view state (selected file and scroll position) to server
+ */
+async function saveViewState(currentFileName, scrollPosition) {
+  try {
+    const viewState = {
+      current_file: currentFileName,
+      scroll_position: scrollPosition,
+      saved_at: new Date().toISOString()
+    };
+    
+    const response = await fetch('/api/search/view-state', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(viewState)
+    });
+    
+    if (!response.ok) {
+      console.warn('[App] Failed to save view state:', response.status);
+      return;
+    }
+    
+    console.info('[App] View state saved:', viewState);
+  } catch (error) {
+    console.warn('[App] Error saving view state:', error);
+  }
+}
+
+/**
+ * Restore view state (scroll to file and restore scroll position)
+ */
+async function restoreViewState() {
+  try {
+    const response = await fetch('/api/search/view-state');
+    
+    if (!response.ok) {
+      console.info('[App] No saved view state available');
+      return null;
+    }
+    
+    const viewState = await response.json();
+    
+    if (!viewState || !viewState.current_file) {
+      console.info('[App] View state is empty');
+      return null;
+    }
+    
+    console.info('[App] Restoring view state:', viewState);
+    
+    // Find the file in the filtered list
+    const fileIndex = filtered.findIndex(v => v.name === viewState.current_file);
+    
+    if (fileIndex >= 0) {
+      // Show the file
+      show(fileIndex);
+      
+      // Restore scroll position after a short delay to ensure rendering is complete
+      setTimeout(() => {
+        const sidebarList = document.getElementById('sidebar_list');
+        if (sidebarList && viewState.scroll_position) {
+          sidebarList.scrollTop = viewState.scroll_position;
+          console.info('[App] Scroll position restored:', viewState.scroll_position);
+        }
+      }, 100);
+      
+      return viewState;
+    } else {
+      console.warn('[App] File not found in filtered list:', viewState.current_file);
+      return null;
+    }
+  } catch (error) {
+    console.warn('[App] Error restoring view state:', error);
+    return null;
+  }
+}
+
+/**
  * Refresh buffer with current filters
  */
 async function refreshBufferWithFilters() {
   try {
     showProgress('Refreshing buffer...');
+    
+    // Save current viewing state before refresh
+    const currentFileName = (filtered.length > 0 && filtered[idx]) ? filtered[idx].name : null;
+    const sidebarList = document.getElementById('sidebar_list');
+    const scrollPosition = sidebarList ? sidebarList.scrollTop : 0;
+    
+    console.info('[App] Saving view state before refresh:', {
+      currentIndex: idx,
+      currentFileName: currentFileName,
+      scrollPosition: scrollPosition
+    });
     
     // Build filter criteria from current state
     const filters = buildFilterCriteria();
@@ -1599,8 +1698,9 @@ async function refreshBufferWithFilters() {
     
     console.info('[App] Buffer refreshed:', result.item_count, 'items');
     
-    // Save active filters to server for persistence
+    // Save active filters AND view state to server for persistence
     await window.BufferClient.setActiveFilters(filters);
+    await saveViewState(currentFileName, scrollPosition);
     
     // Refresh contribution graph to show newly ingested dates
     // Use forceRebuild=true to ensure daily_contributions table is rebuilt from latest media files
@@ -1609,8 +1709,8 @@ async function refreshBufferWithFilters() {
       await loadContributionGraphData(true); // Force rebuild
     }
     
-    // Load first page
-    await loadBufferFirstPage();
+    // Load first page (don't restore state, start fresh at index 0)
+    await loadBufferFirstPage(false);
     
     showNotification(`Buffer refreshed with ${result.item_count} items`, 'success');
   } catch (error) {
