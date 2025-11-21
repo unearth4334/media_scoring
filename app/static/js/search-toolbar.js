@@ -100,6 +100,18 @@ function restoreSearchToolbarState() {
   
   searchToolbarFilters.nsfw = loadState('searchFilters_nsfw') || 'all';
   
+  // Also restore appliedFilters to match searchToolbarFilters on page load
+  // This ensures pills show correct state (applied/cyan instead of modified/green)
+  appliedFilters = {
+    sort: searchToolbarFilters.sort,
+    sortDirection: searchToolbarFilters.sortDirection,
+    filetype: [...searchToolbarFilters.filetype],
+    rating: searchToolbarFilters.rating,
+    dateStart: searchToolbarFilters.dateStart,
+    dateEnd: searchToolbarFilters.dateEnd,
+    nsfw: searchToolbarFilters.nsfw
+  };
+  
   // Restore active pill editor
   const savedActivePill = loadState('activePillEditor');
   if (savedActivePill && savedActivePill !== 'null') {
@@ -773,6 +785,8 @@ function applySearchToolbarFilter(pillType) {
     if (typeof applyCurrentFilters === 'function') {
       applyCurrentFilters();
     }
+    // Sync applied filters (filters are now active, not modified)
+    syncAppliedFilters();
   }
 }
 
