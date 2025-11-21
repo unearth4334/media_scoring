@@ -15,6 +15,17 @@ let searchToolbarFilters = {
   nsfw: 'all'
 };
 
+// Track the last applied (active) filters - these are what's currently showing in the buffer
+let appliedFilters = {
+  sort: 'name',
+  sortDirection: 'asc',
+  filetype: ['jpg', 'png', 'mp4'],
+  rating: 'none',
+  dateStart: null,
+  dateEnd: null,
+  nsfw: 'all'
+};
+
 // Track if filters have changed and need refresh
 let filtersChanged = false;
 
@@ -237,6 +248,17 @@ function applyServerFilters(filters) {
   
   console.info('[SearchToolbar] Filters applied:', searchToolbarFilters);
   
+  // Update appliedFilters to match current filters (these are now the active/applied ones)
+  appliedFilters = {
+    sort: searchToolbarFilters.sort,
+    sortDirection: searchToolbarFilters.sortDirection,
+    filetype: [...searchToolbarFilters.filetype],
+    rating: searchToolbarFilters.rating,
+    dateStart: searchToolbarFilters.dateStart,
+    dateEnd: searchToolbarFilters.dateEnd,
+    nsfw: searchToolbarFilters.nsfw
+  };
+  
   // Update UI to reflect the applied filters
   // Use a small delay to ensure DOM elements are ready
   setTimeout(() => {
@@ -274,6 +296,75 @@ const defaultFilters = {
   nsfw: 'all'
 };
 
+/**
+ * Get current filter value for comparison
+ */
+function getCurrentFilterValue(filterName) {
+  if (filterName === 'sort') {
+    return { sort: searchToolbarFilters.sort, sortDirection: searchToolbarFilters.sortDirection };
+  } else if (filterName === 'dateStart') {
+    return { dateStart: searchToolbarFilters.dateStart, dateEnd: searchToolbarFilters.dateEnd };
+  }
+  return searchToolbarFilters[filterName];
+}
+
+/**
+ * Get applied filter value for comparison
+ */
+function getAppliedFilterValue(filterName) {
+  if (filterName === 'sort') {
+    return { sort: appliedFilters.sort, sortDirection: appliedFilters.sortDirection };
+  } else if (filterName === 'dateStart') {
+    return { dateStart: appliedFilters.dateStart, dateEnd: appliedFilters.dateEnd };
+  }
+  return appliedFilters[filterName];
+}
+
+/**
+ * Get default filter value for comparison
+ */
+function getDefaultFilterValue(filterName) {
+  if (filterName === 'sort') {
+    return { sort: defaultFilters.sort, sortDirection: defaultFilters.sortDirection };
+  } else if (filterName === 'dateStart') {
+    return { dateStart: defaultFilters.dateStart, dateEnd: defaultFilters.dateEnd };
+  }
+  return defaultFilters[filterName];
+}
+
+/**
+ * Compare two filter values for equality
+ */
+function isValueEqual(value1, value2) {
+  // Handle null/undefined
+  if (value1 === null || value1 === undefined) {
+    return value2 === null || value2 === undefined;
+  }
+  if (value2 === null || value2 === undefined) {
+    return false;
+  }
+  
+  // Handle arrays (file types)
+  if (Array.isArray(value1) && Array.isArray(value2)) {
+    if (value1.length !== value2.length) return false;
+    const sorted1 = [...value1].sort();
+    const sorted2 = [...value2].sort();
+    return sorted1.every((val, idx) => val === sorted2[idx]);
+  }
+  
+  // Handle objects (sort with direction, dates)
+  if (typeof value1 === 'object' && typeof value2 === 'object') {
+    const keys1 = Object.keys(value1).sort();
+    const keys2 = Object.keys(value2).sort();
+    if (keys1.length !== keys2.length) return false;
+    if (!keys1.every((key, idx) => key === keys2[idx])) return false;
+    return keys1.every(key => isValueEqual(value1[key], value2[key]));
+  }
+  
+  // Standard comparison
+  return value1 === value2;
+}
+
 // Check if a filter value has been modified from its default
 function isFilterModified(filterName) {
   const current = searchToolbarFilters[filterName];
@@ -301,6 +392,27 @@ function isFilterModified(filterName) {
   
   // Standard comparison for other fields
   return current !== defaultValue;
+}
+
+/**
+ * Sync appliedFilters to match current searchToolbarFilters
+ * This should be called after filters are successfully applied (e.g., after refresh)
+ */
+function syncAppliedFilters() {
+  appliedFilters = {
+    sort: searchToolbarFilters.sort,
+    sortDirection: searchToolbarFilters.sortDirection,
+    filetype: [...searchToolbarFilters.filetype],
+    rating: searchToolbarFilters.rating,
+    dateStart: searchToolbarFilters.dateStart,
+    dateEnd: searchToolbarFilters.dateEnd,
+    nsfw: searchToolbarFilters.nsfw
+  };
+  
+  console.info('[SearchToolbar] Applied filters synced:', appliedFilters);
+  
+  // Update pill values to reflect the new state
+  updatePillValues();
 }
 
 // Initialize search toolbar functionality
@@ -800,7 +912,10 @@ function updatePillValues() {
     nsfwValue.textContent = nsfwLabels[searchToolbarFilters.nsfw] || 'All';
   }
   
-  // Apply modified state classes to pills
+  // Apply state classes to pills based on three states:
+  // 1. Default/All (grey) - no special class
+  // 2. Active/Applied (cyan) - .pill-active class
+  // 3. Modified/Pending (green) - .pill-modified class
   const pillsData = [
     { pill: sortPill, filterName: 'sort' },
     { pill: filetypePill, filterName: 'filetype' },
@@ -811,15 +926,24 @@ function updatePillValues() {
   
   pillsData.forEach(({ pill, filterName }) => {
     if (pill) {
-      const isModified = filterName === 'dateStart' ? 
-        (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) : 
-        isFilterModified(filterName);
-        
+      const currentValue = getCurrentFilterValue(filterName);
+      const appliedValue = getAppliedFilterValue(filterName);
+      const defaultValue = getDefaultFilterValue(filterName);
+      
+      const isDefault = isValueEqual(currentValue, defaultValue);
+      const isModified = !isValueEqual(currentValue, appliedValue);
+      
+      // Remove all state classes first
+      pill.classList.remove('pill-modified', 'pill-active');
+      
       if (isModified) {
+        // Filter has been modified but not yet applied - GREEN
         pill.classList.add('pill-modified');
-      } else {
-        pill.classList.remove('pill-modified');
+      } else if (!isDefault) {
+        // Filter is applied and differs from default - CYAN
+        pill.classList.add('pill-active');
       }
+      // else: Filter is at default value - GREY (no special class)
     }
   });
 }

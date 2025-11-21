@@ -784,27 +784,62 @@ aside#sidebar {
   color: #8b4513;
 }
 
-/* Modified pill styling - vibrant text and outline, button background */
+/* Active pill styling - cyan outline for non-default applied filters */
+.pill.pill-active {
+  background: var(--btn-bg);
+  border-color: #80cbc4;             /* pastel teal/cyan */
+  color: #00897b;                    /* darker teal text */
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(128,203,196,0.3);
+}
+
+.pill.pill-active .pill-value {
+  background: #e0f2f1;               /* very light teal */
+  color: #00897b;
+  font-weight: 600;
+  border: 1px solid #80cbc4;
+}
+
+.pill.pill-active:hover {
+  background: var(--btn-bg-hover);
+  border-color: #4db6ac;
+  color: #00796b;
+  box-shadow: 0 0 12px rgba(128,203,196,0.4);
+}
+
+.pill.pill-active:hover .pill-value {
+  color: #00796b;
+  border-color: #4db6ac;
+  background: #b2dfdb;
+}
+
+/* Modified pill styling - vibrant green for pending changes */
 .pill.pill-modified {
   background: var(--btn-bg);           /* use button background */
-  border-color: #ff7b7b;               /* vibrant red outline */
-  color: #d12c2c;                      /* vibrant red text */
+  border-color: #aed581;               /* pastel green outline */
+  color: #558b2f;                      /* darker green text */
   font-weight: 700;
-  box-shadow: 0 0 10px rgba(255, 123, 123, 0.25);
+  box-shadow: 0 0 10px rgba(174, 213, 129, 0.3);
 }
 
 .pill.pill-modified .pill-value {
-  background: #ffe0e0;                 /* soft red value background */
-  color: #d12c2c;
+  background: #f1f8e9;                 /* very light green */
+  color: #558b2f;
   font-weight: 700;
-  border: 1px solid #ff7b7b;
+  border: 1px solid #aed581;
 }
 
 .pill.pill-modified:hover {
   background: var(--btn-bg-hover);     /* button hover background */
-  border-color: #c41c1c;
-  color: #c41c1c;
-  box-shadow: 0 0 16px rgba(255, 123, 123, 0.4);
+  border-color: #9ccc65;
+  color: #33691e;
+  box-shadow: 0 0 16px rgba(174, 213, 129, 0.4);
+}
+
+.pill.pill-modified:hover .pill-value {
+  color: #33691e;
+  border-color: #9ccc65;
+  background: #dcedc8;
 }
 
 /* Pill editors */
