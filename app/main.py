@@ -49,6 +49,16 @@ def _initialize_app(state):
     # Ensure directory is resolved to absolute path
     resolved_dir = state.video_dir.resolve()
     
+    # Clear all buffers on startup to avoid leftover content from previous runs
+    if state.database_enabled:
+        try:
+            from .database.buffer_service import BufferService
+            buffer_service = BufferService(state.database_path)
+            buffer_service.clear_all_buffers()
+            state.logger.info("Cleared all buffers on application startup")
+        except Exception as e:
+            state.logger.warning(f"Failed to clear buffers on startup: {e}")
+    
     # Switch to initial directory and discover files
     file_list = switch_directory(resolved_dir, state.file_pattern)
     

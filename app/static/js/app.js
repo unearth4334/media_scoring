@@ -1702,6 +1702,11 @@ async function refreshBufferWithFilters() {
     await window.BufferClient.setActiveFilters(filters);
     await saveViewState(currentFileName, scrollPosition);
     
+    // Sync appliedFilters in search toolbar to mark filters as applied (not modified)
+    if (typeof syncAppliedFilters === 'function') {
+      syncAppliedFilters();
+    }
+    
     // Refresh contribution graph to show newly ingested dates
     // Use forceRebuild=true to ensure daily_contributions table is rebuilt from latest media files
     if (typeof loadContributionGraphData === 'function') {

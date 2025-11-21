@@ -814,33 +814,62 @@ aside#sidebar {
   color: #333;
 }
 
-/* Modified pill styling - vibrant outline and text, default background */
+/* Active pill styling - cyan outline and text for non-default applied filters */
+.pill.pill-active {
+  background: var(--btn-bg);
+  border-color: #00bcd4;
+  color: #00bcd4;
+  font-weight: 500;
+  box-shadow: 0 0 6px rgba(0,188,212,0.3);
+}
+
+.pill.pill-active .pill-value {
+  background: rgba(0,188,212,0.15);
+  color: #00bcd4;
+  font-weight: 500;
+  border: 1px solid #00bcd4;
+}
+
+.pill.pill-active:hover {
+  background: var(--btn-bg-hover);
+  border-color: #00acc1;
+  color: #00acc1;
+  box-shadow: 0 0 10px rgba(0,188,212,0.4);
+}
+
+.pill.pill-active:hover .pill-value {
+  color: #00acc1;
+  border-color: #00acc1;
+  background: rgba(0,188,212,0.2);
+}
+
+/* Modified pill styling - vibrant green outline and text for pending changes */
 .pill.pill-modified {
   background: var(--btn-bg);
-  border-color: #00ffff;
-  color: #00ffff;
+  border-color: #4CAF50;
+  color: #4CAF50;
   font-weight: 600;
-  box-shadow: 0 0 8px rgba(0,255,255,0.3);
+  box-shadow: 0 0 8px rgba(76,175,80,0.3);
 }
 
 .pill.pill-modified .pill-value {
-  background: rgba(0,255,255,0.15);
-  color: #00ffff;
+  background: rgba(76,175,80,0.15);
+  color: #4CAF50;
   font-weight: 600;
-  border: 1px solid #00ffff;
+  border: 1px solid #4CAF50;
 }
 
 .pill.pill-modified:hover {
   background: var(--btn-bg-hover);
-  border-color: #4CAF50;
-  color: #4CAF50;
+  border-color: #66BB6A;
+  color: #66BB6A;
   box-shadow: 0 0 12px rgba(76,175,80,0.4);
 }
 
 .pill.pill-modified:hover .pill-value {
-  color: #4CAF50;
-  border-color: #4CAF50;
-  background: rgba(76,175,80,0.15);
+  color: #66BB6A;
+  border-color: #66BB6A;
+  background: rgba(76,175,80,0.2);
 }
 
 /* Pill editors */

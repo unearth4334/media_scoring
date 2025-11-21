@@ -788,33 +788,68 @@ aside#sidebar {
   border-color: #00cccc;
 }
 
-/* Modified pill styling - vibrant text and outline, with themed background */
+/* Active pill styling - purple/magenta for non-default applied filters */
+.pill.pill-active {
+  background: var(--btn-bg);
+  border-color: #9932cc;             /* vibrant purple */
+  color: #da70d6;                    /* orchid/light purple */
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(153,50,204,0.6);
+}
+
+.pill.pill-active .pill-value {
+  background: rgba(153,50,204,0.2);  /* semi-transparent purple */
+  color: #da70d6;
+  font-weight: 600;
+  border: 2px solid #9932cc;
+}
+
+.pill.pill-active:hover {
+  background: var(--btn-bg-hover);
+  border-color: #ba55d3;             /* medium orchid */
+  color: #ee82ee;                    /* violet */
+  box-shadow: 0 0 16px rgba(153,50,204,0.8);
+}
+
+.pill.pill-active:hover .pill-value {
+  color: #ee82ee;
+  border-color: #ba55d3;
+  background: rgba(153,50,204,0.3);
+}
+
+/* Modified pill styling - vibrant cyan/green for pending changes */
 .pill.pill-modified {
   background: var(--btn-bg);           /* Use theme button background */
-  border-color: #00ffff;               /* Vibrant cyan outline */
-  color: #ff69b4;                      /* Vibrant hot pink text */
+  border-color: #00ff00;               /* Vibrant green outline */
+  color: #00ffff;                      /* Cyan text */
   font-weight: 700;
-  box-shadow: 0 0 16px rgba(0,255,255,0.7);
+  box-shadow: 0 0 16px rgba(0,255,0,0.7);
   animation: pulse-glow 2s ease-in-out infinite alternate;
 }
 
 .pill.pill-modified .pill-value {
-  background: #00ffff;                 /* Bright cyan value background */
-  color: #9932cc;                      /* Vibrant purple text */
+  background: #00ff00;                 /* Bright green value background */
+  color: #000000;                      /* Black text for contrast */
   font-weight: 700;
-  border: 2px solid #ff69b4;           /* Hot pink border */
+  border: 2px solid #00ffff;           /* Cyan border */
 }
 
 .pill.pill-modified:hover {
-  background: #00ffff;                 /* Cyan on hover */
-  border-color: #ff69b4;               /* Hot pink border on hover */
-  color: #9932cc;                      /* Vibrant purple text on hover */
-  box-shadow: 0 0 20px rgba(0,255,255,1.0);
+  background: #00ff00;                 /* Green on hover */
+  border-color: #00ffff;               /* Cyan border on hover */
+  color: #000000;                      /* Black text on hover */
+  box-shadow: 0 0 20px rgba(0,255,0,1.0);
+}
+
+.pill.pill-modified:hover .pill-value {
+  background: #00ffff;
+  color: #000000;
+  border-color: #00ff00;
 }
 
 @keyframes pulse-glow {
-  0% { box-shadow: 0 0 16px rgba(255, 105, 180, 0.8); }
-  100% { box-shadow: 0 0 24px rgba(255, 105, 180, 1.0); }
+  0% { box-shadow: 0 0 16px rgba(0, 255, 0, 0.8); }
+  100% { box-shadow: 0 0 24px rgba(0, 255, 0, 1.0); }
 }
 
 /* Pill editors */
