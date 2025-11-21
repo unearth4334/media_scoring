@@ -1226,12 +1226,41 @@ aside#sidebar {
   overflow-y: hidden;
   margin-bottom: 16px;
   padding: 8px 0;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Scrollbar styling for webkit browsers */
+.contribution-graph-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.contribution-graph-container::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.contribution-graph-container::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.contribution-graph-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 255, 255, 0.5);
 }
 
 .contribution-graph {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 8px;
+  min-width: min-content;
+}
+
+.graph-content {
+  min-width: min-content;
+  width: max-content;
+}
+
+.graph-grid-container {
   min-width: min-content;
 }
 
@@ -1274,6 +1303,8 @@ aside#sidebar {
 .graph-weeks {
   display: flex;
   gap: 2px;
+  flex-wrap: nowrap;
+  min-width: min-content;
 }
 
 .graph-week {
