@@ -301,6 +301,10 @@ async def refresh_buffer(request: FilterRequest):
     based on the provided filters. Should be called when user presses
     the Refresh button.
     
+    When refresh is triggered, all existing buffers are cleared to avoid
+    leftover content from previous searches. This ensures a clean state
+    and prevents stale data from being displayed.
+    
     The force_rebuild parameter (default True) ensures that cached buffers
     are invalidated and rebuilt from current database state, allowing
     newly ingested media to appear even when filter criteria unchanged.
@@ -317,6 +321,10 @@ async def refresh_buffer(request: FilterRequest):
         
         buffer_service = get_buffer_service()
         
+        # Clear all existing buffers to avoid leftover content
+        buffer_service.clear_all_buffers()
+        state.logger.info("Cleared all buffers before refresh")
+        
         # Convert request to FilterCriteria
         filters = FilterCriteria(
             keywords=request.keywords,
@@ -331,7 +339,7 @@ async def refresh_buffer(request: FilterRequest):
             sort_direction=request.sort_direction
         )
         
-        # Create or reuse buffer (force rebuild by default)
+        # Create new buffer (force rebuild by default)
         with db_service as db:
             filter_hash, item_count = buffer_service.get_or_create_buffer(
                 filters, db, force_rebuild=request.force_rebuild
