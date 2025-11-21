@@ -170,6 +170,84 @@ function restoreSearchToolbarUI() {
   console.info('Search toolbar UI state restored');
 }
 
+/**
+ * Apply server-side filter state to search toolbar
+ * This is called when buffer state is restored on page load
+ * 
+ * @param {Object} filters - Filter object from server
+ */
+function applyServerFilters(filters) {
+  if (!filters) {
+    console.warn('[SearchToolbar] No server filters to apply');
+    return;
+  }
+  
+  console.info('[SearchToolbar] Applying server-side filters:', filters);
+  
+  // Map server filter format to toolbar format
+  
+  // Sort field and direction
+  if (filters.sort_field) {
+    // Map server sort field names to toolbar values
+    const sortFieldMap = {
+      'name': 'name',
+      'date': 'date',
+      'created_at': 'date',
+      'original_created_at': 'date',
+      'score': 'rating',
+      'file_size': 'size'
+    };
+    searchToolbarFilters.sort = sortFieldMap[filters.sort_field] || filters.sort_field;
+  }
+  
+  if (filters.sort_direction) {
+    searchToolbarFilters.sortDirection = filters.sort_direction;
+  }
+  
+  // File types
+  if (filters.file_types && Array.isArray(filters.file_types)) {
+    searchToolbarFilters.filetype = filters.file_types;
+  }
+  
+  // Rating (min_score)
+  if (filters.min_score !== null && filters.min_score !== undefined) {
+    if (filters.min_score === -1) {
+      searchToolbarFilters.rating = 'rejected';
+    } else if (filters.min_score === 0) {
+      searchToolbarFilters.rating = 'unrated';
+    } else {
+      searchToolbarFilters.rating = filters.min_score.toString();
+    }
+  } else {
+    searchToolbarFilters.rating = 'none';
+  }
+  
+  // Date range
+  if (filters.start_date) {
+    searchToolbarFilters.dateStart = filters.start_date;
+  }
+  if (filters.end_date) {
+    searchToolbarFilters.dateEnd = filters.end_date;
+  }
+  
+  // NSFW filter
+  if (filters.nsfw_filter) {
+    searchToolbarFilters.nsfw = filters.nsfw_filter;
+  }
+  
+  console.info('[SearchToolbar] Filters applied:', searchToolbarFilters);
+  
+  // Update UI to reflect the applied filters
+  // Use a small delay to ensure DOM elements are ready
+  setTimeout(() => {
+    restoreSearchToolbarUI();
+    updatePillValues();
+    
+    // Save to cookies so it persists
+    saveSearchToolbarState();
+  }, 50);
+}
+
 // Function to save search toolbar state to cookies
 function saveSearchToolbarState() {
   if (typeof saveState !== 'function') return;

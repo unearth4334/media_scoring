@@ -1512,6 +1512,13 @@ async function initializeBufferMode() {
     if (state.restored) {
       // Restore previous buffer state
       console.info('[App] Buffer state restored, loading first page...');
+      
+      // Apply server-side filters to search toolbar UI
+      if (state.filters && typeof applyServerFilters === 'function') {
+        console.info('[App] Applying server filters to toolbar...');
+        applyServerFilters(state.filters);
+      }
+      
       await loadBufferFirstPage();
     }
     
