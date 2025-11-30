@@ -22,101 +22,6 @@ function toggleToolbar() {
     toggleBtn.textContent = '⌄';
     toggleBtn.title = 'Hide Toolbar';
   }
-  
-  // Save toolbar state
-  if (typeof saveState === 'function') {
-    saveState('toolbarCollapsed', toolbarCollapsed);
-  }
-}
-
-// State restoration function
-function restoreAppState() {
-  if (typeof loadState !== 'function') {
-    console.warn('State persistence not available yet, will retry...');
-    setTimeout(restoreAppState, 100);
-    return;
-  }
-  
-  console.info('Restoring app state from cookies...');
-  
-  // Restore basic app state
-  toolbarCollapsed = loadState('toolbarCollapsed') || false;
-  currentDir = loadState('currentDir') || '';
-  currentPattern = loadState('currentPattern') || '*.mp4';
-  
-  // Properly restore minFilter with type conversion
-  const savedMinFilter = loadState('minFilter');
-  if (savedMinFilter === 'none' || savedMinFilter === null) {
-    minFilter = null;
-  } else if (savedMinFilter === 'rejected') {
-    minFilter = 'rejected';
-  } else if (savedMinFilter === 'unrated') {
-    minFilter = 'unrated';
-  } else if (savedMinFilter === 'unrated_and_above') {
-    minFilter = 'unrated_and_above';
-  } else if (!isNaN(parseInt(savedMinFilter))) {
-    minFilter = parseInt(savedMinFilter);
-  } else {
-    minFilter = null; // Default fallback
-  }
-  
-  showThumbnails = loadState('showThumbnails') !== false; // Default to true
-  thumbnailHeight = loadState('thumbnailHeight') || 64;
-  isMaximized = loadState('isMaximized') || false;
-  idx = loadState('currentVideoIndex') || 0;
-  
-  const savedExtensions = loadState('toggleExtensions');
-  if (savedExtensions && Array.isArray(savedExtensions)) {
-    toggleExtensions = savedExtensions;
-  }
-  
-  const savedUserPath = loadState('userPathPrefix');
-  if (savedUserPath && savedUserPath !== 'null') {
-    userPathPrefix = savedUserPath;
-  }
-  
-  // Apply toolbar state
-  if (toolbarCollapsed) {
-    const container = document.getElementById('toolbar-container');
-    const toggleBtn = document.getElementById('toolbar-toggle');
-    const body = document.body;
-    
-    if (container && toggleBtn && body) {
-      container.classList.add('collapsed');
-      body.classList.add('toolbar-collapsed');
-      toggleBtn.textContent = '⌃';
-      toggleBtn.title = 'Show Toolbar';
-    }
-  }
-  
-  // Apply maximized state
-  if (isMaximized) {
-    document.body.classList.add('maximized');
-  }
-  
-  console.info('App state restored successfully');
-}
-
-// Initialize video state persistence
-function initializeVideoStatePersistence() {
-  const player = document.getElementById('player');
-  if (!player) return;
-  
-  // Save volume changes
-  player.addEventListener('volumechange', function() {
-    if (typeof saveState === 'function') {
-      saveState('videoVolume', player.volume);
-    }
-  });
-  
-  // Save playback rate changes
-  player.addEventListener('ratechange', function() {
-    if (typeof saveState === 'function') {
-      saveState('videoPlaybackRate', player.playbackRate);
-    }
-  });
-  
-  console.info('Video state persistence initialized');
 }
 
 // Add toolbar toggle event listener
@@ -125,12 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
   if (toggleBtn) {
     toggleBtn.addEventListener('click', toggleToolbar);
   }
-  
-  // Restore state after DOM is ready
-  setTimeout(restoreAppState, 50);
-  
-  // Add video state persistence listeners
-  setTimeout(initializeVideoStatePersistence, 100);
   
   // Initialize mobile score bar
   setTimeout(initializeMobileScoreBar, 100);
@@ -518,11 +417,6 @@ function toggleMaximize(){
     // Remove backdrop
     const backdrop = document.getElementById('maximize-backdrop');
     if (backdrop) backdrop.remove();
-  }
-  
-  // Save maximized state
-  if (typeof saveState === 'function') {
-    saveState('isMaximized', isMaximized);
   }
   
   // Update mobile score bar maximize button
@@ -1254,27 +1148,15 @@ function showMedia(url, name){
     // Hide zoom button for videos
     if (mobileZoomBtn) mobileZoomBtn.style.display = 'none';
     
-    // Restore video state when video loads
-    vtag.addEventListener('loadedmetadata', function restoreVideoState() {
-      if (typeof loadState === 'function') {
-        const savedVolume = loadState('videoVolume');
-        const savedPlaybackRate = loadState('videoPlaybackRate');
-        
-        if (savedVolume !== null && savedVolume !== undefined) {
-          vtag.volume = Math.max(0, Math.min(1, savedVolume));
-        }
-        if (savedPlaybackRate !== null && savedPlaybackRate !== undefined) {
-          vtag.playbackRate = Math.max(0.25, Math.min(4, savedPlaybackRate));
-        }
-      }
-      
+    // Update aspect ratio when video loads
+    vtag.addEventListener('loadedmetadata', function updateVideoAspect() {
       // Update aspect ratio if "free" is selected
       if (videoWrap && videoWrap.classList.contains('aspect-free')) {
         updateFreeAspectRatio();
       }
       
       // Remove the event listener to avoid multiple calls
-      vtag.removeEventListener('loadedmetadata', restoreVideoState);
+      vtag.removeEventListener('loadedmetadata', updateVideoAspect);
     }, { once: true });
     
   } else if (isImageName(name)){
@@ -1338,11 +1220,6 @@ function show(i){
   idx = Math.max(0, Math.min(i, filtered.length-1));
   const v = filtered[idx];
   showMedia(v.url, v.name);
-  
-  // Save current video index
-  if (typeof saveState === 'function') {
-    saveState('currentVideoIndex', idx);
-  }
   
   // Find the file extension to position clipboard icon correctly
   const extensionMatch = v.name.match(/\.([\w]+)$/i);
@@ -2078,10 +1955,6 @@ document.getElementById('min_filter').addEventListener('change', () => {
   } else {
     minFilter = parseInt(val);
   }
-  
-  // Save the filter state to cookies
-  const filterValue = minFilter === null ? 'none' : (typeof minFilter === 'string' ? minFilter : String(minFilter));
-  saveState('minFilter', filterValue);
   
   fetch('/api/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ key: 'Filter=' + (minFilter===null?'none':(typeof minFilter === 'string'?minFilter:('>='+minFilter))), name: '' })});
   applyFilter(); renderSidebar(); show(0);

@@ -406,9 +406,6 @@ function applyDateFilter() {
   // Update pill value (but don't apply filter yet)
   updateDatePillValue();
   
-  // Save state
-  saveSearchToolbarState();
-  
   // Close the editor
   closePillEditor();
   
@@ -471,7 +468,6 @@ function clearDateFilter() {
   });
   
   updateDatePillValue();
-  saveSearchToolbarState();
 }
 
 // Initialize when DOM is ready

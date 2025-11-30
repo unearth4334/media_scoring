@@ -56,120 +56,6 @@ function clearFiltersChanged() {
   }
 }
 
-// Function to restore search toolbar state from cookies
-function restoreSearchToolbarState() {
-  if (typeof loadState !== 'function') {
-    console.warn('State persistence not available for search toolbar, will retry...');
-    setTimeout(restoreSearchToolbarState, 100);
-    return;
-  }
-  
-  console.info('Restoring search toolbar state...');
-  
-  // Restore search filters
-  searchToolbarFilters.sort = loadState('searchFilters_sort') || 'name';
-  searchToolbarFilters.sortDirection = loadState('searchFilters_sortDirection') || 'asc';
-  
-  const savedFiletype = loadState('searchFilters_filetype');
-  if (savedFiletype && Array.isArray(savedFiletype)) {
-    searchToolbarFilters.filetype = savedFiletype;
-  }
-  
-  searchToolbarFilters.rating = loadState('searchFilters_rating') || 'none';
-  
-  const savedDateStart = loadState('searchFilters_dateStart');
-  if (savedDateStart && savedDateStart !== 'null') {
-    searchToolbarFilters.dateStart = savedDateStart;
-  }
-  
-  const savedDateEnd = loadState('searchFilters_dateEnd');
-  if (savedDateEnd && savedDateEnd !== 'null') {
-    searchToolbarFilters.dateEnd = savedDateEnd;
-  }
-  
-  searchToolbarFilters.nsfw = loadState('searchFilters_nsfw') || 'all';
-  
-  // Restore active pill editor
-  const savedActivePill = loadState('activePillEditor');
-  if (savedActivePill && savedActivePill !== 'null') {
-    activePillEditor = savedActivePill;
-  }
-  
-  console.info('Search toolbar state restored successfully');
-  
-  // Apply the restored state to UI elements
-  restoreSearchToolbarUI();
-}
-
-// Function to restore UI elements based on loaded state
-function restoreSearchToolbarUI() {
-  // Restore sort selection
-  const sortSelect = document.getElementById('sort-select');
-  if (sortSelect) {
-    sortSelect.value = searchToolbarFilters.sort;
-  }
-  
-  // Restore sort direction buttons
-  const ascBtn = document.getElementById('sort-asc-btn');
-  const descBtn = document.getElementById('sort-desc-btn');
-  if (ascBtn && descBtn) {
-    if (searchToolbarFilters.sortDirection === 'asc') {
-      ascBtn.classList.add('active');
-      descBtn.classList.remove('active');
-    } else {
-      descBtn.classList.add('active');
-      ascBtn.classList.remove('active');
-    }
-  }
-  
-  // Restore file type checkboxes
-  document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
-    cb.checked = searchToolbarFilters.filetype.includes(cb.value);
-  });
-  
-  // Restore rating selection
-  const ratingSelect = document.getElementById('rating-select');
-  if (ratingSelect) {
-    ratingSelect.value = searchToolbarFilters.rating;
-  }
-  
-  // Restore date inputs
-  const dateStart = document.getElementById('date-start');
-  const dateEnd = document.getElementById('date-end');
-  if (dateStart && searchToolbarFilters.dateStart) {
-    dateStart.value = searchToolbarFilters.dateStart;
-  }
-  if (dateEnd && searchToolbarFilters.dateEnd) {
-    dateEnd.value = searchToolbarFilters.dateEnd;
-  }
-  
-  // Restore NSFW filter buttons
-  const nsfwAllBtn = document.getElementById('nsfw-all-btn');
-  const nsfwSfwBtn = document.getElementById('nsfw-sfw-btn');
-  const nsfwNsfwBtn = document.getElementById('nsfw-nsfw-btn');
-  if (nsfwAllBtn && nsfwSfwBtn && nsfwNsfwBtn) {
-    // Clear all active states first
-    nsfwAllBtn.classList.remove('active');
-    nsfwSfwBtn.classList.remove('active');
-    nsfwNsfwBtn.classList.remove('active');
-    
-    // Set active state based on filter value
-    switch (searchToolbarFilters.nsfw) {
-      case 'all':
-        nsfwAllBtn.classList.add('active');
-        break;
-      case 'sfw':
-        nsfwSfwBtn.classList.add('active');
-        break;
-      case 'nsfw':
-        nsfwNsfwBtn.classList.add('active');
-        break;
-    }
-  }
-  
-  console.info('Search toolbar UI state restored');
-}
-
 /**
  * Apply server-side filter state to search toolbar
  * This is called when buffer state is restored on page load
@@ -240,28 +126,82 @@ function applyServerFilters(filters) {
   // Update UI to reflect the applied filters
   // Use a small delay to ensure DOM elements are ready
   setTimeout(() => {
-    restoreSearchToolbarUI();
+    updateSearchToolbarUI();
     updatePillValues();
-    
-    // Save to cookies so it persists
-    saveSearchToolbarState();
   }, 50);
 }
 
-// Function to save search toolbar state to cookies
-function saveSearchToolbarState() {
-  if (typeof saveState !== 'function') return;
+/**
+ * Update UI elements to reflect current searchToolbarFilters state
+ */
+function updateSearchToolbarUI() {
+  // Update sort selection
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) {
+    sortSelect.value = searchToolbarFilters.sort;
+  }
   
-  // Save all search filter state
-  saveState('searchFilters_sort', searchToolbarFilters.sort);
-  saveState('searchFilters_sortDirection', searchToolbarFilters.sortDirection);
-  saveState('searchFilters_filetype', searchToolbarFilters.filetype);
-  saveState('searchFilters_rating', searchToolbarFilters.rating);
-  saveState('searchFilters_dateStart', searchToolbarFilters.dateStart);
-  saveState('searchFilters_dateEnd', searchToolbarFilters.dateEnd);
-  saveState('searchFilters_nsfw', searchToolbarFilters.nsfw);
-  saveState('activePillEditor', activePillEditor);
+  // Update sort direction buttons
+  const ascBtn = document.getElementById('sort-asc-btn');
+  const descBtn = document.getElementById('sort-desc-btn');
+  if (ascBtn && descBtn) {
+    if (searchToolbarFilters.sortDirection === 'asc') {
+      ascBtn.classList.add('active');
+      descBtn.classList.remove('active');
+    } else {
+      descBtn.classList.add('active');
+      ascBtn.classList.remove('active');
+    }
+  }
+  
+  // Update file type checkboxes
+  document.querySelectorAll('.filetype-checkboxes input[type="checkbox"]').forEach(cb => {
+    cb.checked = searchToolbarFilters.filetype.includes(cb.value);
+  });
+  
+  // Update rating selection
+  const ratingSelect = document.getElementById('rating-select');
+  if (ratingSelect) {
+    ratingSelect.value = searchToolbarFilters.rating;
+  }
+  
+  // Update date inputs
+  const dateStart = document.getElementById('date-start');
+  const dateEnd = document.getElementById('date-end');
+  if (dateStart && searchToolbarFilters.dateStart) {
+    dateStart.value = searchToolbarFilters.dateStart;
+  }
+  if (dateEnd && searchToolbarFilters.dateEnd) {
+    dateEnd.value = searchToolbarFilters.dateEnd;
+  }
+  
+  // Update NSFW filter buttons
+  const nsfwAllBtn = document.getElementById('nsfw-all-btn');
+  const nsfwSfwBtn = document.getElementById('nsfw-sfw-btn');
+  const nsfwNsfwBtn = document.getElementById('nsfw-nsfw-btn');
+  if (nsfwAllBtn && nsfwSfwBtn && nsfwNsfwBtn) {
+    // Clear all active states first
+    nsfwAllBtn.classList.remove('active');
+    nsfwSfwBtn.classList.remove('active');
+    nsfwNsfwBtn.classList.remove('active');
+    
+    // Set active state based on filter value
+    switch (searchToolbarFilters.nsfw) {
+      case 'all':
+        nsfwAllBtn.classList.add('active');
+        break;
+      case 'sfw':
+        nsfwSfwBtn.classList.add('active');
+        break;
+      case 'nsfw':
+        nsfwNsfwBtn.classList.add('active');
+        break;
+    }
+  }
+  
+  console.info('Search toolbar UI updated');
 }
+
 
 // Default filter values for comparison (to detect modifications)
 const defaultFilters = {
@@ -339,11 +279,6 @@ function handlePillClick(event) {
 
 function openPillEditor(pillType, pillElement) {
   activePillEditor = pillType;
-  
-  // Save active pill editor state
-  if (typeof saveState === 'function') {
-    saveState('activePillEditor', activePillEditor);
-  }
   
   // Hide all editors
   document.querySelectorAll('.pill-editor').forEach(editor => {
@@ -423,11 +358,6 @@ function closePillEditor() {
   });
   
   activePillEditor = null;
-  
-  // Save active pill editor state
-  if (typeof saveState === 'function') {
-    saveState('activePillEditor', null);
-  }
 }
 
 function populateEditor(pillType) {
@@ -489,7 +419,6 @@ function setupEditorActions() {
     sortSelect.addEventListener('change', () => {
       searchToolbarFilters.sort = sortSelect.value;
       updatePillValues();
-      saveSearchToolbarState();
     });
   }
 
@@ -502,14 +431,12 @@ function setupEditorActions() {
       ascBtn.classList.add('active');
       descBtn.classList.remove('active');
       updatePillValues();
-      saveSearchToolbarState();
     });
     descBtn.addEventListener('click', () => {
       searchToolbarFilters.sortDirection = 'desc';
       descBtn.classList.add('active');
       ascBtn.classList.remove('active');
       updatePillValues();
-      saveSearchToolbarState();
     });
   }
   
@@ -558,7 +485,6 @@ function setupEditorActions() {
       nsfwSfwBtn.classList.remove('active');
       nsfwNsfwBtn.classList.remove('active');
       updatePillValues();
-      saveSearchToolbarState();
     });
     nsfwSfwBtn.addEventListener('click', () => {
       searchToolbarFilters.nsfw = 'sfw';
@@ -566,7 +492,6 @@ function setupEditorActions() {
       nsfwAllBtn.classList.remove('active');
       nsfwNsfwBtn.classList.remove('active');
       updatePillValues();
-      saveSearchToolbarState();
     });
     nsfwNsfwBtn.addEventListener('click', () => {
       searchToolbarFilters.nsfw = 'nsfw';
@@ -574,7 +499,6 @@ function setupEditorActions() {
       nsfwAllBtn.classList.remove('active');
       nsfwSfwBtn.classList.remove('active');
       updatePillValues();
-      saveSearchToolbarState();
     });
   }
   
@@ -643,9 +567,6 @@ function applySearchToolbarFilter(pillType) {
   
   updatePillValues();
   closePillEditor();
-  
-  // Save search toolbar state
-  saveSearchToolbarState();
   
   // Mark filters as changed if using buffer mode
   if (window.databaseEnabled && window.BufferClient && window.BufferClient.isActive()) {
@@ -719,9 +640,6 @@ function clearFilter(pillType) {
   }
   
   updatePillValues();
-  
-  // Save search toolbar state
-  saveSearchToolbarState();
 }
 
 function updatePillValues() {
@@ -1134,18 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Small delay to ensure other scripts have initialized
   setTimeout(() => {
     initializeSearchToolbar();
-    restoreSearchToolbarState();
-    updatePillValues(); // Update UI to reflect restored state
-    
-    // Restore active pill editor if one was open
-    if (activePillEditor) {
-      const pillElement = document.getElementById(`pill-${activePillEditor}`);
-      if (pillElement) {
-        setTimeout(() => {
-          openPillEditor(activePillEditor, pillElement);
-        }, 200);
-      }
-    }
+    updatePillValues(); // Update UI to reflect current state
   }, 100);
   
   // Initialize menu functionality
