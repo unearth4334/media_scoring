@@ -236,7 +236,9 @@ function isFilterModified(filterName) {
   
   if (filterName === 'dateStart' || filterName === 'dateEnd') {
     // Null/empty comparison for dates
-    return (current !== null && current !== '') || (defaultValue !== null && defaultValue !== '');
+    const currentValue = (current === null || current === '') ? null : current;
+    const defaultVal = (defaultValue === null || defaultValue === '') ? null : defaultValue;
+    return currentValue !== defaultVal;
   }
   
   // Standard comparison for other fields
@@ -729,8 +731,9 @@ function updatePillValues() {
   
   pillsData.forEach(({ pill, filterName }) => {
     if (pill) {
+      // Special handling for date pill - check both dateStart and dateEnd
       const isModified = filterName === 'dateStart' ? 
-        (searchToolbarFilters.dateStart || searchToolbarFilters.dateEnd) : 
+        (isFilterModified('dateStart') || isFilterModified('dateEnd')) : 
         isFilterModified(filterName);
         
       if (isModified) {
