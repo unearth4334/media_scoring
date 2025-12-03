@@ -4,7 +4,7 @@ This document describes the media loading and display architecture for the Video
 
 ## Overview
 
-The application uses a **server-side buffered approach** to provide fast user experience when interacting with the web UI. The key principle is:
+The application uses a **server-side buffered approach** to provide a fast user experience when interacting with the web UI. The key principle is:
 
 1. **Refresh-content button**: Compiles a sorted, filtered list of media server-side and stores it in a temporary SQLite table
 2. **Viewport-based lazy loading**: Only items visible in the sidebar viewport are loaded
@@ -262,3 +262,19 @@ The first refresh after server restart may be slower as indexes are built. Subse
 ### Memory Usage
 
 If buffer size exceeds limits, oldest buffers are evicted. Monitor via `GET /api/search/buffer/stats`.
+
+### GET /api/search/buffer/stats
+
+Returns statistics about all active buffers.
+
+**Response:**
+```json
+{
+  "ok": true,
+  "stats": {
+    "buffer_count": 3,
+    "total_items": 4500,
+    "total_size_mb": 2.25
+  }
+}
+```
