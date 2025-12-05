@@ -269,6 +269,7 @@ docker_down() {
 # Function to destroy containers and volumes
 docker_destroy() {
     log_warning "This will destroy all containers and volumes for ${PROJECT_NAME}"
+    log_warning "This will also delete cached buffer and database files from the media directory"
     read -p "Are you sure you want to continue? (y/N): " -n 1 -r
     echo
     
@@ -296,6 +297,21 @@ docker_destroy() {
         else
             log_info "No project-specific volumes found to remove"
         fi
+        
+        # Clean up buffer cache and database files from media directory
+        log_info "Cleaning up cache files from media directory..."
+        
+        # Get HOST_MEDIA_PATH from .env file or use default
+        local host_media_path="/share/sd/SecretFolder"
+        if [[ -f ".env" ]]; then
+            local env_path=$(grep "^HOST_MEDIA_PATH=" .env | cut -d '=' -f2)
+            if [[ -n "$env_path" ]]; then
+                host_media_path="$env_path"
+            fi
+        fi
+        
+        log_info "Removing buffer cache from ${host_media_path}/.scores/"
+        ssh ${QNAP_HOST} "rm -f ${host_media_path}/.scores/buffer.db*" 2>/dev/null || log_warning "No buffer cache files found"
         
         log_success "Containers and volumes for ${PROJECT_NAME} destroyed successfully"
     else
